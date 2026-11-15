@@ -2,6 +2,7 @@
 using System.Windows.Controls;
 using System.Windows.Input;
 using System.Windows.Media;
+using PCL.Core.App.Localization;
 
 namespace PCL;
 
@@ -207,9 +208,27 @@ public partial class MyCompItem
         MouseLeave += RefreshColor;
         MouseLeftButtonDown += RefreshColor;
         MouseLeftButtonUp += RefreshColor;
+        PathLogo.ImageLoadFailed += OnLogoLoadFailed;
+        PathLogo.ImageLoaded += OnLogoLoaded;
+    }
+
+
+    /// <summary>图片下载失败时，若已配置首字母占位则切回首字母色块。</summary>
+    private void OnLogoLoadFailed()
+    {
+        if (!string.IsNullOrEmpty(LabLetter.Text))
+            ShowLetter = true;
+    }
+
+    /// <summary>图片成功加载后切换到图标层；未配置首字母时不处理。</summary>
+    private void OnLogoLoaded()
+    {
+        if (!string.IsNullOrEmpty(LabLetter.Text))
+            ShowLetter = false;
     }
 
     private void LabInfo_MouseEnter(object sender, MouseEventArgs e)
+
     {
         if (IsTextTrimmed(LabInfo))
         {
@@ -276,6 +295,54 @@ public partial class MyCompItem
             var isFavourite = Comp.CompFavorites.IsFavourite(project.Id);
             BtnDelete.SvgIcon = isFavourite ? "lucide/heart-filled" : "lucide/heart";
         }
+    }
+
+    /// <summary>
+    /// 回填完成后原地刷新卡片显示，不重建可视化树，避免整表 Clear+Add 造成的闪烁。
+    /// </summary>
+    public void RefreshFrom(Comp.CompProject project, bool showMcVersionDesc, bool showLoaderDesc)
+    {
+        Tag = project;
+        project.ApplyIcon(this);
+
+        var title = project.GetControlTitle(true);
+        Title = title.Key;
+        if (string.IsNullOrEmpty(title.Value))
+        {
+            if (LabTitleRaw.Parent is StackPanel rawPanel && rawPanel.Children.Contains(LabTitleRaw))
+                rawPanel.Children.Remove(LabTitleRaw);
+        }
+        else
+        {
+            SubTitle = title.Value;
+        }
+
+        Tags = project.Tags;
+        Description = project.Description.Replace("\r", "").Replace("\n", "");
+
+        Version = project.BuildVersionDescription(showMcVersionDesc, showLoaderDesc);
+        if (!showMcVersionDesc && !showLoaderDesc)
+        {
+            if (SvgIconVersion.Parent is Grid iconGrid && iconGrid.Children.Contains(SvgIconVersion))
+                iconGrid.Children.Remove(SvgIconVersion);
+            if (LabVersion.Parent is Grid versionGrid && versionGrid.Children.Contains(LabVersion))
+                versionGrid.Children.Remove(LabVersion);
+            ColumnVersion1.Width = new GridLength(0);
+            ColumnVersion2.MaxWidth = 0;
+            ColumnVersion3.Width = new GridLength(0);
+        }
+
+        Source = "CKAN";
+
+        if (project.LastUpdate is not null)
+            UpdateTime = Lang.TimeSpan(project.LastUpdate.Value - DateTime.Now, 1);
+        else
+        {
+            LabTime.Visibility = Visibility.Collapsed;
+            ColumnTime1.Width = ColumnTime2.Width = ColumnTime3.Width = new GridLength(0);
+        }
+
+        Downloads = Lang.CompactNumber(project.DownloadCount);
     }
     #endregion
 

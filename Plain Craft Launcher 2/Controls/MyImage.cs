@@ -35,6 +35,7 @@ public class MyImage : Image
                 {
                     ImageSource bitmap = value is null ? null : await Task.Run(() => new MyBitmap(value));
                     base.Source = bitmap;
+                    if (bitmap is not null) ImageLoaded?.Invoke();
                 }
                 catch (Exception ex)
                 {
@@ -98,6 +99,8 @@ public class MyImage : Image
                     ActualSource = resp;
                     return;
                 }
+                if (string.IsNullOrEmpty(ActualSource) || ActualSource == LoadingSource)
+                    ImageLoadFailed?.Invoke();
             }
             catch (Exception ex)
             {
@@ -113,6 +116,8 @@ public class MyImage : Image
                     if (DateTime.Now - tempFile.LastWriteTime < fileCacheExpiredTime)
                         return;
                 }
+                if (string.IsNullOrEmpty(ActualSource) || ActualSource == LoadingSource)
+                    ImageLoadFailed?.Invoke();
             }
         }));
     }
@@ -215,6 +220,11 @@ public class MyImage : Image
     ///     当 Source 首次下载失败时，会从该备用地址加载图片。
     /// </summary>
     public string FallbackSource { get; set; }
+
+    /// <summary>原始图片与兜底图片均加载失败时触发，供上层切换到其他占位层。</summary>
+    public event Action? ImageLoadFailed;
+    /// <summary>图片成功加载（含本地缓存/兜底）后触发，供上层切换到图标层。</summary>
+    public event Action? ImageLoaded;
 
     /// <summary>
     ///     正在下载网络图片时显示的本地图片。

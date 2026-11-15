@@ -130,6 +130,9 @@ public static class CompProjectUiExtensions
         /// <summary>有图标则显示横幅图（方形裁剪）；无图标则用名字首字母色块占位。</summary>
         public void ApplyIcon(MyCompItem item)
         {
+            var letterBrushKey = string.IsNullOrWhiteSpace(project.TranslatedName) ? project.RawName : project.TranslatedName;
+            item.Letter = GetInitial(project);
+            item.LetterBrush = GetInitialBrush(letterBrushKey);
             if (string.IsNullOrEmpty(project.LogoUrl))
             {
                 item.PathLogo.Source = null;
@@ -139,7 +142,8 @@ public static class CompProjectUiExtensions
             }
             else
             {
-                item.ShowLetter = false;
+                // 先保持首字母色块，图片加载成功后由 OnLogoLoaded 切换，避免下载期间显示立方体兜底。
+                item.ShowLetter = true;
                 item.PathLogo.Source = project.LogoUrl;
                 item.PathLogo.FallbackSource = GameDownload.DlSourceModGet(project.LogoUrl);
             }
