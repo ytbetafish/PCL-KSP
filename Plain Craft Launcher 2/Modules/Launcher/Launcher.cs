@@ -64,8 +64,14 @@ public static partial class Launcher
                 service.AttachInstanceRobust(instance);
             }
             _ckanService = service;
-            // 后台刷新注册表，不阻塞 UI（必须 Task.Run：RefreshMasterRegistryAsync 为同步方法，直接调用会在 STA 线程阻塞联网下载仓库）
-            _ = System.Threading.Tasks.Task.Run(() => service.RefreshMasterRegistryAsync());
+            // Background serial: warm up the local cached catalog first (reused by the download page),
+            // then refresh the repo over the network. Warm-up reads repositoriesData while refresh
+            // writes it; the two must not run in parallel to avoid the non-thread-safe Core dictionary.
+            _ = System.Threading.Tasks.Task.Run(async () =>
+            {
+                try { await service.WarmUpAsync().ConfigureAwait(false); } catch { }
+                try { await service.RefreshMasterRegistryAsync().ConfigureAwait(false); } catch { }
+            });
         }
         catch
         {

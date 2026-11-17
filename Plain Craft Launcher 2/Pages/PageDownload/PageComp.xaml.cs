@@ -52,7 +52,7 @@ public partial class PageComp : Grid
             var results = await Launcher.Ckan.SearchAsync(query);
             Common.Log($"[CKAN] SearchAsync 返回 {results.Count} 条，耗时 {sw.ElapsedMilliseconds} ms");
             sw.Restart();
-            _results = results.ToList();
+            _results = ApplySort(results.ToList(), GetSortId());
             _projects = CkanCompAdapter.ToProjects(_results);
             Common.Log($"[CKAN] ToProjects {_projects.Count} 条，耗时 {sw.ElapsedMilliseconds} ms");
             _enrichedPages.Clear();
@@ -72,6 +72,36 @@ public partial class PageComp : Grid
         {
             PanLoad.Visibility = Visibility.Collapsed;
             _loading = false;
+        }
+    }
+
+    /// <summary>读取排序下拉框选中项（与原版 CompSortType 编号一致）。</summary>
+    private int GetSortId()
+    {
+        if (ComboSearchSort.SelectedItem is FrameworkElement fe && fe.Tag != null &&
+            int.TryParse(fe.Tag.ToString(), out var id))
+            return id;
+        return 1;
+    }
+
+    /// <summary>在本地按排序项排列结果；默认/相关性保持注册表原顺序（稳定）。</summary>
+    private static List<ModSearchResult> ApplySort(List<ModSearchResult> list, int sortId)
+    {
+        switch (sortId)
+        {
+            case 3: // 下载量降序；未回填下载量(0)的模组排后
+                return list
+                    .OrderByDescending(r => r.Downloads)
+                    .ThenBy(r => r.Name, StringComparer.OrdinalIgnoreCase)
+                    .ToList();
+            case 5: // 最新发布
+            case 6: // 最近更新（CKAN 目录仅登记发布日期，同用 ReleaseDate）
+                return list
+                    .OrderByDescending(r => r.ReleaseDate)
+                    .ThenBy(r => r.Name, StringComparer.OrdinalIgnoreCase)
+                    .ToList();
+            default: // 1 默认 / 2 相关性
+                return list;
         }
     }
 
@@ -112,7 +142,17 @@ public partial class PageComp : Grid
             for (var i = 0; i < mapped.Count; i++)
                 _projects[start + i] = mapped[i];
 
-            await Dispatcher.InvokeAsync(() => RefreshList());
+            // Refresh cards in place; do not rebuild the tree (Clear+Add) to avoid flicker on focus loss/restore.
+            await Dispatcher.InvokeAsync(() =>
+            {
+                var children = PanProjects.Children;
+                for (var i = 0; i < children.Count && i < mapped.Count; i++)
+                {
+                    if (children[i] is FrameworkElement fe &&
+                        MyVirtualizingElement.TryInit(fe) is MyCompItem item)
+                        item.RefreshFrom(mapped[i], false, false);
+                }
+            });
         }
         catch (OperationCanceledException)
         {
@@ -133,7 +173,11 @@ public partial class PageComp : Grid
 
     private void PanSearchBox_Search(object sender, EventArgs e) => StartSearch();
 
-    private void EnterTrigger(object sender, KeyEventArgs e) => StartSearch();
+    private void EnterTrigger(object sender, KeyEventArgs e)
+    {
+        if (e.Key == Key.Enter)
+            StartSearch();
+    }
 
     private void BtnSearchReset_Click(object sender, EventArgs e) => ResetFilter();
 
@@ -168,7 +212,10 @@ public partial class PageComp : Grid
     {
     }
 
-    private async void StartSearch() => await LoadProjects(PanSearchBox.Text);
+    private async void StartSearch()
+    {
+        await LoadProjects(PanSearchBox.Text);
+    }
 
     private async void ResetFilter()
     {
@@ -176,5 +223,17 @@ public partial class PageComp : Grid
         ComboSearchTag.SelectedIndex = 0;
         ComboSearchSort.SelectedIndex = 0;
         await LoadProjects(null);
+    }
+
+    private void ComboSearchSort_SelectionChanged(object sender, SelectionChangedEventArgs e)
+    {
+        if (_results.Count == 0)
+            return;
+        _results = ApplySort(_results, GetSortId());
+        _projects = CkanCompAdapter.ToProjects(_results);
+        _enrichedPages.Clear();
+        _currentPage = 0;
+        RefreshList();
+        _ = EnrichCurrentPageAsync();
     }
 }

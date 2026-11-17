@@ -148,14 +148,29 @@ public partial class PageMods
             Info = string.Join(" · ", info),
             tag = mod,
             Height = 46d,
-            Type = MyListItem.CheckType.None
+            // Clickable：允许普通行点击触发 Click（Type=None 时 MouseDown 不会置位 _isMouseDown，Click 永不触发）；该类型不参与勾选。
+            Type = MyListItem.CheckType.Clickable
         };
-        if (!string.IsNullOrWhiteSpace(mod.IconUrl))
+        if (IsImageUrl(mod.IconUrl))
+        {
             item.Logo = mod.IconUrl!;
+        }
         else
+        {
             item.SvgIcon = "lucide/puzzle";
+        }
         item.Click += (_, _) => SelectMod(mod);
         return item;
+    }
+
+    private static bool IsImageUrl(string? url)
+    {
+        if (string.IsNullOrWhiteSpace(url)) return false;
+        if (url.StartsWith("http", StringComparison.OrdinalIgnoreCase)) return true;
+        return url.EndsWith(".png", StringComparison.OrdinalIgnoreCase)
+            || url.EndsWith(".jpg", StringComparison.OrdinalIgnoreCase)
+            || url.EndsWith(".jpeg", StringComparison.OrdinalIgnoreCase)
+            || url.EndsWith(".webp", StringComparison.OrdinalIgnoreCase);
     }
 
     private async void BtnSearch_Click(object sender, EventArgs e) => await DoSearch(TxtSearch.Text);
@@ -250,31 +265,37 @@ public partial class PageMods
         try
         {
             var plan = await GetService().GetInstallPlanAsync(_selected.Identifier);
-            if (plan is { ToInstall.Count: > 0 })
-            {
-                LabDeps.Text = "依赖：" + string.Join("、", plan.ToInstall);
-                LabDeps.Visibility = Visibility.Visible;
-            }
-            else
-            {
-                LabDeps.Visibility = Visibility.Collapsed;
-            }
+            FillRelLab(LabDeps, "依赖：", plan?.ToInstall);
 
             var (rev, conflicts) = GetService().GetReverseAndConflicts(_selected.Identifier);
-            if (rev.Count > 0)
-            {
-                LabReverse.Text = "被依赖：" + string.Join("、", rev);
-                LabReverse.Visibility = Visibility.Visible;
-            }
-            else LabReverse.Visibility = Visibility.Collapsed;
-            if (conflicts.Count > 0)
-            {
-                LabConflicts.Text = "冲突：" + string.Join("、", conflicts);
-                LabConflicts.Visibility = Visibility.Visible;
-            }
-            else LabConflicts.Visibility = Visibility.Collapsed;
+            FillRelLab(LabReverse, "被依赖：", rev);
+            FillRelLab(LabConflicts, "冲突：", conflicts);
         }
-        catch { LabDeps.Visibility = Visibility.Collapsed; }
+        catch
+        {
+            LabDeps.Visibility = Visibility.Collapsed;
+            LabReverse.Visibility = Visibility.Collapsed;
+            LabConflicts.Visibility = Visibility.Collapsed;
+        }
+    }
+
+    private const int RelNameDisplayCount = 5;
+
+    /// <summary>填充依赖/被依赖/冲突标签：名单过长时只显示前几个，完整名单放入悬停提示。</summary>
+    private static void FillRelLab(TextBlock lab, string prefix, IReadOnlyList<string>? names)
+    {
+        if (names is not { Count: > 0 })
+        {
+            lab.Visibility = Visibility.Collapsed;
+            lab.ToolTip = null;
+            return;
+        }
+        var shown = string.Join("、", names.Take(RelNameDisplayCount));
+        lab.Text = names.Count > RelNameDisplayCount
+            ? $"{prefix}{shown}（等 {names.Count} 个）"
+            : prefix + shown;
+        lab.ToolTip = prefix + string.Join("、", names);
+        lab.Visibility = Visibility.Visible;
     }
 
     private async void BtnTranslate_Click(object sender, System.Windows.Input.MouseButtonEventArgs e)
@@ -303,9 +324,17 @@ public partial class PageMods
             Model = PklSettings.Current.TranslateModel
         });
         LabModDesc.Text = "翻译中…";
-        var result = await svc.TranslateAsync(_selected.Description, "zh-CN");
-        _transCache[key] = result;
-        LabModDesc.Text = result ?? "（翻译失败，请检查翻译设置）";
+        try
+        {
+            var result = await svc.TranslateAsync(_selected.Description, "zh-CN");
+            _transCache[key] = result;
+            LabModDesc.Text = result ?? "（翻译失败，请检查翻译设置）";
+        }
+        catch (Exception ex)
+        {
+            Common.Log(ex, "[PageMods] 翻译简介失败");
+            LabModDesc.Text = "（翻译失败：" + ex.Message + "）";
+        }
     }
 
     private async void BtnInstall_Click(object sender, System.Windows.Input.MouseButtonEventArgs e)

@@ -33,12 +33,12 @@
                         <TextBlock x:Name="LabSort" VerticalAlignment="Center" Grid.Column="2"
                                    HorizontalAlignment="Left" Text="{loc:Loc Download.Comp.Filter.Sort}"
                                    Margin="5,0,5,0" />
-                        <local:MyComboBox x:Name="ComboSearchSort" Grid.Column="3" MaxDropDownHeight="320">
+                        <local:MyComboBox x:Name="ComboSearchSort" Grid.Column="3" MaxDropDownHeight="320"
+                                          SelectionChanged="ComboSearchSort_SelectionChanged">
                             <local:MyComboBoxItem Content="{loc:Loc Common.Option.Default}" Tag="1"
                                                   IsSelected="True" />
                             <local:MyComboBoxItem Content="{loc:Loc Download.Comp.Sort.Relevance}" Tag="2" />
                             <local:MyComboBoxItem Content="{loc:Loc Download.Comp.Sort.Downloads}" Tag="3" />
-                            <local:MyComboBoxItem Content="{loc:Loc Download.Comp.Sort.Follows}" Tag="4" />
                             <local:MyComboBoxItem Content="{loc:Loc Download.Comp.Sort.Latest}" Tag="5" />
                             <local:MyComboBoxItem Content="{loc:Loc Download.Comp.Sort.Updated}" Tag="6" />
                         </local:MyComboBox>

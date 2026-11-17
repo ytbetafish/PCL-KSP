@@ -5,6 +5,7 @@ using CKAN.Versioning;
 using IUser = CKAN.IUser;
 using System.Diagnostics;
 using System.Net;
+using System.Threading;
 
 namespace Pkl.Ckan;
 
@@ -36,6 +37,11 @@ public sealed class ModService : IModService, IDisposable
     private RegistryManager? _registryManager;
     private Registry? _readonlyRegistry;
     private readonly SpaceDockClient _spaceDock = new();
+    private readonly object _catalogLock = new();
+    private readonly object _repoLock = new();
+    private IReadOnlyList<ModSearchResult>? _cachedAll;
+    private Task? _warmTask;
+    private readonly SemaphoreSlim _catalogGate = new(1, 1);
 
     /// <summary>诊断埋点汇（如启动器 log4net）；为空时仅写入内存日志。</summary>
     public Action<string>? TraceSink { get; set; }
@@ -142,26 +148,30 @@ public sealed class ModService : IModService, IDisposable
     public string RepoStrategy { get; set; } = "OfficialFirst";
 
     /// <inheritdoc />
-    public Task RefreshMasterRegistryAsync(CancellationToken cancellationToken = default)
+    public async Task RefreshMasterRegistryAsync(CancellationToken cancellationToken = default)
     {
         if (_instance == null || _registryManager == null)
         {
-            return Task.CompletedTask;
+            return;
         }
 
+        // 段 1：短锁补齐仓库注册表并落盘（Repositories 字典写，与目录枚举互斥）
+        await _catalogGate.WaitAsync(cancellationToken).ConfigureAwait(false);
         try
         {
             Trace("Refresh 开始");
             var registry = _registryManager.registry;
             var existing = registry.Repositories;
 
-            // 保留实例注册表中已有的仓库（含本机 CKAN 客户端写入的仓库），只按配置补齐缺失项；
-            // 不再清空仓库列表，避免抹掉既有仓库导致磁盘缓存与当前仓库对不上。
             void AddRepo(string name, string uri)
             {
-                if (string.IsNullOrWhiteSpace(uri) || existing.ContainsKey(name))
+                var uriTrim = uri.Trim();
+                if (string.IsNullOrWhiteSpace(uriTrim) || existing.ContainsKey(name))
                     return;
-                registry.RepositoriesAdd(new CKAN.Repository(name, uri.Trim()));
+                if (existing.Values.Any(r => r.uri != null &&
+                    string.Equals(r.uri.ToString(), uriTrim, StringComparison.OrdinalIgnoreCase)))
+                    return;
+                registry.RepositoriesAdd(new CKAN.Repository(name, uriTrim));
             }
 
             if (RepoStrategy != "OfficialOnly")
@@ -179,38 +189,115 @@ public sealed class ModService : IModService, IDisposable
             }
             _registryManager.Save();
             Trace("注册表 Save 完成");
+        }
+        finally
+        {
+            _catalogGate.Release();
+        }
 
-            var repos = registry.Repositories.Values.ToList();
+        // 段 2：仓库元数据网络下载在锁外进行，避免长时间占用门控阻塞目录枚举与搜索
+        try
+        {
+            var repos = DistinctRepos(_registryManager.registry.Repositories.Values);
             var downloader = new NetAsyncDownloader(_user,
                 () => (System.Security.Cryptography.HashAlgorithm?)null,
                 UserAgent,
                 cancellationToken);
-            var updateResult = _repoData.Update(repos, _instance.Game, false, downloader, _user, UserAgent);
-            Trace($"仓库 Update 完成: {updateResult}");
+            lock (_repoLock)
+            {
+                var updateResult = _repoData.Update(repos, _instance.Game, false, downloader, _user, UserAgent);
+                Trace($"仓库 Update 完成: {updateResult}");
+            }
         }
         catch (Exception ex)
         {
             try { _user.RaiseError("刷新仓库注册表失败: " + ex.Message); } catch { }
         }
 
-        return Task.CompletedTask;
+        // 段 3：网络更新结束后短锁失效内存缓存
+        await _catalogGate.WaitAsync(cancellationToken).ConfigureAwait(false);
+        try
+        {
+            lock (_catalogLock)
+            {
+                _cachedAll = null;
+                _warmTask = null;
+            }
+        }
+        finally
+        {
+            _catalogGate.Release();
+        }
     }
 
     /// <inheritdoc />
     public async Task<IReadOnlyList<ModSearchResult>> SearchAsync(string? query, CancellationToken cancellationToken = default)
     {
-        var sw = Stopwatch.StartNew();
-        // 目录枚举与投影放到后台线程，避免阻塞 STA 导致加载动画停滞、页面看似未响应。
-        var results = await Task.Run(() =>
+        var isEmptyQuery = string.IsNullOrWhiteSpace(query);
+        Task? warmTask = null;
+        if (isEmptyQuery)
         {
-            var modules = EnumerateCatalog().Where(m => MatchesQuery(m, query)).ToList();
-            Trace($"目录枚举 {modules.Count} 条，{sw.ElapsedMilliseconds} ms");
-            sw.Restart();
-            var list = modules.Select(ToResult).ToList();
-            Trace($"结果投影 {list.Count} 条，{sw.ElapsedMilliseconds} ms");
-            return list;
-        }, cancellationToken).ConfigureAwait(false);
+            lock (_catalogLock)
+            {
+                if (_cachedAll is not null)
+                    return _cachedAll;
+                warmTask = _warmTask;
+            }
+            if (warmTask is not null)
+            {
+                Trace("Search waiting warmTask");
+                try { await warmTask.ConfigureAwait(false); } catch { }
+                lock (_catalogLock)
+                {
+                    if (_cachedAll is not null)
+                        return _cachedAll;
+                }
+            }
+        }
+        return await BuildAllAsync(query, isEmptyQuery, cancellationToken).ConfigureAwait(false);
+    }
+
+    /// <summary>Catalog enumerate + project + cache write. Shared by warm-up and on-demand search; does not go through the warmTask reuse branch (avoids awaiting itself).</summary>
+    private async Task<IReadOnlyList<ModSearchResult>> BuildAllAsync(string? query, bool isEmptyQuery, CancellationToken cancellationToken)
+    {
+        var sw = Stopwatch.StartNew();
+        var catalog = await EnumerateCatalogLockedAsync(cancellationToken).ConfigureAwait(false);
+        Trace($"Catalog enumerate {catalog.Count} in {sw.ElapsedMilliseconds} ms");
+        sw.Restart();
+        var results = catalog.Where(m => MatchesQuery(m, query)).Select(ToResult).ToList();
+        Trace($"Projected {results.Count} in {sw.ElapsedMilliseconds} ms");
+        if (isEmptyQuery && results.Count > 0)
+        {
+            lock (_catalogLock)
+            {
+                _cachedAll = results;
+            }
+        }
         return results;
+    }
+
+    /// <inheritdoc />
+    public Task WarmUpAsync(CancellationToken cancellationToken = default)
+    {
+        lock (_catalogLock)
+        {
+            if (_cachedAll is not null)
+                return Task.CompletedTask;
+            _warmTask ??= Task.Run(async () =>
+            {
+                try
+                {
+                    Trace("WarmUp enumerate start");
+                    await BuildAllAsync(null, true, cancellationToken).ConfigureAwait(false);
+                    Trace("WarmUp enumerate done");
+                }
+                catch
+                {
+                    // Warm-up failure must not block; the download page loads on demand.
+                }
+            }, cancellationToken);
+            return _warmTask;
+        }
     }
 
     /// <summary>对 results 的 [start, start+count) 区间做 SpaceDock 回填；并发限流，失败项保持原值。</summary>
@@ -272,6 +359,7 @@ public sealed class ModService : IModService, IDisposable
         }
 
         var sw = Stopwatch.StartNew();
+        var catalog = await EnumerateCatalogLockedAsync(cancellationToken).ConfigureAwait(false);
         var results = await Task.Run(() =>
         {
             var installed = reg.Installed();
@@ -280,7 +368,7 @@ public sealed class ModService : IModService, IDisposable
             var nameById = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
             var reverseMap = new Dictionary<string, List<string>>(StringComparer.OrdinalIgnoreCase);
             var conflictMap = new Dictionary<string, List<string>>(StringComparer.OrdinalIgnoreCase);
-            foreach (var m in EnumerateCatalog())
+            foreach (var m in catalog)
             {
                 nameById[m.identifier] = m.name ?? m.identifier;
                 foreach (var r in m.depends ?? Enumerable.Empty<CKAN.RelationshipDescriptor>())
@@ -530,6 +618,32 @@ public sealed class ModService : IModService, IDisposable
             list.Add(display);
     }
 
+    /// <summary>按仓库地址去重：Repository 字典以 uri 为判重键，重复地址会导致仓库数据缓存字典撞 key。</summary>
+    private static List<CKAN.Repository> DistinctRepos(IEnumerable<CKAN.Repository>? repos)
+        => repos?.GroupBy(r => r.uri?.ToString() ?? r.name)
+                 .Select(g => g.First())
+                 .ToList() ?? new List<CKAN.Repository>();
+
+    /// <summary>在门控内枚举全量目录，串行访问 CKAN Core，避免并发刷新/搜索撞内部仓库字典。</summary>
+    private async Task<List<CkanModule>> EnumerateCatalogLockedAsync(CancellationToken cancellationToken)
+    {
+        Trace("Enum enter (waiting gate)");
+        await _catalogGate.WaitAsync(cancellationToken).ConfigureAwait(false);
+        try
+        {
+            lock (_repoLock)
+            {
+                var enumList = EnumerateCatalog().ToList();
+                Trace("Enum ToList done");
+                return enumList;
+            }
+        }
+        finally
+        {
+            _catalogGate.Release();
+        }
+    }
+
     private IEnumerable<CkanModule> EnumerateCatalog()
     {
         var reg = Registry;
@@ -538,7 +652,7 @@ public sealed class ModService : IModService, IDisposable
             yield break;
         }
 
-        var repos = reg.Repositories.Values.ToList();
+        var repos = DistinctRepos(reg.Repositories.Values);
         foreach (var avail in _repoData.GetAllAvailableModules(repos))
         {
             CkanModule? best = null;
@@ -631,7 +745,8 @@ public sealed class ModService : IModService, IDisposable
             isInstalled,
             hasUpdate,
             compatible,
-            iconUrl);
+            iconUrl,
+            ReleaseDate: mod?.release_date);
     }
 
     /// <inheritdoc />
@@ -642,7 +757,7 @@ public sealed class ModService : IModService, IDisposable
         if (_instance == null) return (deps, conflicts);
         try
         {
-            var repos = Registry?.Repositories?.Values ?? Enumerable.Empty<CKAN.Repository>();
+            var repos = DistinctRepos(Registry?.Repositories?.Values ?? Enumerable.Empty<CKAN.Repository>());
             foreach (var am in _repoData.GetAllAvailableModules(repos))
             {
                 foreach (var mod in am.AllAvailable())

@@ -17,6 +17,12 @@ public interface IModService
     Task<IReadOnlyList<ModSearchResult>> SearchAsync(string? query, CancellationToken cancellationToken = default);
 
     /// <summary>
+    /// 后台预热全量目录（空查询搜索结果）并缓存；重复调用复用同一任务。
+    /// 失败静默忽略，不阻断启动；下载页打开时优先复用该缓存。
+    /// </summary>
+    Task WarmUpAsync(CancellationToken cancellationToken = default);
+
+    /// <summary>
     /// 对结果列表 [start, start+count) 区间做 SpaceDock 联网回填（图标、下载量、作者等），
     /// 原地写回列表；失败项保持原值。调用方可缓存已回填区间，避免重复网络请求。
     /// </summary>

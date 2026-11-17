@@ -28,7 +28,9 @@ public sealed record ModSearchResult(
     /// <summary>依赖本模组（把它作为前置）的模组显示名列表。</summary>
     IReadOnlyList<string>? ReverseDeps = null,
     /// <summary>与本模组冲突的模组显示名列表。</summary>
-    IReadOnlyList<string>? Conflicts = null);
+    IReadOnlyList<string>? Conflicts = null,
+    /// <summary>CKAN 目录登记的模组发布日期；用于按最新/更新排序。</summary>
+    DateTime? ReleaseDate = null);
 
 /// <summary>
 /// The install/upgrade/remove plan computed by CKAN's dependency resolver.

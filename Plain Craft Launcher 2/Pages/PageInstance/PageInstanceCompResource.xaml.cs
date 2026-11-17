@@ -173,7 +173,8 @@ public partial class PageInstanceCompResource : IPageView
 
         var project = CkanCompAdapter.ToProject(mod);
         var item = new MyCompItem { Tag = project };
-        item.ShowFavoriteBtn = true;
+        // 实例本地模组卡片不提供收藏（对齐原版：收藏仅属于下载在线卡片）。
+        item.ShowFavoriteBtn = false;
         item.Title = mod.Name;
         item.Description = string.Join(" · ", info);
         item.ShowMetaRow = false;
@@ -190,6 +191,8 @@ public partial class PageInstanceCompResource : IPageView
             };
         }
 
+        item.Letter = GetInitial(mod.Name);
+        item.LetterBrush = GetInitialBrush(mod.Name);
         if (IsImageUrl(mod.IconUrl))
         {
             item.Logo = mod.IconUrl!;
@@ -198,10 +201,7 @@ public partial class PageInstanceCompResource : IPageView
         else
         {
             item.ShowLetter = true;
-            item.Letter = GetInitial(mod.Name);
-            item.LetterBrush = GetInitialBrush(mod.Name);
         }
-        item.RefreshFavoriteStatus();
         return item;
     }
 
