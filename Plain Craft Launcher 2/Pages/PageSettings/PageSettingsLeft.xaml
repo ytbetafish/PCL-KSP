@@ -33,6 +33,9 @@
             <local:MyListItem x:Name="NavMisc" IsScaleAnimationEnabled="False" Type="RadioBox"
                               MinPaddingRight="35" Height="36" VerticalAlignment="Top"
                               Title="杂项与调试" SvgIcon="lucide/settings" />
+            <local:MyListItem x:Name="NavLog" IsScaleAnimationEnabled="False" Type="RadioBox"
+                              MinPaddingRight="35" Height="36" VerticalAlignment="Top"
+                              Title="日志" SvgIcon="lucide/file-text" />
 
             <TextBlock Text="关于" Margin="13,6,5,4" Opacity="0.6" FontSize="12" />
             <local:MyListItem x:Name="NavAbout" IsScaleAnimationEnabled="False" Type="RadioBox"

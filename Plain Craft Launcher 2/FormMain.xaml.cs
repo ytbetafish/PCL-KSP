@@ -1479,6 +1479,7 @@ public partial class FormMain
                                     "language" => new Pages.PageLanguage(),
                                     "appearance" => new Pages.PageAppearance(),
                                     "misc" => new Pages.PageMisc(),
+                                    "log" => new Pages.PageLog(),
                                     _ => new Pages.PageAbout(),
                                 };
                                 if (PanMainRight.Child is MyPageRight oldRight) oldRight.PageOnExit();
@@ -1495,6 +1496,7 @@ public partial class FormMain
                             "language" => new Pages.PageLanguage(),
                             "appearance" => new Pages.PageAppearance(),
                             "misc" => new Pages.PageMisc(),
+                            "log" => new Pages.PageLog(),
                             _ => new Pages.PageAbout(),
                         };
                         PageChangeAnim(settingsLeft, right);
