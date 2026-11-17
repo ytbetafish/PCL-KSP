@@ -86,28 +86,8 @@ public sealed partial class TelemetryService
     // 错误上报
     public static void ReportException(Exception ex, string plain, LogLevel level)
     {
-        // Building the event parses the whole stack trace, which is wasted work while telemetry is off.
-        if (!SentrySdk.IsEnabled) return;
-
-        var sentryEvent = new SentryEvent(ex)
-        {
-            Level = level.RealLevel() switch
-            {
-                LogLevel.Fatal => SentryLevel.Fatal,
-                LogLevel.Error => SentryLevel.Error,
-                LogLevel.Warning => SentryLevel.Warning,
-                LogLevel.Info => SentryLevel.Info,
-                LogLevel.Debug or LogLevel.Trace => SentryLevel.Debug,
-                _ => throw new ArgumentOutOfRangeException(nameof(level))
-            }
-        };
-
-        if (!string.IsNullOrWhiteSpace(plain))
-        {
-            sentryEvent.Message = new SentryMessage { Formatted = plain };
-        }
-        
-        SentrySdk.CaptureEvent(sentryEvent);
+        // PKL: 已掐断异常上报到 Sentry，方法保留为空实现以兼容日志调用。
+        return;
     }
 
     // 设备环境上报
@@ -158,60 +138,8 @@ public sealed partial class TelemetryService
     [LifecycleStart]
     private static async Task _StartAsync()
     {
-        if (!Config.System.Telemetry) return;
-        if (!await BuildProvenance.IsTrustedAsync().ConfigureAwait(false))
-        {
-            IsBuildUntrusted = true;
-            Context.Warn($"当前版本 {Basics.VersionName} 的文件哈希与官方发布资产不匹配，遥测上报已禁用");
-            return;
-        }
-
-        _InitSentry();
-        
-        var appDataFolder = Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData);
-
-        // stun test
-        StunClient5389UDP? natTest = null;
-        var miWifiIps = await DnsQuery.Instance.QueryForIpAsync(STUN_SERVER_ADDR).ConfigureAwait(false);
-        try
-        {
-            miWifiIps ??= await Dns.GetHostAddressesAsync(STUN_SERVER_ADDR).ConfigureAwait(false);
-        } catch(Exception) { /* Ignore dns error */ }
-        
-        if (miWifiIps is not null && miWifiIps.Length != 0)
-        {
-            natTest = new StunClient5389UDP(new IPEndPoint(miWifiIps.First(), 3478),
-                new IPEndPoint(IPAddress.Any, 0));
-            await natTest.QueryAsync().ConfigureAwait(false);
-        }
-
-        var telemetry = new TelemetryDeviceEnvironment
-        {
-            Tag = "Telemetry",
-            Id = Utils.Secret.Identify.LauncherId,
-            Os = Environment.OSVersion.Version.Build,
-            Is64Bit = Environment.Is64BitOperatingSystem,
-            IsArm64 = RuntimeInformation.OSArchitecture.Equals(Architecture.Arm64),
-            Launcher = Basics.VersionName,
-            LauncherBranch = Config.Update.UpdateChannel switch
-            {
-                UpdateChannel.Release => "Release",
-                UpdateChannel.Beta => "Beta",
-                UpdateChannel.Dev => "Dev",
-                _ => "Unknown"
-            },
-            UsedOfficialPcl =
-                bool.TryParse(Registry.GetValue(@"HKEY_CURRENT_USER\Software\PCL", "SystemEula", "false") as string,
-                    out var officialPcl) && officialPcl,
-            UsedHmcl = Directory.Exists(Path.Combine(appDataFolder, ".hmcl")),
-            UsedBakaXl = Directory.Exists(Path.Combine(appDataFolder, "BakaXL")),
-            Memory = KernelInterop.GetPhysicalMemoryBytes().Total,
-            NatMapBehaviour = natTest?.State.MappingBehavior.ToString(),
-            NatFilterBehaviour = natTest?.State.FilteringBehavior.ToString(),
-            Ipv6Status = NetworkInterfaceUtils.GetIPv6Status().ToString()
-        };
-        
-        _ReportDeviceEnvironment(telemetry);
+        // PKL: 已掐断 Sentry 初始化、STUN 探测与设备环境上报，不再向 PCL-CE 后端发送任何数据。
+        await Task.CompletedTask;
     }
     
     // 用来细分过滤 SocketException 的过滤器，我觉得应该除了遥测服务之外没有其他东西会用到这破玩意儿

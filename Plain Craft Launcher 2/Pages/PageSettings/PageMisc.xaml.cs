@@ -11,7 +11,6 @@ public partial class PageMisc
         InitializeComponent();
         _loading = true;
         CheckHwAccel.Checked = Config.System.DisableHardwareAcceleration;
-        CheckTelemetry.Checked = Config.System.Telemetry;
         CheckDoH.Checked = Config.Network.EnableDoH;
         CheckDebugMode.Checked = Config.Debug.Enabled;
         SliderAnim.Value = Config.Debug.AnimationSpeed;
@@ -23,12 +22,6 @@ public partial class PageMisc
     {
         if (_loading) return;
         Config.System.DisableHardwareAcceleration = CheckHwAccel.Checked == true;
-    }
-
-    private void CheckTelemetry_Change(object sender, bool user)
-    {
-        if (_loading) return;
-        Config.System.Telemetry = CheckTelemetry.Checked == true;
     }
 
     private void CheckDoH_Change(object sender, bool user)

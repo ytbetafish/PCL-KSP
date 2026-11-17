@@ -10,8 +10,6 @@
                     <StackPanel Orientation="Vertical">
                         <local:MyCheckBox x:Name="CheckHwAccel" Text="禁用硬件加速" Height="28"
                                            Change="CheckHwAccel_Change" />
-                        <local:MyCheckBox x:Name="CheckTelemetry" Text="启用遥测数据收集" Height="28" Margin="0,12,0,0"
-                                          Change="CheckTelemetry_Change" />
                     </StackPanel>
                 </StackPanel>
             </local:MyCard>
