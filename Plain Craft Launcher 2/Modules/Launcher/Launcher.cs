@@ -1,4 +1,5 @@
 using System.IO;
+using System.Threading;
 using System.Windows;
 using System.Windows.Controls;
 using Microsoft.Win32;
@@ -101,13 +102,32 @@ public static partial class Launcher
     /// <summary>主时钟拖拽控件。KSP 改造后保留字段以兼容残留调用。</summary>
     public static MySlider? dragControl;
 
+    private static bool _mainTimerStarted;
+
     /// <summary>
-    ///     KSP 改造后：原主时钟（任务栏进度/愚人节彩蛋）已随 MC 导航剥离，
-    ///     此方法保留为空实现以兼容启动调用。
+    ///     主时钟：后台线程每约 49ms 在 UI 线程调用一次 <see cref="FormMain.DragTick"/>，
+    ///     在鼠标在窗口外松开或抬起事件丢失时兜底释放滑块拖拽（对齐原版 PCL-CE 主时钟）。
     /// </summary>
     public static void TimerMainStart()
     {
-        // 主时钟已剥离。
+        if (_mainTimerStarted)
+            return;
+        _mainTimerStarted = true;
+        Common.RunInNewThread(() =>
+        {
+            while (true)
+            {
+                try
+                {
+                    Common.RunInUi(() => frmMain?.DragTick());
+                }
+                catch
+                {
+                    // 时钟回调异常不终止时钟线程
+                }
+                Thread.Sleep(49);
+            }
+        }, "Timer Main");
     }
 
     /// <summary>
