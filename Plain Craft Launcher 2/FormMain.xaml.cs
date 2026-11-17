@@ -1478,6 +1478,7 @@ public partial class FormMain
                                     "translate" => new Pages.PageTranslate(),
                                     "language" => new Pages.PageLanguage(),
                                     "appearance" => new Pages.PageAppearance(),
+                                    "misc" => new Pages.PageMisc(),
                                     _ => new Pages.PageAbout(),
                                 };
                                 if (PanMainRight.Child is MyPageRight oldRight) oldRight.PageOnExit();
@@ -1493,6 +1494,7 @@ public partial class FormMain
                             "translate" => new Pages.PageTranslate(),
                             "language" => new Pages.PageLanguage(),
                             "appearance" => new Pages.PageAppearance(),
+                            "misc" => new Pages.PageMisc(),
                             _ => new Pages.PageAbout(),
                         };
                         PageChangeAnim(settingsLeft, right);

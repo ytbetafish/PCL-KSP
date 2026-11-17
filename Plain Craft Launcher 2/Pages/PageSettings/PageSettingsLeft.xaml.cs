@@ -17,6 +17,7 @@ public partial class PageSettingsLeft
         NavTranslate.Check += (s, e) => NavChanged?.Invoke("translate");
         NavLanguage.Check += (s, e) => NavChanged?.Invoke("language");
         NavAppearance.Check += (s, e) => NavChanged?.Invoke("appearance");
+        NavMisc.Check += (s, e) => NavChanged?.Invoke("misc");
         NavAbout.Check += (s, e) => NavChanged?.Invoke("about");
     }
 
@@ -30,6 +31,7 @@ public partial class PageSettingsLeft
             case "translate": NavTranslate.Checked = true; break;
             case "language": NavLanguage.Checked = true; break;
             case "appearance": NavAppearance.Checked = true; break;
+            case "misc": NavMisc.Checked = true; break;
             case "about": NavAbout.Checked = true; break;
         }
     }
