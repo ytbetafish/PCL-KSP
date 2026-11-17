@@ -15,6 +15,7 @@ public partial class PageSettingsLeft
         NavMods.Check += (s, e) => NavChanged?.Invoke("mods");
         NavCkan.Check += (s, e) => NavChanged?.Invoke("ckan");
         NavTranslate.Check += (s, e) => NavChanged?.Invoke("translate");
+        NavLanguage.Check += (s, e) => NavChanged?.Invoke("language");
         NavAbout.Check += (s, e) => NavChanged?.Invoke("about");
     }
 
@@ -26,6 +27,7 @@ public partial class PageSettingsLeft
             case "mods": NavMods.Checked = true; break;
             case "ckan": NavCkan.Checked = true; break;
             case "translate": NavTranslate.Checked = true; break;
+            case "language": NavLanguage.Checked = true; break;
             case "about": NavAbout.Checked = true; break;
         }
     }

@@ -1476,6 +1476,7 @@ public partial class FormMain
                                     "mods" => new Pages.PageMods(),
                                     "ckan" => new Pages.PageCkan(),
                                     "translate" => new Pages.PageTranslate(),
+                                    "language" => new Pages.PageLanguage(),
                                     _ => new Pages.PageAbout(),
                                 };
                                 if (PanMainRight.Child is MyPageRight oldRight) oldRight.PageOnExit();
@@ -1489,6 +1490,7 @@ public partial class FormMain
                             "mods" => new Pages.PageMods(),
                             "ckan" => new Pages.PageCkan(),
                             "translate" => new Pages.PageTranslate(),
+                            "language" => new Pages.PageLanguage(),
                             _ => new Pages.PageAbout(),
                         };
                         PageChangeAnim(settingsLeft, right);
