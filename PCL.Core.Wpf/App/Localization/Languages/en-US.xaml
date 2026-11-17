@@ -3284,7 +3284,7 @@
 
     <sys:String x:Key="Setup.Update.Changelog.Empty">The developers seem to have forgotten to provide an update summary... Maybe click below to view the full changelog?</sys:String>
     <sys:String x:Key="Setup.Update.Changelog.MoreInfo">More information about this update...</sys:String>
-    <sys:String x:Key="Setup.Update.Changelog.Placeholder">PCL CE 2.14.0 brings a refreshing new design, several Pigeon smart features, and a delightful cross-instance workflow to boost your productivity.</sys:String>
+    <sys:String x:Key="Setup.Update.Changelog.Placeholder">No changelog available.</sys:String>
     <sys:String x:Key="Setup.Update.Changelog.Title">About this update</sys:String>
     <sys:String x:Key="Setup.Update.Changelog.Unavailable">No changelog available...</sys:String>
     <sys:String x:Key="Setup.Update.Changelog.View">Full changelog</sys:String>

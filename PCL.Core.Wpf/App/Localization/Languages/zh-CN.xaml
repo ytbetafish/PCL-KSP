@@ -3284,7 +3284,7 @@
 
     <sys:String x:Key="Setup.Update.Changelog.Empty">开发者似乎忘记提供更新摘要了...也许你可以点击下方看看完整更新日志？</sys:String>
     <sys:String x:Key="Setup.Update.Changelog.MoreInfo">有关此更新的更多信息...</sys:String>
-    <sys:String x:Key="Setup.Update.Changelog.Placeholder">PCL CE 2.14.0 带来了让人眼前一亮的新设计和 Pigeon 智能的多项功能，同时还带来了令人愉快的跨实例工作方式，助你提高工作效率。</sys:String>
+    <sys:String x:Key="Setup.Update.Changelog.Placeholder">暂无更新日志。</sys:String>
     <sys:String x:Key="Setup.Update.Changelog.Title">关于此更新</sys:String>
     <sys:String x:Key="Setup.Update.Changelog.Unavailable">没有可用的更新日志...</sys:String>
     <sys:String x:Key="Setup.Update.Changelog.View">查看更新日志</sys:String>

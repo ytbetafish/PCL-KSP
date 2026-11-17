@@ -2,7 +2,6 @@
   "name": "PKL - KSP Launcher",
   "version": {
     "base": "1.0.0",
-    "upstream": "2.15.1",
     "suffix": "",
     "code": 99999
   },

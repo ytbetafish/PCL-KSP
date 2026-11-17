@@ -8,7 +8,6 @@ public static partial class Common
 {
     public static readonly string VersionBaseName = Basics.VersionName;
     public static readonly string VersionStandardCode = Basics.Metadata.Version.StandardVersion;
-    public static readonly string UpstreamVersion = Basics.Metadata.Version.UpstreamVersion;
     public static readonly string CommitHash = Basics.Metadata.Version.Commit;
     public static readonly string CommitHashShort = Basics.Metadata.Version.CommitDigest;
     public static readonly int VersionCode = Basics.VersionCode;
@@ -78,11 +77,11 @@ public static partial class Common
         $@"{Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "PCL")}\";
 
     /// <summary>
-    ///     AppData 中的 PCLCE 配置文件夹路径，以 \ 结尾。
+    ///     AppData 中的 PKL 配置文件夹路径，以 \ 结尾。
     /// </summary>
     public static string pathAppdataConfig =
         Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData)
-        + (VersionBranchName == "Debug" ? @"\.pclcedebug\" : @"\.pclce\");
+        + (VersionBranchName == "Debug" ? @"\.\pkldebug\" : @"\.\pkl\");
 
     /// <summary>
     ///     纯 ASCII 路径，用于避免部分程序对非 ASCII 路径的兼容问题。

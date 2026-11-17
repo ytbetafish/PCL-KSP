@@ -327,7 +327,8 @@
                                        HorizontalAlignment="Left"
                                        Margin="18,0,0,0"
                                        Foreground="White"
-                                       FontSize="17"
+                                       FontSize="19"
+                                       FontWeight="Bold"
                                        VerticalAlignment="Center" />
                             <local:MyImage Grid.Column="0"
                                            x:Name="ImageTitleLogo"

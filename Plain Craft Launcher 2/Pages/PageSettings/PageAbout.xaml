@@ -9,7 +9,7 @@
                 <StackPanel Margin="25,37,25,15">
                     <TextBlock Text="PKL - Kerbal Space Program Launcher" FontSize="16" FontWeight="Bold" Margin="0,0,0,15" />
                     <TextBlock Text="基于 PCL-CE 二次开发的 KSP 启动器" Margin="0,0,0,10" Foreground="#888" />
-                    <TextBlock Text="版本: v1.0.0" Margin="0,0,0,5" />
+                    <TextBlock x:Name="LabVersion" Margin="0,0,0,5" />
                     <TextBlock Text="开源协议: GPL-3.0" Margin="0,0,0,20" />
                     <TextBlock Text="致谢" FontSize="14" FontWeight="Bold" Margin="0,0,0,10" />
                     <TextBlock Text="• PCL-CE (Plain Craft Launcher Community Edition) - 原版启动器框架" Margin="0,0,0,5" />

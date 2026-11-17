@@ -55,7 +55,7 @@ public partial class FormMain
                 Buttons = DialogButtons.Create("Common.Action.Confirm", "Main.UpdateLog.FullChangelog"),
                 ForceWait = true
             }).Result?.Button ?? 0) ==
-                2) Common.OpenWebsite("https://github.com/PCL-Community/PCL2-CE/releases");
+                2) Common.OpenWebsite("https://github.com/ytbetafish/PKL/releases");
         }, "UpdateLog Output");
     }
 
@@ -208,6 +208,8 @@ public partial class FormMain
         // Top = (GetWPFSize(My.Computer.Screen.WorkingArea.Height) - Height) / 2
         // Left = (GetWPFSize(My.Computer.Screen.WorkingArea.Width) - Width) / 2
         isSizeSaveable = true;
+        // #23: Warm up CKAN service and catalog on a background thread early at startup; does not block STA.
+        _ = System.Threading.Tasks.Task.Run(() => _ = Launcher.Ckan);
         ShowWindowToTop();
         var hwndSource = (HwndSource)PresentationSource.FromVisual(this);
         hwndSource.AddHook(WndProc);
@@ -257,7 +259,7 @@ public partial class FormMain
                         Content = $"{hint}{"\r\n"}{"\r\n"}{Lang.Text("Main.SpecialVersion.HideHintNotice")}",
                         Buttons = DialogButtons.From(DialogButton.Create(Lang.Text("Main.SpecialVersion.IUnderstand")), DialogButton.Create(Lang.Text("Main.SpecialVersion.OpenDownloadPageAndExit"), () =>
                         {
-                            Common.OpenWebsite("https://github.com/PCL-Community/PCL2-CE/releases/latest");
+                            Common.OpenWebsite("https://github.com/ytbetafish/PKL/releases/latest");
                             EndProgram(false);
                         })),
                         IsWarn = true,
@@ -623,7 +625,7 @@ public partial class FormMain
             if (!isLogShown)
             {
                 Common.FeedbackInfo();
-                Common.Log("请在 https://github.com/PCL-Community/PCL2-CE/issues 提交错误报告，以便于社区解决此问题！（这也有可能是原版 PCL 的问题）");
+                Common.Log("请在 https://github.com/ytbetafish/PKL/issues 提交错误报告，以便于社区解决此问题！（这也有可能是原版 PCL 的问题）");
                 isLogShown = true;
                 Common.ShellOnly(LogWrapper.CurrentLogger.CurrentLogFiles.Last());
             }
@@ -993,6 +995,11 @@ public partial class FormMain
         base.OnActivated(e);
         if (Hidden)
             Hidden = false;
+    }
+
+    protected override void OnDeactivated(EventArgs e)
+    {
+        base.OnDeactivated(e);
     }
 
     /// <summary>

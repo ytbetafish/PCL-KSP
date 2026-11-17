@@ -199,47 +199,35 @@ public partial class Setup
 
         if (value is >= 0 and <= 4)
         {
-            main.ShapeTitleLogo.Visibility = ToVisibility(value == 1);
-            main.ShapeHMCLTitleLogo.Visibility = ToVisibility(value == 4);
-            main.BtnTitleHelp.Visibility = ToVisibility(value == 4);
-            main.LabTitleLogo.Visibility = ToVisibility(value == 2);
-            main.ImageTitleLogo.Visibility = ToVisibility(value == 3);
-
-            if (value != 4)
-                main.CELogo.Visibility = ToVisibility(value != 0);
-
-            switch (value)
-            {
-                case 2:
-                    _ = Config.Preference.WindowTitleCustomText;
-                    break;
-
-                case 3:
-                    try
-                    {
-                        main.ImageTitleLogo.Source =
-                            Common.ExePath + @"PCL\Logo.png";
-                    }
-                    catch (Exception ex)
-                    {
-                        main.ImageTitleLogo.Source = null;
-                        Common.Log(
-                            ex,
-                            "显示标题栏图片失败",
-                            Common.LogLevel.Msgbox,
-                            userSummary: Lang.Text("Setup.Error.OperationFailed"));
-                    }
-
-                    break;
-            }
+            // PKL 品牌：固定显示文本 logo，隐藏原版矢量/图片/HMCL logo 与 CE 角标。
+            main.ShapeTitleLogo.Visibility = Visibility.Collapsed;
+            main.ShapeHMCLTitleLogo.Visibility = Visibility.Collapsed;
+            main.BtnTitleHelp.Visibility = Visibility.Collapsed;
+            main.ImageTitleLogo.Visibility = Visibility.Collapsed;
+            main.CELogo.Visibility = Visibility.Collapsed;
+            main.LabTitleLogo.Visibility = Visibility.Visible;
         }
 
         UiLogoLeft(Config.Preference.TopBarLeftAlign);
     }
 
+    /// <summary>
+    ///     标题栏默认品牌标题：PKL 品牌名 + 自有版本号（不含上游版本）。
+    /// </summary>
+    public static string BrandTitle => "PKL " + Basics.VersionName;
+
     public static void UiLogoText(string value)
     {
-        Launcher.frmMain?.LabTitleLogo.Text = value;
+        // PKL 品牌：空文本或残留的原版品牌名回退为默认品牌标题（含自有版本号）。
+        var text = (value ?? string.Empty).Trim();
+        if (text.Length == 0 ||
+            text.Equals("PCL", StringComparison.OrdinalIgnoreCase) ||
+            text.StartsWith("PCL-", StringComparison.OrdinalIgnoreCase) ||
+            text.StartsWith("PCL ", StringComparison.OrdinalIgnoreCase))
+        {
+            text = "PKL";
+        }
+        Launcher.frmMain?.LabTitleLogo.Text = text;
     }
 
     public static void UiLogoLeft(bool value)

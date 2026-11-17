@@ -16,6 +16,8 @@
             <TextBlock x:Name="LabKspVersion" Text="KSP" FontSize="18" Opacity="0.9" />
             <TextBlock x:Name="LabKspPath" Text="" FontSize="12" Opacity="0.6"
                        Margin="0,6,0,0" TextWrapping="Wrap" />
+            <TextBlock x:Name="LabLauncherVersion" Text="" FontSize="12" Opacity="0.6"
+                       Margin="0,4,0,0" />
         </StackPanel>
 
         <!-- Row 1：空白 -->

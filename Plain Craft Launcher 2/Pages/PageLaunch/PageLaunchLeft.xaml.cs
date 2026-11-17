@@ -13,6 +13,7 @@ public partial class PageLaunchLeft
     public PageLaunchLeft()
     {
         InitializeComponent();
+        LabLauncherVersion.Text = "PKL v" + PCL.Core.App.Basics.VersionName;
         Loaded += (_, _) => RefreshPath();
         Unloaded += (_, _) => DetachKspWatcher();
     }

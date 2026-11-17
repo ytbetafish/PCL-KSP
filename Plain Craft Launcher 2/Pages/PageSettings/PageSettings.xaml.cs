@@ -17,6 +17,7 @@ public partial class PageSettings
     public PageSettings()
     {
         InitializeComponent();
+        LabSettingsVersion.Text = "PKL v" + PCL.Core.App.Basics.VersionName;
         TxtBaseUrl.Text = PklSettings.Current.TranslateBaseUrl;
         TxtApiKey.Text = PklSettings.Current.TranslateApiKey;
         TxtModel.Text = PklSettings.Current.TranslateModel;

@@ -46,7 +46,6 @@ public static class LauncherCommon
 
     public static string VersionStandardCode => Basics.Metadata.Version.StandardVersion;
 
-    public static string UpstreamVersion => Basics.Metadata.Version.UpstreamVersion;
     public static string VersionBaseName => Basics.VersionName;
     public static int VersionCode => Basics.VersionCode;
 

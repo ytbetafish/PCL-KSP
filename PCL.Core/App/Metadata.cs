@@ -6,15 +6,13 @@ namespace PCL.Core.App;
 /// <summary>
 /// 启动器版本信息模型
 /// </summary>
-/// <param name="BaseVersion">基本版本号, 如 <c>2.14.1</c></param>
+/// <param name="BaseVersion">基本版本号, 如 <c>1.0.0</c></param>
 /// <param name="Suffix">后缀, 如 <c>beta.1</c></param>
 /// <param name="Code">内部版本代号, 如 <c>712</c></param>
-/// <param name="UpstreamVersion">上游版本, 如 <c>2.12.0</c></param>
 public sealed record LauncherVersionModel(
     [property: JsonPropertyName("base")] string BaseVersion,
     [property: JsonPropertyName("suffix")] string Suffix,
-    [property: JsonPropertyName("code")] int Code,
-    [property: JsonPropertyName("upstream")] string UpstreamVersion
+    [property: JsonPropertyName("code")] int Code
 ) {
     private static readonly (string Name, int Code) _CompilationBranchInfo =
 #if DEBUG
