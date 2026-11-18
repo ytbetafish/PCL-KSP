@@ -21,7 +21,7 @@
                 </StackPanel>
             </local:MyCard>
 
-            <local:MyCard Margin="0,15" Title="调试">
+            <local:MyCard Margin="0,15" Title="调试" CanSwap="True" IsSwapped="True">
                 <StackPanel Margin="25,37,25,15">
                     <Grid IsSharedSizeScope="True">
                         <Grid.ColumnDefinitions>
