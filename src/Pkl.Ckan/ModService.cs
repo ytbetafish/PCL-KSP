@@ -331,7 +331,7 @@ public sealed class ModService : IModService, IDisposable
                     var r = results[idx];
                     results[idx] = r with
                     {
-                        Downloads = sd.Downloads,
+                        Downloads = sd.Downloads > 0 ? sd.Downloads : r.Downloads,
                         Author = string.IsNullOrEmpty(r.Author) ? sd.Author : r.Author,
                         IconUrl = string.IsNullOrEmpty(r.IconUrl) ? sd.Background : r.IconUrl,
                         Description = string.IsNullOrEmpty(r.Description) ? sd.ShortDescription : r.Description,
@@ -653,6 +653,7 @@ public sealed class ModService : IModService, IDisposable
         }
 
         var repos = DistinctRepos(reg.Repositories.Values);
+        var byId = new Dictionary<string, CkanModule>(System.StringComparer.OrdinalIgnoreCase);
         foreach (var avail in _repoData.GetAllAvailableModules(repos))
         {
             CkanModule? best = null;
@@ -664,10 +665,21 @@ public sealed class ModService : IModService, IDisposable
                 }
             }
 
-            if (best != null)
+            if (best == null)
             {
-                yield return best;
+                continue;
             }
+
+            if (!byId.TryGetValue(best.identifier, out var existing) ||
+                best.version.CompareTo(existing.version) > 0)
+            {
+                byId[best.identifier] = best;
+            }
+        }
+
+        foreach (var mod in byId.Values)
+        {
+            yield return mod;
         }
     }
 
