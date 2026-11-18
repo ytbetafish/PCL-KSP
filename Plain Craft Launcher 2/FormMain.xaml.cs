@@ -26,7 +26,7 @@ namespace PCL;
 public partial class FormMain
 {
     private static PageSettingsLeft? settingsLeft;
-    private static string settingsNav = "ksp";
+    private static string settingsNav = "appearance";
     // 愚人节鼠标位置
     public MouseEventArgs lastMouseArg;
 
@@ -1461,8 +1461,6 @@ public partial class FormMain
                                 settingsNav = key;
                                 FrameworkElement right = key switch
                                 {
-                                    "ksp" => new Pages.PageKspInstance(),
-                                    "mods" => new Pages.PageMods(),
                                     "ckan" => new Pages.PageCkan(),
                                     "translate" => new Pages.PageTranslate(),
                                     "language" => new Pages.PageLanguage(),
@@ -1478,8 +1476,6 @@ public partial class FormMain
                         }
                         FrameworkElement right = settingsNav switch
                         {
-                            "ksp" => new Pages.PageKspInstance(),
-                            "mods" => new Pages.PageMods(),
                             "ckan" => new Pages.PageCkan(),
                             "translate" => new Pages.PageTranslate(),
                             "language" => new Pages.PageLanguage(),

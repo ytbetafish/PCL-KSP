@@ -10,9 +10,7 @@ public partial class PageSettingsLeft
     public PageSettingsLeft()
     {
         InitializeComponent();
-        NavKsp.Checked = true;
-        NavKsp.Check += (s, e) => NavChanged?.Invoke("ksp");
-        NavMods.Check += (s, e) => NavChanged?.Invoke("mods");
+        NavAppearance.Checked = true;
         NavCkan.Check += (s, e) => NavChanged?.Invoke("ckan");
         NavTranslate.Check += (s, e) => NavChanged?.Invoke("translate");
         NavLanguage.Check += (s, e) => NavChanged?.Invoke("language");
@@ -26,8 +24,6 @@ public partial class PageSettingsLeft
     {
         switch (key)
         {
-            case "ksp": NavKsp.Checked = true; break;
-            case "mods": NavMods.Checked = true; break;
             case "ckan": NavCkan.Checked = true; break;
             case "translate": NavTranslate.Checked = true; break;
             case "language": NavLanguage.Checked = true; break;
