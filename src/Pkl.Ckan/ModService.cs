@@ -631,12 +631,16 @@ public sealed class ModService : IModService, IDisposable
         await _catalogGate.WaitAsync(cancellationToken).ConfigureAwait(false);
         try
         {
-            lock (_repoLock)
+            var enumList = await Task.Run(() =>
             {
-                var enumList = EnumerateCatalog().ToList();
-                Trace("Enum ToList done");
-                return enumList;
-            }
+                lock (_repoLock)
+                {
+                    var list = EnumerateCatalog().ToList();
+                    Trace("Enum ToList done");
+                    return list;
+                }
+            }, cancellationToken).ConfigureAwait(false);
+            return enumList;
         }
         finally
         {
