@@ -676,6 +676,38 @@ public class MyPageRight : AdornerDecorator
     }
 
     /// <summary>
+    ///     复用控件二次进入时，重置退出动画残留的 Opacity / IsHitTestVisible / RenderTransform。
+    ///     异步刷新完成后才切换到 Visible 的内容容器，在进入动画遍历时刻仍为 Collapsed、未被本次进入补间覆盖，
+    ///     退出动画把其 Opacity 减到 0 后会残留，需在回填列表后显式复位。
+    /// </summary>
+    public void ResetAnimState(FrameworkElement root)
+    {
+        if (root is null)
+            return;
+        ResetAnimStateRecursive(root);
+    }
+
+    private static void ResetAnimStateRecursive(FrameworkElement element)
+    {
+        // 行内背景装饰（RectBack Border）与阴影装饰（MyDropShadow Decorator）由自身 hover / 阴影动画管理
+        // Opacity 与 IsHitTestVisible；页面退出动画集合不包含它们，复位时跳过，避免把未 hover 的背景框抬到可见。
+        if (element is Border || element is Decorator)
+            return;
+
+        element.Opacity = 1d;
+        element.IsHitTestVisible = true;
+        if (element.RenderTransform is TranslateTransform)
+            element.RenderTransform = null;
+
+        if (element is ContentControl { Content: FrameworkElement content })
+            ResetAnimStateRecursive(content);
+        else if (element is Panel panel)
+            foreach (var child in panel.Children)
+                if (child is FrameworkElement fe)
+                    ResetAnimStateRecursive(fe);
+    }
+
+    /// <summary>
     ///     禁用页面切换动画的控件列表。
     /// </summary>
     public List<FrameworkElement> disabledPageAnimControls = new();

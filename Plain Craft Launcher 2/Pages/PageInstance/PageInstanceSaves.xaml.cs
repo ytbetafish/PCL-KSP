@@ -1,6 +1,5 @@
 using System;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
@@ -16,13 +15,11 @@ namespace PCL;
 /// </summary>
 public partial class PageInstanceSaves : IPageView
 {
-    private readonly Stopwatch _sw = Stopwatch.StartNew();
     private bool _refreshed;
 
     public PageInstanceSaves()
     {
         InitializeComponent();
-        Common.Log($"[Saves] 构造完成 {_sw.ElapsedMilliseconds} ms");
         Loaded += (_, _) => RefreshOnNavigate();
         Unloaded += (_, _) => _refreshed = false;
     }
@@ -38,10 +35,8 @@ public partial class PageInstanceSaves : IPageView
         if (_refreshed)
             return;
         _refreshed = true;
-        Common.Log($"[Saves] RefreshOnNavigate 开始 {_sw.ElapsedMilliseconds} ms");
 
         PanLoad.Visibility = Visibility.Visible;
-        // 子页控件缓存复用：每次进入显式重置加载器为运行态，避免转圈动画不重启。
         Load.State = new MyLoadingStateSimulator { LoadingState = LoadingState.Run };
         PanListCard.Visibility = Visibility.Collapsed;
 
@@ -51,14 +46,12 @@ public partial class PageInstanceSaves : IPageView
         List<string> dirs;
         try
         {
-            var t0 = _sw.ElapsedMilliseconds;
             dirs = await Task.Run(() =>
             {
                 if (string.IsNullOrEmpty(savesDir) || !Directory.Exists(savesDir))
                     return new List<string>();
                 return Directory.GetDirectories(savesDir).OrderBy(Path.GetFileName).ToList();
             });
-            Common.Log($"[Saves] 后台枚举完成 {_sw.ElapsedMilliseconds} ms（枚举段 {_sw.ElapsedMilliseconds - t0} ms），目录 {dirs.Count}");
         }
         catch (Exception ex)
         {
@@ -85,7 +78,7 @@ public partial class PageInstanceSaves : IPageView
 
         PanLoad.Visibility = Visibility.Collapsed;
         PanListCard.Visibility = Visibility.Visible;
-        Common.Log($"[Saves] 回填完成 {_sw.ElapsedMilliseconds} ms");
+        ResetAnimState(PanListCard);
     }
 
     private MyListItem CreateItem(string dir)

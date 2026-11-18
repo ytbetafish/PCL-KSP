@@ -61,8 +61,6 @@ public partial class PageInstanceCompResource : IPageView
         _refreshed = true;
 
         PanLoad.Visibility = Visibility.Visible;
-        // 子页控件被静态缓存复用，二次进入时不再触发 Loaded，内置模拟器会停在卸载时的 Stop；
-        // 每次进入显式重置加载器为运行态，确保转圈动画重新启动。
         Load.State = new MyLoadingStateSimulator { LoadingState = LoadingState.Run };
         PanListCard.Visibility = Visibility.Collapsed;
         PanEmpty.Visibility = Visibility.Collapsed;
@@ -83,6 +81,7 @@ public partial class PageInstanceCompResource : IPageView
         RenderList();
         PanLoad.Visibility = Visibility.Collapsed;
     }
+
 
     private async Task AttachInstanceAsync()
     {
@@ -136,6 +135,9 @@ public partial class PageInstanceCompResource : IPageView
         PanListCard.Visibility = Visibility.Visible;
         foreach (var mod in list)
             PanList.Children.Add(CreateItem(mod));
+
+        ResetAnimState(PanListCard);
+        ResetAnimState(PanEmpty);
     }
 
     private static readonly Brush[] _initialBrushes =
