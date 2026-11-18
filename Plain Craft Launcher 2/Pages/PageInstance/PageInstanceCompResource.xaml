@@ -15,10 +15,41 @@
                         <local:MyButton x:Name="BtnManageOpen" Click="BtnOpenFolder_Click" MinWidth="110"
                                          Text="打开模组目录" Padding="13,7" Margin="0,7,15,0"
                                          HorizontalAlignment="Left" ColorType="Highlight" />
+                        <local:MyButton x:Name="BtnManageDownload" Click="BtnManageDownload_Click" MinWidth="110"
+                                         Text="下载新资源" Padding="13,7" Margin="0,7,15,0" HorizontalAlignment="Left" />
+                        <local:MyButton x:Name="BtnManageSelectAll" Click="BtnManageSelectAll_Click" MinWidth="110"
+                                         Text="全选" Padding="13,7" Margin="0,7,15,0" HorizontalAlignment="Left" />
+                        <local:MyButton x:Name="BtnManageInfoExport" Click="BtnManageInfoExport_Click" MinWidth="110"
+                                         Text="导出信息" Padding="13,7" Margin="0,7,15,0" HorizontalAlignment="Left"
+                                         ToolTip="将已安装模组清单导出为文本或 CSV 文件" />
                     </WrapPanel>
                 </local:MyCard>
-                <local:MyCard x:Name="PanListCard" Margin="0,0,0,15" Title="模组" MinHeight="55" Visibility="Collapsed">
-                    <StackPanel x:Name="PanList" Margin="20,40,18,10" Orientation="Vertical" VerticalAlignment="Top" />
+                <local:MyCard Margin="0,0,0,15" Title="更新进度" x:Name="PanProgress" Visibility="Collapsed">
+                    <StackPanel Margin="25,38,23,18">
+                        <TextBlock x:Name="LabProgress" Text="准备中…" FontSize="12" Opacity="0.8" Margin="0,0,0,6"
+                                   TextTrimming="CharacterEllipsis" />
+                        <ProgressBar x:Name="BarProgress" Height="6" IsIndeterminate="True" />
+                    </StackPanel>
+                </local:MyCard>
+                <local:MyCard x:Name="PanListCard" Margin="0,0,0,15" Title=" " MinHeight="55" Visibility="Collapsed">
+                    <StackPanel x:Name="PanFilter" Margin="15,13,0,0" Orientation="Horizontal"
+                                VerticalAlignment="Top" HorizontalAlignment="Left" Height="28">
+                        <local:MyRadioButton Tag="0" ColorType="Highlight" VerticalAlignment="Center" Margin="2,0"
+                                             Text="全部" x:Name="BtnFilterAll" LabTextMargin="-2,0,8,0" Check="ChangeFilter" Checked="True" />
+
+                        <local:MyRadioButton Tag="3" ColorType="Highlight" VerticalAlignment="Center" Margin="2,0"
+                                             Text="可更新" x:Name="BtnFilterCanUpdate" LabTextMargin="-2,0,8,0" Check="ChangeFilter" Visibility="Collapsed" />
+                        <local:MyRadioButton Tag="5" ColorType="Highlight" VerticalAlignment="Center" Margin="2,0"
+                                             Text="重复" x:Name="BtnFilterDuplicate" LabTextMargin="-2,0,8,0" Check="ChangeFilter" Visibility="Collapsed" />
+                        <local:MyRadioButton Tag="6" ColorType="Highlight" VerticalAlignment="Center" Margin="2,0"
+                                             Text="收藏" x:Name="BtnFilterFavorites" LabTextMargin="-2,0,8,0" Check="ChangeFilter" Visibility="Collapsed" />
+                    </StackPanel>
+                    <StackPanel Margin="0,13,15,0" Orientation="Horizontal" VerticalAlignment="Top"
+                                HorizontalAlignment="Right" Height="28">
+                        <local:MyIconTextButton x:Name="BtnSort" Click="BtnSortClick" Text="排序：资源名称"
+                                                SvgIcon="lucide/arrow-up-down" />
+                    </StackPanel>
+                    <StackPanel x:Name="PanList" Margin="20,48,18,22" Orientation="Vertical" VerticalAlignment="Top" />
                 </local:MyCard>
                 <local:MyCard x:Name="PanEmpty" HorizontalAlignment="Center" VerticalAlignment="Center" Margin="40" Visibility="Collapsed">
                     <StackPanel Margin="20,17">
@@ -35,6 +66,29 @@
         <local:MyCard x:Name="PanLoad" HorizontalAlignment="Center" VerticalAlignment="Center" Margin="40,0" UseAnimation="False">
             <local:MyLoading Text="正在加载模组…" Margin="20,20,20,17" x:Name="Load" HorizontalAlignment="Center"
                              VerticalAlignment="Center" />
+        </local:MyCard>
+        <!-- 多选底部操作栏（复刻原版 CardSelect，选中数 >0 时出现） -->
+        <local:MyCard x:Name="CardSelect" Visibility="Collapsed" Opacity="0"
+                      HorizontalAlignment="Center" VerticalAlignment="Bottom" Margin="25,25,25,0" UseAnimation="False">
+            <local:MyCard.RenderTransform>
+                <TranslateTransform x:Name="TransSelect" Y="-10" />
+            </local:MyCard.RenderTransform>
+            <TextBlock x:Name="LabSelect" Text="已选择 0 个模组" HorizontalAlignment="Center" VerticalAlignment="Top"
+                       Margin="9" Foreground="{DynamicResource ColorBrush2}" />
+            <StackPanel Orientation="Horizontal" Margin="5,28,5,5">
+                <!-- 批量动作本阶段占位：按钮可用性按选中状态计算，真实 CKAN 动作后续接入 -->
+                <local:MyIconTextButton x:Name="BtnSelectUpdate" Click="BtnSelectUpdate_Click" Text="更新"
+                                        LogoScale="1" SvgIcon="lucide/upload" IsEnabled="False" />
+
+                <local:MyIconTextButton x:Name="BtnSelectFavorites" Click="BtnSelectFavorites_Click" Text="收藏"
+                                        LogoScale="1" SvgIcon="lucide/heart" IsEnabled="False" />
+                <local:MyIconTextButton x:Name="BtnSelectShare" Click="BtnSelectShare_Click" Text="分享所选"
+                                        LogoScale="1" SvgIcon="lucide/share-2" IsEnabled="False" />
+                <local:MyIconTextButton x:Name="BtnSelectDelete" Click="BtnSelectDelete_Click" Text="卸载/删除"
+                                        LogoScale="0.96" SvgIcon="lucide/trash-2" IsEnabled="False" />
+                <local:MyIconTextButton x:Name="BtnSelectCancel" Click="BtnSelectCancel_Click" Text="取消选择"
+                                         LogoScale="0.8" SvgIcon="lucide/x" />
+            </StackPanel>
         </local:MyCard>
     </Grid>
 </local:MyPageRight>
