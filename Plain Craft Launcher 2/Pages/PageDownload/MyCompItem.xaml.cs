@@ -103,6 +103,128 @@ public partial class MyCompItem
 
     public int Uuid = Common.GetUuid();
 
+    #region 勾选状态（对齐原版 MyListItem 的 Checked / Changed / rectCheck 竖条）
+
+    public delegate void ChangedEventHandler(MyCompItem sender, Common.RouteEventArgs e);
+
+    /// <summary>勾选状态发生变化时触发（含程序化与用户操作，由参数区分）。</summary>
+    public event ChangedEventHandler? Changed;
+
+    /// <summary>是否处于可勾选模式。关闭时保持原有“单击进详情”行为不变。</summary>
+    public bool IsCheckable { get; set; }
+
+    /// <summary>供页面记录选中项所用的唯一键（实例页为模组 Identifier）。</summary>
+    public string? SelectKey { get; set; }
+
+    private bool _checked;
+
+    public bool Checked => _checked;
+
+    /// <summary>
+    /// 设置勾选状态。
+    /// </summary>
+    /// <param name="value">是否勾选。</param>
+    /// <param name="user">是否由用户操作引发。</param>
+    /// <param name="anime">是否播放竖条动画。</param>
+    public void SetChecked(bool value, bool user, bool anime)
+    {
+        try
+        {
+            var rawValue = _checked;
+            if (value == _checked)
+                return;
+            _checked = value;
+
+            var changedEventArgs = new Common.RouteEventArgs(user);
+            if (IsInitialized)
+            {
+                Changed?.Invoke(this, changedEventArgs);
+                if (changedEventArgs.handled)
+                {
+                    _checked = rawValue;
+                    return;
+                }
+            }
+
+            RefreshCheckedVisual(value, anime);
+        }
+        catch (Exception ex)
+        {
+            Common.Log(ex, "设置 Checked 失败");
+        }
+    }
+
+    /// <summary>复刻原版 MyListItem.RefreshCheckedVisual：左侧竖条 ScaleY 回弹 / 收缩淡出。</summary>
+    private void RefreshCheckedVisual(bool value, bool anime)
+    {
+        if (RectCheck is null)
+            return;
+
+        if (IsLoaded && !Animations.AniExitsAnyControl() && anime)
+        {
+            var anim = new List<Animations.AniData>();
+            if (value)
+            {
+                // 由无变有：竖条 ScaleY 从 0 弹性放大到 1
+                RectCheck.Height = 20d;
+                RectCheck.VerticalAlignment = VerticalAlignment.Center;
+                RectCheck.Margin = new Thickness(-1, 0d, 0d, 0d);
+                RectCheck.Opacity = 1d;
+
+                var scale = new ScaleTransform(1d, 0d);
+                RectCheck.RenderTransformOrigin = new Point(0.5d, 0.5d);
+                RectCheck.RenderTransform = scale;
+
+                anim.Add(Animations.AaDouble(
+                    i => scale.ScaleY = Math.Max(0d, scale.ScaleY + (double)i),
+                    1d - scale.ScaleY,
+                    300,
+                    ease: new Animations.AniEaseOutBack(Animations.AniEasePower.Weak)));
+            }
+            else
+            {
+                // 由有变无：竖条 ScaleY 收缩到 0 并淡出
+                if (RectCheck.RenderTransform is not ScaleTransform)
+                {
+                    RectCheck.RenderTransformOrigin = new Point(0.5d, 0.5d);
+                    RectCheck.RenderTransform = new ScaleTransform(1d, 1d);
+                }
+
+                var scale = (ScaleTransform)RectCheck.RenderTransform;
+                anim.Add(Animations.AaDouble(
+                    i => scale.ScaleY = Math.Max(0d, scale.ScaleY + (double)i),
+                    -scale.ScaleY,
+                    120,
+                    ease: new Animations.AniEaseInFluent(Animations.AniEasePower.Weak)));
+                anim.Add(Animations.AaOpacity(RectCheck, -RectCheck.Opacity, 70, 40));
+            }
+
+            Animations.AniStart(anim, "MyCompItem Checked " + Uuid);
+        }
+        else
+        {
+            Animations.AniStop("MyCompItem Checked " + Uuid);
+            if (value)
+            {
+                RectCheck.Height = 20d;
+                RectCheck.Margin = new Thickness(-1, 0d, 0d, 0d);
+                RectCheck.Opacity = 1d;
+                RectCheck.VerticalAlignment = VerticalAlignment.Center;
+                RectCheck.RenderTransform = null;
+            }
+            else
+            {
+                RectCheck.Height = 0d;
+                RectCheck.Margin = new Thickness(-1, 0d, 0d, 0d);
+                RectCheck.Opacity = 0d;
+                RectCheck.VerticalAlignment = VerticalAlignment.Center;
+                RectCheck.RenderTransform = null;
+            }
+        }
+    }
+
+    #endregion
+
     public string Logo
     {
         get => PathLogo.Source;
@@ -210,6 +332,15 @@ public partial class MyCompItem
         MouseLeftButtonUp += RefreshColor;
         PathLogo.ImageLoadFailed += OnLogoLoadFailed;
         PathLogo.ImageLoaded += OnLogoLoaded;
+        // 右键任意位置进入详情（对齐原版：sender.MouseRightButtonUp += Info_Click）
+        MouseRightButtonUp += MyCompItem_RightClick;
+    }
+
+    /// <summary>右键进入模组详情页（与详情按钮、非勾选模式单击同一入口）。</summary>
+    private void MyCompItem_RightClick(object sender, MouseButtonEventArgs e)
+    {
+        e.Handled = true;
+        OpenDetail();
     }
 
 
@@ -280,7 +411,18 @@ public partial class MyCompItem
         }
     }
 
-    private bool _HasActionButtons => ShowFavoriteBtn || ShowDownloadBtn;
+    /// <summary>是否显示详情（info）按钮。可勾选模式下用它作为进模组详情的明确入口。</summary>
+    public bool ShowDetailBtn
+    {
+        get => BtnDetail.Visibility == Visibility.Visible;
+        set
+        {
+            BtnDetail.Visibility = value ? Visibility.Visible : Visibility.Collapsed;
+            _UpdatePanButtons();
+        }
+    }
+
+    private bool _HasActionButtons => ShowFavoriteBtn || ShowDownloadBtn || ShowDetailBtn;
 
     private void _UpdatePanButtons()
     {
@@ -364,6 +506,18 @@ public partial class MyCompItem
 
     private void MyCompItem_Click(MyCompItem sender, EventArgs e)
     {
+        if (IsCheckable)
+        {
+            // 可勾选模式：单击切换选中（对齐原版本地模组“单击勾选”），详情由 info 按钮进入。
+            SetChecked(!Checked, true, true);
+            return;
+        }
+        OpenDetail();
+    }
+
+    /// <summary>进入模组详情页（保留原有导航，供详情按钮与非勾选模式单击调用）。</summary>
+    private void OpenDetail()
+    {
         if (Tag is Comp.CompProject project)
         {
             Launcher.frmMain?.PageChange(new FormMain.PageStackData
@@ -379,6 +533,8 @@ public partial class MyCompItem
             });
         }
     }
+
+    private void BtnDetail_Click(object sender, EventArgs e) => OpenDetail();
 
     private bool _isMouseDown;
 
@@ -397,19 +553,15 @@ public partial class MyCompItem
         var isClickOnButton = false;
 
         if (PanButtons.Visibility == Visibility.Visible)
-            isClickOnButton = _IsClickOnActionButton(BtnDelete, clickPosition) ||
+            isClickOnButton = _IsClickOnActionButton(BtnDetail, clickPosition) ||
+                              _IsClickOnActionButton(BtnDelete, clickPosition) ||
                               _IsClickOnActionButton(BtnDownload, clickPosition);
 
         if (isClickOnButton) return;
 
-        var isClickOnLabInfo = false;
-        if (LabInfo.Visibility == Visibility.Visible)
-        {
-            var labInfoBounds = new Rect(LabInfo.TranslatePoint(new Point(0d, 0d), this), LabInfo.RenderSize);
-            isClickOnLabInfo = labInfoBounds.Contains(clickPosition);
-        }
-
-        if (IsMouseDirectlyOver || isClickOnLabInfo) _isMouseDown = true;
+        // 整张卡片均可点击：只排除右侧操作按钮。
+        // （原版用 IsMouseDirectlyOver 判定，命中标题/图标等不同部位时结果不一致，会出现“点文字没反应、点图标有反应”。）
+        _isMouseDown = true;
     }
 
     private void Button_MouseLeave(object sender, object e)
