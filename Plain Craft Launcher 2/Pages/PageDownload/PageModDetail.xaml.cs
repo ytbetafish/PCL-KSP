@@ -53,6 +53,8 @@ public partial class PageModDetail : IPageView
     private void Init()
     {
         Animations.AniBeginControl();
+        try
+        {
         var detailAdditional = Launcher.frmMain?.pageCurrent.additional;
         if (detailAdditional is null)
             return;
@@ -76,8 +78,13 @@ public partial class PageModDetail : IPageView
         // 决定按钮显示
         _vm.ApplyProjectState(_project);
         RefreshFavoriteButton();
-
-        Animations.AniEndControl();
+        }
+        finally
+        {
+            // 早退（additional 为空）也必须归还动画控制计数，否则全局动画被永久禁用，
+            // 表现为页面控件一直透明、鼠标移上去才出现。
+            Animations.AniEndControl();
+        }
     }
 
     // 整合包安装：KSP 场景由 CKAN 安装计划统一处理，MC 整合包链路已剥离。

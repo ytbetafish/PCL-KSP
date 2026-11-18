@@ -125,8 +125,14 @@ public partial class MyIconButton
         {
             field = value;
             Animations.AniBeginControl();
-            RefreshAnim();
-            Animations.AniEndControl();
+            try
+            {
+                RefreshAnim();
+            }
+            finally
+            {
+                Animations.AniEndControl();
+            }
         }
     } = new(Color.FromRgb(128, 128, 128));
 
