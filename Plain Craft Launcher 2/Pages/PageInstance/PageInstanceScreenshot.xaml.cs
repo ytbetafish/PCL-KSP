@@ -37,6 +37,8 @@ public partial class PageInstanceScreenshot : IPageView
         _refreshed = true;
 
         PanLoad.Visibility = Visibility.Visible;
+        // 子页控件缓存复用：每次进入显式重置加载器为运行态，避免转圈动画不重启。
+        Load.State = new MyLoadingStateSimulator { LoadingState = LoadingState.Run };
         PanListCard.Visibility = Visibility.Collapsed;
 
         var root = PklSettings.Current.KspRootPath;

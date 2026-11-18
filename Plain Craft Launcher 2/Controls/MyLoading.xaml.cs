@@ -47,7 +47,7 @@ public partial class MyLoading
         Loaded += (_, _) => RefreshText();
         Loaded += (_, _) => InitState();
         Loaded += (_, _) => RefreshState();
-        Unloaded += (_, _) => RefreshState();
+        Unloaded += (_, _) => { _isLooping = false; RefreshState(); };
         MouseLeftButtonUp += Button_MouseUp;
         MouseLeftButtonDown += Button_MouseDown;
         MouseLeave += Button_MouseLeave;
