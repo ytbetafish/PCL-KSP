@@ -65,12 +65,12 @@ PKL/
 
 ## 三、构建方式
 
-需要 **.NET 10 SDK**（本机装于 `%USERPROFILE%\.dotnet`）。干净构建：
+需要 **.NET 10 SDK**（示例假定装在 `%USERPROFILE%\.dotnet`，若已在 PATH 可省略前两行）。干净构建：
 
 ```powershell
 # 指向 .NET 10 SDK（若已在 PATH 可省略前两行）
-$env:DOTNET_ROOT='%USERPROFILE%\.dotnet'
-$env:Path='%USERPROFILE%\.dotnet;'+$env:Path
+$env:DOTNET_ROOT="$env:USERPROFILE\.dotnet"
+$env:Path="$env:USERPROFILE\.dotnet;$env:Path"
 # 可选：把 NuGet 缓存与 CLI 主目录重定向到仓库内，避免权限问题
 $env:DOTNET_CLI_TELEMETRY_OPTOUT='1'
 $env:DOTNET_SKIP_FIRST_TIME_EXPERIENCE='1'
