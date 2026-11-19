@@ -621,57 +621,60 @@ public sealed class ModService : IModService, IDisposable
             throw new InstanceReadOnlyException();
         }
 
-        var opts = RelationshipResolverOptions.DependsOnlyOpts(_instance.StabilityToleranceConfig);
-        Directory.CreateDirectory(_instance.DownloadCacheDir);
-        var cache = new NetModuleCache(_instance.DownloadCacheDir);
-        var installer = new ModuleInstaller(_instance, cache, _config, _user, cancellationToken);
-
-        var desired = plan.ToInstall.Concat(plan.ToUpgrade)
-            .Select(LatestAvailable)
-            .Where(m => m != null)
-            .Select(m => m!)
-            .ToList();
-
-        if (desired.Count > 0)
+        // CKAN 的安装/卸载是同步阻塞调用，必须移到后台线程，否则批量更新会卡死 UI 线程。
+        return Task.Run(() =>
         {
-            HashSet<string>? possibleConfigOnlyDirs = null;
+            var opts = RelationshipResolverOptions.DependsOnlyOpts(_instance.StabilityToleranceConfig);
+            Directory.CreateDirectory(_instance.DownloadCacheDir);
+            var cache = new NetModuleCache(_instance.DownloadCacheDir);
+            var installer = new ModuleInstaller(_instance, cache, _config, _user, cancellationToken);
 
-            // 部分模组元数据缺 download_size / install_size，CKAN 的进度分母会是 0（百分比恒 0），
-            // 这里按目录里的模块大小估一个总量，交给 StringBuilderUser 换算百分比。
-            Log.ExpectedBytes = desired.Sum(m => Math.Max(0L, m.download_size) + Math.Max(0L, m.install_size));
-            var accelerated = ApplyGitHubAcceleration(desired);
-            try
+            var desired = plan.ToInstall.Concat(plan.ToUpgrade)
+                .Select(LatestAvailable)
+                .Where(m => m != null)
+                .Select(m => m!)
+                .ToList();
+
+            if (desired.Count > 0)
             {
+                HashSet<string>? possibleConfigOnlyDirs = null;
+
+                // 部分模组元数据缺 download_size / install_size，CKAN 的进度分母会是 0（百分比恒 0），
+                // 这里按目录里的模块大小估一个总量，交给 StringBuilderUser 换算百分比。
+                Log.ExpectedBytes = desired.Sum(m => Math.Max(0L, m.download_size) + Math.Max(0L, m.install_size));
+                var accelerated = ApplyGitHubAcceleration(desired);
                 try
                 {
-                    installer.InstallList(desired, opts, _registryManager, ref possibleConfigOnlyDirs,
-                        userAgent: UserAgent, ConfirmPrompt: false);
+                    try
+                    {
+                        installer.InstallList(desired, opts, _registryManager, ref possibleConfigOnlyDirs,
+                            userAgent: UserAgent, ConfirmPrompt: false);
+                    }
+                    catch when (accelerated)
+                    {
+                        // 加速前缀失效时回退到原始地址重试一次，避免卡在下载失败。
+                        RestoreGitHubAcceleration();
+                        installer.InstallList(desired, opts, _registryManager, ref possibleConfigOnlyDirs,
+                            userAgent: UserAgent, ConfirmPrompt: false);
+                    }
                 }
-                catch when (accelerated)
+                finally
                 {
-                    // 加速前缀失效时回退到原始地址重试一次，避免卡在下载失败。
                     RestoreGitHubAcceleration();
-                    installer.InstallList(desired, opts, _registryManager, ref possibleConfigOnlyDirs,
-                        userAgent: UserAgent, ConfirmPrompt: false);
+                    Log.ExpectedBytes = 0;
                 }
             }
-            finally
+
+            if (plan.ToRemove.Count > 0)
             {
-                RestoreGitHubAcceleration();
-                Log.ExpectedBytes = 0;
+                HashSet<string>? possibleConfigOnlyDirs = null;
+                installer.UninstallList(plan.ToRemove, ref possibleConfigOnlyDirs, _registryManager, ConfirmPrompt: false);
             }
-        }
 
-        if (plan.ToRemove.Count > 0)
-        {
-            HashSet<string>? possibleConfigOnlyDirs = null;
-            installer.UninstallList(plan.ToRemove, ref possibleConfigOnlyDirs, _registryManager, ConfirmPrompt: false);
-        }
+            _registryManager.Save();
 
-        _registryManager.Save();
-
-        progress?.Report($"Plan for '{plan.Target}' applied.");
-        return Task.CompletedTask;
+            progress?.Report($"Plan for '{plan.Target}' applied.");
+        }, cancellationToken);
     }
 
     /// <summary>把 github.com 的下载地址改写成「加速前缀 + 原地址」，返回是否改写了任何模组。</summary>
@@ -744,16 +747,18 @@ public sealed class ModService : IModService, IDisposable
             throw new InstanceReadOnlyException();
         }
 
-        Directory.CreateDirectory(_instance.DownloadCacheDir);
-        var cache = new NetModuleCache(_instance.DownloadCacheDir);
-        var installer = new ModuleInstaller(_instance, cache, _config, _user, cancellationToken);
+        return Task.Run(() =>
+        {
+            Directory.CreateDirectory(_instance.DownloadCacheDir);
+            var cache = new NetModuleCache(_instance.DownloadCacheDir);
+            var installer = new ModuleInstaller(_instance, cache, _config, _user, cancellationToken);
 
-        HashSet<string>? possibleConfigOnlyDirs = null;
-        installer.UninstallList(new[] { identifier }, ref possibleConfigOnlyDirs, _registryManager, ConfirmPrompt: false);
+            HashSet<string>? possibleConfigOnlyDirs = null;
+            installer.UninstallList(new[] { identifier }, ref possibleConfigOnlyDirs, _registryManager, ConfirmPrompt: false);
 
-        _registryManager.Save();
-        progress?.Report($"Uninstalled '{identifier}'.");
-        return Task.CompletedTask;
+            _registryManager.Save();
+            progress?.Report($"Uninstalled '{identifier}'.");
+        }, cancellationToken);
     }
 
     // ---- internals -----------------------------------------------------------
