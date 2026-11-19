@@ -119,20 +119,20 @@ dotnet build ".\Plain Craft Launcher 2.slnx" -c Release
 ## 五、分层架构
 
 ```
-┌────────────────────────────────────────┐
-│  UI 层（WPF）                          │
-│  PageLaunch / PageDownload / PageSelect│
-│  PageInstance / PageSettings / PageTools│
-│  PageSpeedLeft / 模组详情              │
-├────────────────────────────────────────┤
-│  适配层（无 WPF 依赖）                 │
-│  src/Pcl.Ckan：IModService / ModService │
-│  KspInstanceService / SpaceDockClient  │
-├────────────────────────────────────────┤
-│  核心库                                │
-│  external/CKAN.Core（MIT）             │
+┌──────────────────────────────────────────────┐
+│  UI 层（WPF）                                │
+│  PageLaunch / PageDownload / PageSelect      │
+│  PageInstance / PageSettings / PageTools     │
+│  PageSpeedLeft / 模组详情                     │
+├──────────────────────────────────────────────┤
+│  适配层（无 WPF 依赖）                        │
+│  src/Pcl.Ckan：IModService / ModService      │
+│  KspInstanceService / SpaceDockClient        │
+├──────────────────────────────────────────────┤
+│  核心库                                      │
+│  external/CKAN.Core（MIT）                   │
 │  PCL.Core / PCL.Core.Wpf / PCL.Launcher.Core │
-└────────────────────────────────────────┘
+└──────────────────────────────────────────────┘
 ```
 
 ## 六、页面动画说明
