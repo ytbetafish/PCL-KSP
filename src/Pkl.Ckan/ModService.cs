@@ -203,7 +203,7 @@ public sealed class ModService : IModService, IDisposable
                 foreach (var u in MirrorUrls)
                 {
                     if (!string.IsNullOrWhiteSpace(u))
-                        AddRepo($"PKL-Mirror-{++i}", u.Trim());
+                        AddRepo($"PCLKSP-Mirror-{++i}", u.Trim());
                 }
             }
             if (RepoStrategy != "MirrorOnly")

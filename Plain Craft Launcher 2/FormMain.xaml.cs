@@ -57,7 +57,7 @@ public partial class FormMain
                 Buttons = DialogButtons.Create("Common.Action.Confirm", "Main.UpdateLog.FullChangelog"),
                 ForceWait = true
             }).Result?.Button ?? 0) ==
-                2) Common.OpenWebsite("https://github.com/ytbetafish/PKL/releases");
+                2) Common.OpenWebsite("https://github.com/ytbetafish/PCL-KSP/releases");
         }, "UpdateLog Output");
     }
 
@@ -261,7 +261,7 @@ public partial class FormMain
                         Content = $"{hint}{"\r\n"}{"\r\n"}{Lang.Text("Main.SpecialVersion.HideHintNotice")}",
                         Buttons = DialogButtons.From(DialogButton.Create(Lang.Text("Main.SpecialVersion.IUnderstand")), DialogButton.Create(Lang.Text("Main.SpecialVersion.OpenDownloadPageAndExit"), () =>
                         {
-                            Common.OpenWebsite("https://github.com/ytbetafish/PKL/releases/latest");
+                            Common.OpenWebsite("https://github.com/ytbetafish/PCL-KSP/releases/latest");
                             EndProgram(false);
                         })),
                         IsWarn = true,
@@ -616,7 +616,7 @@ public partial class FormMain
             if (!isLogShown)
             {
                 Common.FeedbackInfo();
-                Common.Log("请在 https://github.com/ytbetafish/PKL/issues 提交错误报告，以便于社区解决此问题！（这也有可能是原版 PCL 的问题）");
+                Common.Log("请在 https://github.com/ytbetafish/PCL-KSP/issues 提交错误报告，以便于社区解决此问题！（这也有可能是原版 PCL 的问题）");
                 isLogShown = true;
                 Common.ShellOnly(LogWrapper.CurrentLogger.CurrentLogFiles.Last());
             }

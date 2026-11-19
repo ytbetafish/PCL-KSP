@@ -8,7 +8,7 @@ namespace PCL;
 /// <summary>
 /// 模组横幅图的按需加载与磁盘缓存。
 /// 首次渲染时只把图片排进下载队列（全局最多 2 个并发），下载完成后才显示；
-/// 图片落盘在 %LOCALAPPDATA%\PKL\Cache\Banners，之后同一张图直接读本地，不再联网。
+/// 图片落盘在 %LOCALAPPDATA%\PCL-KSP\Cache\Banners，之后同一张图直接读本地，不再联网。
 /// 缓存总量超过上限时按最后访问时间淘汰最旧的文件。
 /// </summary>
 public static class BannerCache

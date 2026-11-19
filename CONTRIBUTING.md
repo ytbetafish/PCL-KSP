@@ -2,13 +2,13 @@
 
 本仓库是对 [PCL-CE](https://github.com/PCL-Community/PCL-CE) 的二次开发，改造目标是 KSP 启动器，**不再接受与上游同步相关的改动**；与 PCL-CE 本体有关的问题请提交到上游仓库。
 
-- 仓库：`https://github.com/ytbetafish/PKL`
+- 仓库：`https://github.com/ytbetafish/PCL-KSP`
 - 默认分支：`main`
 - 构建方式见 [README](./README.md) 第三节
 
 ## 报告问题
 
-1. 先在 [Issues](https://github.com/ytbetafish/PKL/issues) 里搜一下有没有相同的问题；
+1. 先在 [Issues](https://github.com/ytbetafish/PCL-KSP/issues) 里搜一下有没有相同的问题；
 2. 没有的话新建 Issue（Bug 模板即可），尽量包含：
    - 现象与期望行为；
    - 复现步骤；
@@ -22,7 +22,7 @@
 1. Fork 并克隆本仓库：
 
    ```bash
-   git clone https://github.com/<你的用户名>/PKL.git
+   git clone https://github.com/<你的用户名>/PCL-KSP.git
    ```
 
 2. 从 `main` 拉分支，分支名建议 `feat/xxx` 或 `fix/issue-123-xxx`：

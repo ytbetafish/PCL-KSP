@@ -14,7 +14,7 @@
 
 > ## 声明：本项目不分发原版游戏
 >
-> PKL 只是一个启动器，**本仓库与任何发行物均不含《坎巴拉太空计划》(Kerbal Space Program) 游戏本体、DLC 或官方资源**。运行前请自备通过合法渠道获得的 KSP 正版游戏；游戏及全部官方内容的版权归其权利人（Squad / Private Division 等）所有。
+> 本项目只是一个启动器，**本仓库与任何发行物均不含《坎巴拉太空计划》(Kerbal Space Program) 游戏本体、DLC 或官方资源**。运行前请自备通过合法渠道获得的 KSP 正版游戏；游戏及全部官方内容的版权归其权利人（Squad / Private Division 等）所有。
 >
 > 模组数据来自 CKAN 公共索引与 SpaceDock，模组本体由各自作者发布，本项目不托管、不分发这些资源；国内 CKAN 加速源由坎喵社区（QQ 群 758050820）群友集资提供，本项目仅接入，不提供该服务。
 
@@ -33,10 +33,10 @@
 
 ## 二、目录结构
 
-> 本节由 GitHub Trees API 生成（`GET /repos/ytbetafish/PKL/git/trees/main?recursive=1`，截至 `1782731` 共 1 654 个文件），括号内为该目录文件数。结构变动后重新拉取即可，不必手写维护。
+> 本节由 GitHub Trees API 生成（`GET /repos/ytbetafish/PCL-KSP/git/trees/main?recursive=1`，截至 `1782731` 共 1 654 个文件），括号内为该目录文件数。结构变动后重新拉取即可，不必手写维护。
 
 ```
-PKL/
+PCL-KSP/
 ├─ PCL.Core/                     (390)  核心库：日志、IO/网络、配置、平台、加密、基础 UI 设施
 ├─ PCL.Core.Wpf/                 (251)  WPF 基础：主题资源、控件、动画、图标包（lucide 87 个 SVG）
 ├─ PCL.Core.SourceGenerators/      (9)  源生成器
@@ -86,7 +86,7 @@ dotnet build ".\Plain Craft Launcher 2.slnx" -c Release
 ```
 
 预期结果：**0 error**；warning 多为可空性与未使用字段，不影响运行。
-运行主程序：构建输出目录下的 `PKL.exe`（`AssemblyName` 为 `PKL`；未指定 `-o` 时位于 `Plain Craft Launcher 2\bin\Release\<TargetFramework>\`）。
+运行主程序：构建输出目录下的 `PCL-KSP.exe`（`AssemblyName` 为 `PCL-KSP`；未指定 `-o` 时位于 `Plain Craft Launcher 2\bin\Release\<TargetFramework>\`）。
 
 ## 四、功能清单
 

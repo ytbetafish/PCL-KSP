@@ -1,3 +1,3 @@
 using System.Runtime.CompilerServices;
 
-[assembly: InternalsVisibleTo("PKL")]
+[assembly: InternalsVisibleTo("PCL-KSP")]

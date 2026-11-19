@@ -8,7 +8,7 @@ namespace PCL;
 /// <summary>
 ///     PKL 自己的设置（KSP 路径 + 翻译服务选项）。
 ///     不走 PCL 的 source-generator Config 系统，避免动 PCL.Core。
-///     持久化到 %APPDATA%\PKL\pkl-settings.json，保证 exe 位于只读目录（如 Program Files、
+///     持久化到 %APPDATA%\PCL-KSP\pkl-settings.json，保证 exe 位于只读目录（如 Program Files、
 ///     解压到受保护位置的 Release zip）时也能读写，避免 Access denied。
 ///     若旧版本曾把配置写在 exe 同目录，启动时自动迁移一次。
 /// </summary>
@@ -28,7 +28,7 @@ public static class PklSettings
         public string TranslateModel { get; set; } = "deepseek-chat";
 
         public string CkanDataDir { get; set; } =
-            Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "PKL", "Ckan");
+            Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "PCL-KSP", "Ckan");
         public string CkanMasterRepoUrl { get; set; } = "https://github.com/KSP-CKAN/CKAN-meta/archive/master.tar.gz";
         public List<string> CkanMirrorUrls { get; set; } = new() { DefaultMirrorUrl };
         // MirrorOnly / OfficialFirst / OfficialOnly
@@ -57,9 +57,9 @@ public static class PklSettings
 
     private static string ResolvePath()
     {
-        // 首选 %APPDATA%\PKL（每个用户、必然可写）。
+        // 首选 %APPDATA%\PCL-KSP（每个用户、必然可写）。
         var dir = Path.Combine(
-            Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "PKL");
+            Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "PCL-KSP");
         Directory.CreateDirectory(dir);
         var target = Path.Combine(dir, "pkl-settings.json");
 
@@ -69,6 +69,11 @@ public static class PklSettings
             var legacy = Path.Combine(LauncherPaths.ExecutableDirectory, "pkl-settings.json");
             if (!File.Exists(target) && File.Exists(legacy))
                 File.Copy(legacy, target, true);
+            // 旧版配置目录 %APPDATA%\PKL 也迁移一次。
+            var legacyShared = Path.Combine(
+                Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "PKL", "pkl-settings.json");
+            if (!File.Exists(target) && File.Exists(legacyShared))
+                File.Copy(legacyShared, target, true);
         }
         catch
         {

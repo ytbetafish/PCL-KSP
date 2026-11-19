@@ -38,7 +38,7 @@ public static partial class Common
     ///     程序内嵌图片文件夹路径，以“/”结尾。
     /// </summary>
     public const string PathImage =
-        "pack://application:,,,/PKL;component/Images/";
+        "pack://application:,,,/PCL-KSP;component/Images/";
 
     /// <summary>
     ///     当前程序的语言。

@@ -64,11 +64,11 @@ public static class Paths
     static Paths()
     {
 #if DEBUG
-        const string name = "PKL_Debug";
-        const string oldName = ".PKL_Debug";
+        const string name = "PCL-KSP_Debug";
+        const string oldName = ".PCL-KSP_Debug";
 #else
-        const string name = "PKL";
-        const string oldName = ".PKL";
+        const string name = "PCL-KSP";
+        const string oldName = ".PCL-KSP";
 #endif
         // fill paths
         _data = Path.Combine(DefaultDirectory, "PCL");
@@ -88,5 +88,33 @@ public static class Paths
         Directory.CreateDirectory(_sharedData);
         Directory.CreateDirectory(_sharedLocalData);
         Directory.CreateDirectory(_temp);
+#if !DEBUG
+        // 旧版数据目录为 %APPDATA%\PKL，新目录为空时整目录复制一次，避免设置与缓存丢失。
+        try
+        {
+            var legacyShared = GetSpecialPath(Special.ApplicationData, "PKL");
+            if (Directory.Exists(legacyShared) && Directory.GetFileSystemEntries(_sharedData).Length == 0)
+            {
+                CopyDirectory(legacyShared, _sharedData);
+            }
+        }
+        catch
+        {
+            // 迁移失败不致命，使用空目录继续运行。
+        }
+#endif
+    }
+
+    private static void CopyDirectory(string source, string target)
+    {
+        Directory.CreateDirectory(target);
+        foreach (var file in Directory.GetFiles(source))
+        {
+            File.Copy(file, Path.Combine(target, Path.GetFileName(file)), true);
+        }
+        foreach (var dir in Directory.GetDirectories(source))
+        {
+            CopyDirectory(dir, Path.Combine(target, Path.GetFileName(dir)));
+        }
     }
 }

@@ -99,7 +99,7 @@ public partial class PageMods
         }
         catch (Exception ex)
         {
-            MessageBox.Show("搜索失败：" + ex.Message, "PKL", MessageBoxButton.OK, MessageBoxImage.Warning);
+            MessageBox.Show("搜索失败：" + ex.Message, "PCL KSP 修改版", MessageBoxButton.OK, MessageBoxImage.Warning);
         }
     }
 
@@ -212,7 +212,7 @@ public partial class PageMods
             if (updates.Count == 0)
             {
                 PanProgress.Visibility = Visibility.Collapsed;
-                MessageBox.Show("没有需要更新的模组。", "PKL", MessageBoxButton.OK, MessageBoxImage.Information);
+                MessageBox.Show("没有需要更新的模组。", "PCL KSP 修改版", MessageBoxButton.OK, MessageBoxImage.Information);
                 return;
             }
             var progress = new Progress<string>(msg =>
@@ -226,7 +226,7 @@ public partial class PageMods
                 if (plan is not null) await GetService().ExecutePlanAsync(plan, progress);
             }
             PanProgress.Visibility = Visibility.Collapsed;
-            MessageBox.Show($"已更新 {updates.Count} 个模组。", "PKL", MessageBoxButton.OK, MessageBoxImage.Information);
+            MessageBox.Show($"已更新 {updates.Count} 个模组。", "PCL KSP 修改版", MessageBoxButton.OK, MessageBoxImage.Information);
             _filter = "updates";
             _lastResults = await GetService().ListInstalledAsync();
             ApplyFilter();
@@ -234,7 +234,7 @@ public partial class PageMods
         catch (Exception ex)
         {
             PanProgress.Visibility = Visibility.Collapsed;
-            MessageBox.Show("更新失败：" + ex.Message, "PKL", MessageBoxButton.OK, MessageBoxImage.Error);
+            MessageBox.Show("更新失败：" + ex.Message, "PCL KSP 修改版", MessageBoxButton.OK, MessageBoxImage.Error);
         }
     }
 
@@ -352,7 +352,7 @@ public partial class PageMods
             if (plan is null)
             {
                 PanProgress.Visibility = Visibility.Collapsed;
-                MessageBox.Show("无法为该模组生成安装计划（未附加 KSP 实例？）。", "PKL", MessageBoxButton.OK, MessageBoxImage.Information);
+                MessageBox.Show("无法为该模组生成安装计划（未附加 KSP 实例？）。", "PCL KSP 修改版", MessageBoxButton.OK, MessageBoxImage.Information);
                 return;
             }
 
@@ -365,20 +365,20 @@ public partial class PageMods
             await GetService().ExecutePlanAsync(plan, progress);
 
             PanProgress.Visibility = Visibility.Collapsed;
-            MessageBox.Show("安装计划执行完成。", "PKL", MessageBoxButton.OK, MessageBoxImage.Information);
+            MessageBox.Show("安装计划执行完成。", "PCL KSP 修改版", MessageBoxButton.OK, MessageBoxImage.Information);
             await DoSearch(TxtSearch.Text);
         }
         catch (Exception ex)
         {
             PanProgress.Visibility = Visibility.Collapsed;
-            MessageBox.Show("安装失败：" + ex.Message, "PKL", MessageBoxButton.OK, MessageBoxImage.Error);
+            MessageBox.Show("安装失败：" + ex.Message, "PCL KSP 修改版", MessageBoxButton.OK, MessageBoxImage.Error);
         }
     }
 
     private async void BtnUninstall_Click(object sender, System.Windows.Input.MouseButtonEventArgs e)
     {
         if (_selected is null) return;
-        if (MessageBox.Show($"确定卸载 {_selected.Name}？", "PKL",
+        if (MessageBox.Show($"确定卸载 {_selected.Name}？", "PCL KSP 修改版",
                 MessageBoxButton.YesNo, MessageBoxImage.Question) != MessageBoxResult.Yes)
             return;
         try
@@ -390,13 +390,13 @@ public partial class PageMods
                 Dispatcher.BeginInvoke(new Action(() => LabProgress.Text = msg)));
             await GetService().UninstallAsync(_selected.Identifier, progress);
             PanProgress.Visibility = Visibility.Collapsed;
-            MessageBox.Show("卸载完成。", "PKL", MessageBoxButton.OK, MessageBoxImage.Information);
+            MessageBox.Show("卸载完成。", "PCL KSP 修改版", MessageBoxButton.OK, MessageBoxImage.Information);
             await DoSearch(TxtSearch.Text);
         }
         catch (Exception ex)
         {
             PanProgress.Visibility = Visibility.Collapsed;
-            MessageBox.Show("卸载失败：" + ex.Message, "PKL", MessageBoxButton.OK, MessageBoxImage.Error);
+            MessageBox.Show("卸载失败：" + ex.Message, "PCL KSP 修改版", MessageBoxButton.OK, MessageBoxImage.Error);
         }
     }
 

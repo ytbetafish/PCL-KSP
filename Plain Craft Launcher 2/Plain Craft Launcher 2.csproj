@@ -4,7 +4,7 @@
         <TargetFramework>net10.0-windows</TargetFramework>
         <OutputType>WinExe</OutputType>
         <RootNamespace>PCL</RootNamespace>
-        <AssemblyName>PKL</AssemblyName>
+        <AssemblyName>PCL-KSP</AssemblyName>
         <MyType>Custom</MyType>
         <IsWebBootstrapper>false</IsWebBootstrapper>
         <StartupObject>PCL.Program</StartupObject>
