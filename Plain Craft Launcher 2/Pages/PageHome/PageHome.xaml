@@ -3,7 +3,7 @@
                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
                    xmlns:local="clr-namespace:PCL">
     <Grid>
-        <TextBlock Text="欢迎使用 PKL" FontSize="22" FontWeight="Light" Opacity="0.5"
+        <TextBlock Text="欢迎使用 PCL-KSP" FontSize="22" FontWeight="Light" Opacity="0.5"
                    HorizontalAlignment="Center" VerticalAlignment="Center" />
     </Grid>
 </local:MyPageRight>

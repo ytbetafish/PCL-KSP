@@ -40,7 +40,7 @@ public partial class PageInstanceSaves : IPageView
         Load.State = new MyLoadingStateSimulator { LoadingState = LoadingState.Run };
         PanListCard.Visibility = Visibility.Collapsed;
 
-        var root = PklSettings.Current.KspRootPath;
+        var root = KspSettings.Current.KspRootPath;
         var savesDir = string.IsNullOrWhiteSpace(root) ? null : Path.Combine(root, "saves");
 
         List<string> dirs;

@@ -6,7 +6,7 @@ using System.Windows;
 using System.Windows.Controls;
 using PCL;
 using PCL.Translation;
-using Pkl.Ckan;
+using Pcl.Ckan;
 
 namespace PCL.Pages;
 
@@ -30,18 +30,18 @@ public partial class PageMods
     private static ModService GetService()
     {
         ModService.ApplyNetworkSettings(
-            PklSettings.Current.HttpProxy,
-            PklSettings.Current.DownloadConcurrency,
-            PklSettings.Current.HttpTimeoutSeconds);
+            KspSettings.Current.HttpProxy,
+            KspSettings.Current.DownloadConcurrency,
+            KspSettings.Current.HttpTimeoutSeconds);
         if (_modService is null)
         {
-            _modService = new ModService(dataDir: PklSettings.Current.CkanDataDir);
+            _modService = new ModService(dataDir: KspSettings.Current.CkanDataDir);
         }
-        _modService.MirrorUrls = new System.Collections.Generic.List<string>(PklSettings.Current.CkanMirrorUrls);
-        _modService.OfficialRepoUrl = PklSettings.Current.CkanMasterRepoUrl;
-        _modService.RepoStrategy = PklSettings.Current.CkanRepoStrategy;
-        _modService.GitHubAccelerationEnabled = PklSettings.Current.GitHubAccelerationEnabled;
-        _modService.GitHubAccelerationPrefix = PklSettings.Current.GitHubAccelerationPrefix;
+        _modService.MirrorUrls = new System.Collections.Generic.List<string>(KspSettings.Current.CkanMirrorUrls);
+        _modService.OfficialRepoUrl = KspSettings.Current.CkanMasterRepoUrl;
+        _modService.RepoStrategy = KspSettings.Current.CkanRepoStrategy;
+        _modService.GitHubAccelerationEnabled = KspSettings.Current.GitHubAccelerationEnabled;
+        _modService.GitHubAccelerationPrefix = KspSettings.Current.GitHubAccelerationPrefix;
         return _modService;
     }
 
@@ -51,7 +51,7 @@ public partial class PageMods
         _serviceAttaching = true;
         try
         {
-            var root = PklSettings.Current.KspRootPath;
+            var root = KspSettings.Current.KspRootPath;
             if (string.IsNullOrWhiteSpace(root) || !KspInstanceService.IsKspRoot(root)) return;
             PanLoad.Visibility = Visibility.Visible;
             await Task.Run(() =>
@@ -259,7 +259,7 @@ public partial class PageMods
         _originalDescription = _selected.Description;
         LabModDesc.Text = string.IsNullOrWhiteSpace(_originalDescription) ? "（无简介）" : _originalDescription;
         LabModHome.Text = string.IsNullOrWhiteSpace(_selected.Homepage) ? "" : _selected.Homepage;
-        BtnInstall.Visibility = string.IsNullOrWhiteSpace(PklSettings.Current.KspRootPath) ? Visibility.Collapsed : Visibility.Visible;
+        BtnInstall.Visibility = string.IsNullOrWhiteSpace(KspSettings.Current.KspRootPath) ? Visibility.Collapsed : Visibility.Visible;
         BtnUninstall.Visibility = _selected.IsInstalled ? Visibility.Visible : Visibility.Collapsed;
         BtnTranslate.Visibility = string.IsNullOrWhiteSpace(_originalDescription) ? Visibility.Collapsed : Visibility.Visible;
 
@@ -321,9 +321,9 @@ public partial class PageMods
 
         var svc = new OpenAiTranslationService(new TranslationOptions
         {
-            BaseUrl = PklSettings.Current.TranslateBaseUrl,
-            ApiKey = PklSettings.Current.TranslateApiKey,
-            Model = PklSettings.Current.TranslateModel
+            BaseUrl = KspSettings.Current.TranslateBaseUrl,
+            ApiKey = KspSettings.Current.TranslateApiKey,
+            Model = KspSettings.Current.TranslateModel
         });
         LabModDesc.Text = "翻译中…";
         try
@@ -405,7 +405,7 @@ public partial class PageMods
         var text = GetService().Log.Dump();
         var win = new Window
         {
-            Title = "PKL 操作日志",
+            Title = "PCL-KSP 操作日志",
             Width = 700,
             Height = 500,
             Content = new TextBox

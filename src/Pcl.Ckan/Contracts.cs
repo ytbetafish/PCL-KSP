@@ -1,4 +1,4 @@
-namespace Pkl.Ckan;
+namespace Pcl.Ckan;
 
 /// <summary>
 /// A detected KSP install on disk.

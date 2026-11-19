@@ -1,4 +1,4 @@
-namespace Pkl.Ckan;
+namespace Pcl.Ckan;
 
 /// <summary>
 /// High-level mod-management surface built on top of CKAN.Core.

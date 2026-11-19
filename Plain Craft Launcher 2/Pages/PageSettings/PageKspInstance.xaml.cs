@@ -16,19 +16,19 @@ public partial class PageKspInstance
     private void RefreshInstancesList()
     {
         CboInstances.Items.Clear();
-        foreach (var p in PklSettings.Current.Instances) CboInstances.Items.Add(p);
-        if (!string.IsNullOrEmpty(PklSettings.Current.KspRootPath)
-            && !PklSettings.Current.Instances.Contains(PklSettings.Current.KspRootPath))
+        foreach (var p in KspSettings.Current.Instances) CboInstances.Items.Add(p);
+        if (!string.IsNullOrEmpty(KspSettings.Current.KspRootPath)
+            && !KspSettings.Current.Instances.Contains(KspSettings.Current.KspRootPath))
         {
-            CboInstances.Items.Insert(0, PklSettings.Current.KspRootPath);
+            CboInstances.Items.Insert(0, KspSettings.Current.KspRootPath);
         }
-        CboInstances.SelectedItem = PklSettings.Current.KspRootPath;
+        CboInstances.SelectedItem = KspSettings.Current.KspRootPath;
         CboInstances.SelectionChanged += (_, _) =>
         {
             if (CboInstances.SelectedItem is string s && !string.IsNullOrEmpty(s))
             {
-                PklSettings.Current.KspRootPath = s;
-                PklSettings.Save();
+                KspSettings.Current.KspRootPath = s;
+                KspSettings.Save();
                 RefreshKspInfo();
             }
         };
@@ -36,7 +36,7 @@ public partial class PageKspInstance
 
     private void RefreshKspInfo()
     {
-        var settings = PklSettings.Current;
+        var settings = KspSettings.Current;
         var root = settings.KspRootPath;
         LabKspPath.Text = string.IsNullOrEmpty(root) ? "（未设置）" : root;
 
@@ -76,13 +76,13 @@ public partial class PageKspInstance
 
     private void SaveInstanceFields(object sender, RoutedEventArgs e)
     {
-        var settings = PklSettings.Current;
+        var settings = KspSettings.Current;
         if (!string.IsNullOrWhiteSpace(LabKspPath.Text))
             settings.KspRootPath = LabKspPath.Text.Trim();
         settings.KspExePath = LabKspExe.Text.Trim();
         settings.KspGameDataPath = LabKspGameData.Text.Trim();
         settings.KspLogsPath = LabKspLogs.Text.Trim();
-        PklSettings.Save();
+        KspSettings.Save();
         RefreshKspInfo();
     }
 
@@ -91,10 +91,10 @@ public partial class PageKspInstance
         var dialog = new OpenFolderDialog { Title = "添加 KSP 实例目录" };
         if (dialog.ShowDialog() == true)
         {
-            if (!PklSettings.Current.Instances.Contains(dialog.FolderName))
-                PklSettings.Current.Instances.Add(dialog.FolderName);
-            PklSettings.Current.KspRootPath = dialog.FolderName;
-            PklSettings.Save();
+            if (!KspSettings.Current.Instances.Contains(dialog.FolderName))
+                KspSettings.Current.Instances.Add(dialog.FolderName);
+            KspSettings.Current.KspRootPath = dialog.FolderName;
+            KspSettings.Save();
             RefreshInstancesList();
             RefreshKspInfo();
         }

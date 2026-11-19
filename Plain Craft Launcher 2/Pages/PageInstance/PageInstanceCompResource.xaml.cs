@@ -7,7 +7,7 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
 using System.Windows.Media;
-using Pkl.Ckan;
+using Pcl.Ckan;
 using PCL.Core.UI;
 using PCL.Core.UI.Dialogs;
 using PCL.Core.UI.Hints;
@@ -47,7 +47,7 @@ public partial class PageInstanceCompResource : IPageView
         CanUpdate = 3,
         Duplicate = 5,
 
-        /// <summary>收藏（PKL 扩展：筛选已收藏的已装模组）。</summary>
+        /// <summary>收藏（PCL-KSP 扩展：筛选已收藏的已装模组）。</summary>
         Favorites = 6
     }
 
@@ -78,18 +78,18 @@ public partial class PageInstanceCompResource : IPageView
     private static ModService GetService()
     {
         ModService.ApplyNetworkSettings(
-            PklSettings.Current.HttpProxy,
-            PklSettings.Current.DownloadConcurrency,
-            PklSettings.Current.HttpTimeoutSeconds);
+            KspSettings.Current.HttpProxy,
+            KspSettings.Current.DownloadConcurrency,
+            KspSettings.Current.HttpTimeoutSeconds);
         if (_modService is null)
         {
-            _modService = new ModService(dataDir: PklSettings.Current.CkanDataDir);
+            _modService = new ModService(dataDir: KspSettings.Current.CkanDataDir);
         }
-        _modService.MirrorUrls = new List<string>(PklSettings.Current.CkanMirrorUrls);
-        _modService.OfficialRepoUrl = PklSettings.Current.CkanMasterRepoUrl;
-        _modService.RepoStrategy = PklSettings.Current.CkanRepoStrategy;
-        _modService.GitHubAccelerationEnabled = PklSettings.Current.GitHubAccelerationEnabled;
-        _modService.GitHubAccelerationPrefix = PklSettings.Current.GitHubAccelerationPrefix;
+        _modService.MirrorUrls = new List<string>(KspSettings.Current.CkanMirrorUrls);
+        _modService.OfficialRepoUrl = KspSettings.Current.CkanMasterRepoUrl;
+        _modService.RepoStrategy = KspSettings.Current.CkanRepoStrategy;
+        _modService.GitHubAccelerationEnabled = KspSettings.Current.GitHubAccelerationEnabled;
+        _modService.GitHubAccelerationPrefix = KspSettings.Current.GitHubAccelerationPrefix;
         return _modService;
     }
 
@@ -139,7 +139,7 @@ public partial class PageInstanceCompResource : IPageView
             return;
         _serviceAttaching = true;
 
-        var root = PklSettings.Current.KspRootPath;
+        var root = KspSettings.Current.KspRootPath;
         if (string.IsNullOrWhiteSpace(root) || !KspInstanceService.IsKspRoot(root))
             return;
 
@@ -183,7 +183,7 @@ public partial class PageInstanceCompResource : IPageView
         {
             PanListCard.Visibility = Visibility.Collapsed;
             PanEmpty.Visibility = Visibility.Visible;
-            TxtEmptyDescription.Text = string.IsNullOrEmpty(PklSettings.Current.KspRootPath)
+            TxtEmptyDescription.Text = string.IsNullOrEmpty(KspSettings.Current.KspRootPath)
                 ? "未选择 KSP 实例"
                 : "当前实例尚未通过 CKAN 安装模组";
             RefreshSelectBar();
@@ -417,8 +417,8 @@ public partial class PageInstanceCompResource : IPageView
             return; // 0 = 未点击，3 = 取消
 
         var rows = _results.OrderBy(m => m.Name, StringComparer.OrdinalIgnoreCase).ToList();
-        var instanceName = string.IsNullOrWhiteSpace(PklSettings.Current.KspRootPath)
-            ? "KSP" : Path.GetFileName(PklSettings.Current.KspRootPath.TrimEnd('\\', '/'));
+        var instanceName = string.IsNullOrWhiteSpace(KspSettings.Current.KspRootPath)
+            ? "KSP" : Path.GetFileName(KspSettings.Current.KspRootPath.TrimEnd('\\', '/'));
 
         string content;
         string filter;
@@ -925,7 +925,7 @@ public partial class PageInstanceCompResource : IPageView
 
     private static string? ResolveGameData()
     {
-        var settings = PklSettings.Current;
+        var settings = KspSettings.Current;
         if (!string.IsNullOrWhiteSpace(settings.KspGameDataPath) && Directory.Exists(settings.KspGameDataPath))
             return settings.KspGameDataPath;
         var root = settings.KspRootPath;

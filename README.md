@@ -50,7 +50,7 @@ PCL-KSP/
 │   ├─ Resources/                 (14)  本地化与提示文本
 │   └─ FormMain.xaml(.cs)                主窗口外壳与顶栏导航
 ├─ external/CKAN.Core/           (172)  内联 CKAN 核心（MIT，目标 net10.0）
-├─ src/Pkl.Ckan/                   (8)  CKAN 适配层（无头，不依赖 WPF）
+├─ src/Pcl.Ckan/                   (8)  CKAN 适配层（无头，不依赖 WPF）
 ├─ docs/                           (2)  改造方案与参考样例分析
 ├─ .github/                       (12)  issue / PR 模板与 CI（继承自上游，尚未适配）
 └─ 根目录                         (11)  slnx / README / LICENSE / CONTRIBUTING / cliff.toml 等
@@ -126,7 +126,7 @@ dotnet build ".\Plain Craft Launcher 2.slnx" -c Release
 │  PageSpeedLeft / 模组详情              │
 ├────────────────────────────────────────┤
 │  适配层（无 WPF 依赖）                 │
-│  src/Pkl.Ckan：IModService / ModService │
+│  src/Pcl.Ckan：IModService / ModService │
 │  KspInstanceService / SpaceDockClient  │
 ├────────────────────────────────────────┤
 │  核心库                                │

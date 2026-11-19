@@ -346,9 +346,9 @@ MaskFiles/
 # macOS
 
 **/.DS_Store
-# PKL local state
+# PCL-KSP local state
 .dotnet-home/
-pkl-settings.json
+pclksp-settings.json
 
 # Temp scripts and test files
 temp_orig_*
@@ -358,7 +358,7 @@ rewrite_*.py
 unwrap_*.py
 wrap_*.py
 write_*.py
-PKL-v*.zip
+PCLKSP-v*.zip
 
 .nuget/
 
@@ -373,4 +373,4 @@ PKL-v*.zip
 /*.xaml
 
 # 本地发布暂存目录（构建产物，不入库）
-/PKL-release-stage/
+/PCLKSP-release-stage/

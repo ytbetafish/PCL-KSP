@@ -6,7 +6,7 @@ using System.Windows.Markup;
 using System.Windows.Media;
 using PCL.Core.App.Localization;
 using PCL.Core.UI.Hints;
-using Pkl.Ckan;
+using Pcl.Ckan;
 
 namespace PCL;
 

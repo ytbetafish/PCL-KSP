@@ -2,7 +2,7 @@ using CKAN;
 using CKAN.Configuration;
 using CKAN.Games;
 
-namespace Pkl.Ckan;
+namespace Pcl.Ckan;
 
 /// <summary>
 /// Detects KSP installations on disk and loads them through CKAN's <see cref="GameInstance"/>
@@ -19,7 +19,7 @@ public sealed class KspInstanceService
     public KspInstanceService(IUser? user = null, string? dataDir = null)
     {
         _user = user ?? new NullUser();
-        _dataDir = dataDir ?? Path.Combine(Path.GetTempPath(), "Pkl.Ckan");
+        _dataDir = dataDir ?? Path.Combine(Path.GetTempPath(), "Pcl.Ckan");
     }
 
     /// <summary>

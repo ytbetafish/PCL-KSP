@@ -7,7 +7,7 @@ using System.Diagnostics;
 using System.Net;
 using System.Threading;
 
-namespace Pkl.Ckan;
+namespace Pcl.Ckan;
 
 /// <summary>
 /// 当前实例以只读方式附加（注册表被其他 CKAN 进程占用），安装 / 升级 / 卸载等写操作被拒绝。
@@ -27,7 +27,7 @@ public sealed class InstanceReadOnlyException : InvalidOperationException
 /// </summary>
 public sealed class ModService : IModService, IDisposable
 {
-    private const string UserAgent = "Pkl.Ckan/1.0";
+    private const string UserAgent = "Pcl.Ckan/1.0";
     private readonly IUser _user;
     private readonly IConfiguration _config;
     private readonly RepositoryDataManager _repoData;
@@ -67,7 +67,7 @@ public sealed class ModService : IModService, IDisposable
     {
         Log = user as StringBuilderUser ?? new StringBuilderUser();
         _user = Log;
-        dataDir ??= Path.Combine(Path.GetTempPath(), "Pkl.Ckan");
+        dataDir ??= Path.Combine(Path.GetTempPath(), "Pcl.Ckan");
         Directory.CreateDirectory(dataDir);
         _config = new JsonConfiguration(Path.Combine(dataDir, "config.json"));
         _repoData = new RepositoryDataManager(Path.Combine(dataDir, "repo-data"));

@@ -6,7 +6,7 @@ using System.Net.Http;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Media;
-using Pkl.Ckan;
+using Pcl.Ckan;
 
 namespace PCL.Pages;
 
@@ -17,27 +17,27 @@ public partial class PageSettings
     public PageSettings()
     {
         InitializeComponent();
-        LabSettingsVersion.Text = "PKL v" + PCL.Core.App.Basics.VersionName;
-        TxtBaseUrl.Text = PklSettings.Current.TranslateBaseUrl;
-        TxtApiKey.Text = PklSettings.Current.TranslateApiKey;
-        TxtModel.Text = PklSettings.Current.TranslateModel;
-        LabCkanDataDir.Text = PklSettings.Current.CkanDataDir;
-        TxtMirrorUrls.Text = string.Join("\n", PklSettings.Current.CkanMirrorUrls);
+        LabSettingsVersion.Text = "PCL-KSP v" + PCL.Core.App.Basics.VersionName;
+        TxtBaseUrl.Text = KspSettings.Current.TranslateBaseUrl;
+        TxtApiKey.Text = KspSettings.Current.TranslateApiKey;
+        TxtModel.Text = KspSettings.Current.TranslateModel;
+        LabCkanDataDir.Text = KspSettings.Current.CkanDataDir;
+        TxtMirrorUrls.Text = string.Join("\n", KspSettings.Current.CkanMirrorUrls);
         foreach (var item in CboStrategy.Items)
         {
-            if (item is System.Windows.Controls.ComboBoxItem ci && (string)ci.Tag == PklSettings.Current.CkanRepoStrategy) { CboStrategy.SelectedItem = item; break; }
+            if (item is System.Windows.Controls.ComboBoxItem ci && (string)ci.Tag == KspSettings.Current.CkanRepoStrategy) { CboStrategy.SelectedItem = item; break; }
         }
         if (CboStrategy.SelectedItem == null) CboStrategy.SelectedIndex = 0;
-        switch (PklSettings.Current.CkanStabilityTolerance)
+        switch (KspSettings.Current.CkanStabilityTolerance)
         {
             case "Testing": OptTesting.Checked = true; break;
             case "PreRelease": OptPre.Checked = true; break;
             default: OptStable.Checked = true; break;
         }
 
-        TxtProxy.Text = PklSettings.Current.HttpProxy;
-        TxtConcurrency.Text = PklSettings.Current.DownloadConcurrency.ToString();
-        TxtTimeout.Text = PklSettings.Current.HttpTimeoutSeconds.ToString();
+        TxtProxy.Text = KspSettings.Current.HttpProxy;
+        TxtConcurrency.Text = KspSettings.Current.DownloadConcurrency.ToString();
+        TxtTimeout.Text = KspSettings.Current.HttpTimeoutSeconds.ToString();
 
         RefreshInstancesList();
         RefreshKspInfo();
@@ -56,19 +56,19 @@ public partial class PageSettings
     private void RefreshInstancesList()
     {
         CboInstances.Items.Clear();
-        foreach (var p in PklSettings.Current.Instances) CboInstances.Items.Add(p);
-        if (!string.IsNullOrEmpty(PklSettings.Current.KspRootPath)
-            && !PklSettings.Current.Instances.Contains(PklSettings.Current.KspRootPath))
+        foreach (var p in KspSettings.Current.Instances) CboInstances.Items.Add(p);
+        if (!string.IsNullOrEmpty(KspSettings.Current.KspRootPath)
+            && !KspSettings.Current.Instances.Contains(KspSettings.Current.KspRootPath))
         {
-            CboInstances.Items.Insert(0, PklSettings.Current.KspRootPath);
+            CboInstances.Items.Insert(0, KspSettings.Current.KspRootPath);
         }
-        CboInstances.SelectedItem = PklSettings.Current.KspRootPath;
+        CboInstances.SelectedItem = KspSettings.Current.KspRootPath;
         CboInstances.SelectionChanged += (_, _) =>
         {
             if (CboInstances.SelectedItem is string s && !string.IsNullOrEmpty(s))
             {
-                PklSettings.Current.KspRootPath = s;
-                PklSettings.Save();
+                KspSettings.Current.KspRootPath = s;
+                KspSettings.Save();
                 RefreshKspInfo();
                 LabSaved.Text = "已切换 KSP 实例。";
             }
@@ -77,7 +77,7 @@ public partial class PageSettings
 
     private void RefreshKspInfo()
     {
-        var root = PklSettings.Current.KspRootPath;
+        var root = KspSettings.Current.KspRootPath;
         LabKspPath.Text = string.IsNullOrEmpty(root) ? "（未设置）" : root;
         if (string.IsNullOrEmpty(root) || !Directory.Exists(root))
         {
@@ -112,10 +112,10 @@ public partial class PageSettings
         var dialog = new OpenFolderDialog { Title = "添加 KSP 实例目录" };
         if (dialog.ShowDialog() == true)
         {
-            if (!PklSettings.Current.Instances.Contains(dialog.FolderName))
-                PklSettings.Current.Instances.Add(dialog.FolderName);
-            PklSettings.Current.KspRootPath = dialog.FolderName;
-            PklSettings.Save();
+            if (!KspSettings.Current.Instances.Contains(dialog.FolderName))
+                KspSettings.Current.Instances.Add(dialog.FolderName);
+            KspSettings.Current.KspRootPath = dialog.FolderName;
+            KspSettings.Save();
             LabSaved.Text = "实例已添加。";
             RefreshInstancesList();
             RefreshKspInfo();
@@ -130,8 +130,8 @@ public partial class PageSettings
         };
         if (dialog.ShowDialog() == true)
         {
-            PklSettings.Current.CkanDataDir = dialog.FolderName;
-            PklSettings.Save();
+            KspSettings.Current.CkanDataDir = dialog.FolderName;
+            KspSettings.Save();
             LabCkanDataDir.Text = dialog.FolderName;
             LabCkanStatus.Text = "数据目录已保存。";
         }
@@ -143,10 +143,10 @@ public partial class PageSettings
         {
             BtnRefreshRepo.IsEnabled = false;
             LabCkanStatus.Text = "正在刷新模组索引…";
-            var svc = new ModService(dataDir: PklSettings.Current.CkanDataDir);
+            var svc = new ModService(dataDir: KspSettings.Current.CkanDataDir);
             svc.MirrorUrls = TxtMirrorUrls.Text.Split(new[]{'\r','\n'}, StringSplitOptions.RemoveEmptyEntries)
                             .Select(s => s.Trim()).Where(s => s.Length > 0).ToList();
-            svc.OfficialRepoUrl = PklSettings.Current.CkanMasterRepoUrl;
+            svc.OfficialRepoUrl = KspSettings.Current.CkanMasterRepoUrl;
             svc.RepoStrategy = (CboStrategy.SelectedItem as System.Windows.Controls.ComboBoxItem)?.Tag as string ?? "OfficialFirst";
             await svc.RefreshMasterRegistryAsync();
             LabCkanStatus.Text = "索引刷新完成。";
@@ -165,12 +165,12 @@ public partial class PageSettings
     {
         try
         {
-            var svc = new ModService(dataDir: PklSettings.Current.CkanDataDir);
+            var svc = new ModService(dataDir: KspSettings.Current.CkanDataDir);
             var ksp = new KspInstanceService();
-            svc.AttachInstance(ksp.Load(PklSettings.Current.KspRootPath));
+            svc.AttachInstance(ksp.Load(KspSettings.Current.KspRootPath));
             var installed = await svc.ListInstalledAsync();
             var rows = installed.Select(m => new { name = m.Identifier, version = m.Version ?? "" }).ToList();
-            var dlg = new SaveFileDialog { Filter = "CKAN 清单|*.ckan|JSON|*.json", FileName = "pkl-modlist.ckan" };
+            var dlg = new SaveFileDialog { Filter = "CKAN 清单|*.ckan|JSON|*.json", FileName = "ksp-modlist.ckan" };
             if (dlg.ShowDialog() == true)
             {
                 File.WriteAllText(dlg.FileName, System.Text.Json.JsonSerializer.Serialize(rows, new System.Text.Json.JsonSerializerOptions { WriteIndented = true }));
@@ -193,9 +193,9 @@ public partial class PageSettings
             var rows = System.Text.Json.JsonSerializer.Deserialize<System.Collections.Generic.List<ImportRow>>(json);
             if (rows is not { Count: > 0 }) { LabCkanStatus.Text = "清单为空。"; return; }
 
-            var svc = new ModService(dataDir: PklSettings.Current.CkanDataDir);
+            var svc = new ModService(dataDir: KspSettings.Current.CkanDataDir);
             var ksp = new KspInstanceService();
-            svc.AttachInstance(ksp.Load(PklSettings.Current.KspRootPath));
+            svc.AttachInstance(ksp.Load(KspSettings.Current.KspRootPath));
 
             var progress = new Progress<string>(msg => LabCkanStatus.Text = msg);
             foreach (var row in rows)
@@ -214,20 +214,20 @@ public partial class PageSettings
 
     private void BtnSave_Click(object sender, System.Windows.Input.MouseButtonEventArgs e)
     {
-        PklSettings.Current.TranslateBaseUrl = TxtBaseUrl.Text.Trim();
-        PklSettings.Current.TranslateApiKey = TxtApiKey.Text.Trim();
-        PklSettings.Current.TranslateModel = TxtModel.Text.Trim();
-        PklSettings.Current.CkanMirrorUrls = TxtMirrorUrls.Text.Split(new[]{'\r','\n'}, StringSplitOptions.RemoveEmptyEntries)
+        KspSettings.Current.TranslateBaseUrl = TxtBaseUrl.Text.Trim();
+        KspSettings.Current.TranslateApiKey = TxtApiKey.Text.Trim();
+        KspSettings.Current.TranslateModel = TxtModel.Text.Trim();
+        KspSettings.Current.CkanMirrorUrls = TxtMirrorUrls.Text.Split(new[]{'\r','\n'}, StringSplitOptions.RemoveEmptyEntries)
                             .Select(s => s.Trim()).Where(s => s.Length > 0).ToList();
-        PklSettings.Current.CkanRepoStrategy = (CboStrategy.SelectedItem as System.Windows.Controls.ComboBoxItem)?.Tag as string ?? "MirrorOnly";
-        PklSettings.Current.CkanStabilityTolerance =
+        KspSettings.Current.CkanRepoStrategy = (CboStrategy.SelectedItem as System.Windows.Controls.ComboBoxItem)?.Tag as string ?? "MirrorOnly";
+        KspSettings.Current.CkanStabilityTolerance =
             OptPre.Checked ? "PreRelease" : OptTesting.Checked ? "Testing" : "Stable";
-        PklSettings.Current.HttpProxy = TxtProxy.Text.Trim();
+        KspSettings.Current.HttpProxy = TxtProxy.Text.Trim();
         int.TryParse(TxtConcurrency.Text.Trim(), out var conc);
-        if (conc > 0) PklSettings.Current.DownloadConcurrency = conc;
+        if (conc > 0) KspSettings.Current.DownloadConcurrency = conc;
         int.TryParse(TxtTimeout.Text.Trim(), out var to);
-        if (to > 0) PklSettings.Current.HttpTimeoutSeconds = to;
-        PklSettings.Save();
+        if (to > 0) KspSettings.Current.HttpTimeoutSeconds = to;
+        KspSettings.Save();
         LabSaved.Text = "已保存。";
     }
 

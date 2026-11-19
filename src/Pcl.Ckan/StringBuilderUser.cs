@@ -1,6 +1,6 @@
 using System.Text;
 
-namespace Pkl.Ckan;
+namespace Pcl.Ckan;
 
 /// <summary>
 /// IUser implementation that accumulates all CKAN log/progress/error messages into a StringBuilder.

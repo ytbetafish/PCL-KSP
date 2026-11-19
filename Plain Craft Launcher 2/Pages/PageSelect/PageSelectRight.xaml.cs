@@ -7,7 +7,7 @@ using System.Windows.Controls;
 using System.Windows.Controls.Primitives;
 using System.Windows.Input;
 using Microsoft.Win32;
-using Pkl.Ckan;
+using Pcl.Ckan;
 
 namespace PCL;
 
@@ -61,10 +61,10 @@ public partial class PageSelectRight : IPageView
     private List<string> GetInstancePaths()
     {
         var paths = new List<string>();
-        var current = PklSettings.Current.KspRootPath;
+        var current = KspSettings.Current.KspRootPath;
         if (!string.IsNullOrWhiteSpace(current))
             paths.Add(current);
-        foreach (var p in PklSettings.Current.Instances)
+        foreach (var p in KspSettings.Current.Instances)
         {
             if (!string.IsNullOrWhiteSpace(p) &&
                 !paths.Contains(p, StringComparer.OrdinalIgnoreCase))
@@ -143,7 +143,7 @@ public partial class PageSelectRight : IPageView
             tag = path,
             Height = 42d,
             Type = MyListItem.CheckType.Clickable,
-            Checked = string.Equals(path, PklSettings.Current.KspRootPath,
+            Checked = string.Equals(path, KspSettings.Current.KspRootPath,
                 StringComparison.OrdinalIgnoreCase)
         };
         item.ContentHandler = (sender, e) => InstanceItemContent(item, path);
@@ -197,10 +197,10 @@ public partial class PageSelectRight : IPageView
         if (sender is not MyListItem item || item.tag is not string path)
             return;
 
-        PklSettings.Current.KspRootPath = path;
-        if (!PklSettings.Current.Instances.Contains(path, StringComparer.OrdinalIgnoreCase))
-            PklSettings.Current.Instances.Add(path);
-        PklSettings.Save();
+        KspSettings.Current.KspRootPath = path;
+        if (!KspSettings.Current.Instances.Contains(path, StringComparer.OrdinalIgnoreCase))
+            KspSettings.Current.Instances.Add(path);
+        KspSettings.Save();
 
         if (Window.GetWindow(item) is FormMain fm)
             fm.PageBack();
@@ -214,10 +214,10 @@ public partial class PageSelectRight : IPageView
             return;
 
         var path = dialog.FolderName;
-        if (!PklSettings.Current.Instances.Contains(path, StringComparer.OrdinalIgnoreCase))
-            PklSettings.Current.Instances.Add(path);
-        PklSettings.Current.KspRootPath = path;
-        PklSettings.Save();
+        if (!KspSettings.Current.Instances.Contains(path, StringComparer.OrdinalIgnoreCase))
+            KspSettings.Current.Instances.Add(path);
+        KspSettings.Current.KspRootPath = path;
+        KspSettings.Save();
         RefreshList();
     }
 

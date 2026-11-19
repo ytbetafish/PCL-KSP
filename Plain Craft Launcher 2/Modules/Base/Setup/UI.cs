@@ -199,7 +199,7 @@ public partial class Setup
 
         if (value is >= 0 and <= 4)
         {
-            // PKL 品牌：固定显示文本 logo，隐藏原版矢量/图片/HMCL logo 与 CE 角标。
+            // PCL-KSP 品牌：固定显示文本 logo，隐藏原版矢量/图片/HMCL logo 与 CE 角标。
             main.ShapeTitleLogo.Visibility = Visibility.Collapsed;
             main.ShapeHMCLTitleLogo.Visibility = Visibility.Collapsed;
             main.BtnTitleHelp.Visibility = Visibility.Collapsed;
@@ -212,13 +212,13 @@ public partial class Setup
     }
 
     /// <summary>
-    ///     标题栏默认品牌标题：PKL 品牌名 + 自有版本号（不含上游版本）。
+    ///     标题栏默认品牌标题：PCL-KSP 品牌名 + 自有版本号（不含上游版本）。
     /// </summary>
     public static string BrandTitle => "PCL KSP 修改版 " + Basics.VersionName;
 
     public static void UiLogoText(string value)
     {
-        // PKL 品牌：空文本或残留的原版品牌名回退为默认品牌标题（含自有版本号）。
+        // PCL-KSP 品牌：空文本或残留的原版品牌名回退为默认品牌标题（含自有版本号）。
         var text = (value ?? string.Empty).Trim();
         if (text.Length == 0 ||
             text.Equals("PCL", StringComparison.OrdinalIgnoreCase) ||

@@ -6,13 +6,13 @@ using System.Text.Json;
 namespace PCL;
 
 /// <summary>
-///     PKL 自己的设置（KSP 路径 + 翻译服务选项）。
+///     PCL-KSP 自己的设置（KSP 路径 + 翻译服务选项）。
 ///     不走 PCL 的 source-generator Config 系统，避免动 PCL.Core。
-///     持久化到 %APPDATA%\PCL-KSP\pkl-settings.json，保证 exe 位于只读目录（如 Program Files、
+///     持久化到 %APPDATA%\PCL-KSP\pclksp-settings.json，保证 exe 位于只读目录（如 Program Files、
 ///     解压到受保护位置的 Release zip）时也能读写，避免 Access denied。
 ///     若旧版本曾把配置写在 exe 同目录，启动时自动迁移一次。
 /// </summary>
-public static class PklSettings
+public static class KspSettings
 {
     private static readonly string _path = ResolvePath();
 
@@ -61,15 +61,15 @@ public static class PklSettings
         var dir = Path.Combine(
             Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "PCL-KSP");
         Directory.CreateDirectory(dir);
-        var target = Path.Combine(dir, "pkl-settings.json");
+        var target = Path.Combine(dir, "pclksp-settings.json");
 
-        // 迁移旧版 exe 同目录配置。
+        // 迁移旧版（工程名为 PKL 时期）的 exe 同目录配置。
         try
         {
             var legacy = Path.Combine(LauncherPaths.ExecutableDirectory, "pkl-settings.json");
             if (!File.Exists(target) && File.Exists(legacy))
                 File.Copy(legacy, target, true);
-            // 旧版配置目录 %APPDATA%\PKL 也迁移一次。
+            // 旧版配置目录（%APPDATA%\PKL）也迁移一次。
             var legacyShared = Path.Combine(
                 Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "PKL", "pkl-settings.json");
             if (!File.Exists(target) && File.Exists(legacyShared))
@@ -82,7 +82,7 @@ public static class PklSettings
         return target;
     }
 
-    static PklSettings()
+    static KspSettings()
     {
         try
         {
@@ -130,7 +130,7 @@ public static class PklSettings
         catch
         {
             // 写盘失败不致命，但不静默吞掉——至少留个痕迹。
-            try { File.AppendAllText(Path.Combine(Path.GetTempPath(), "pkl-settings-save-error.log"),
+            try { File.AppendAllText(Path.Combine(Path.GetTempPath(), "pclksp-settings-save-error.log"),
                 $"[{DateTime.Now}] save to {_path} failed{Environment.NewLine}"); } catch { }
         }
     }

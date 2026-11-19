@@ -77,11 +77,11 @@ public static partial class Common
         $@"{Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "PCL")}\";
 
     /// <summary>
-    ///     AppData 中的 PKL 配置文件夹路径，以 \ 结尾。
+    ///     AppData 中的 PCL-KSP 配置文件夹路径，以 \ 结尾。
     /// </summary>
     public static string pathAppdataConfig =
         Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData)
-        + (VersionBranchName == "Debug" ? @"\.\pkldebug\" : @"\.\pkl\");
+        + (VersionBranchName == "Debug" ? @"\.\pclkspdebug\" : @"\.\pclksp\");
 
     /// <summary>
     ///     纯 ASCII 路径，用于避免部分程序对非 ASCII 路径的兼容问题。

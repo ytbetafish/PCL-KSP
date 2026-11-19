@@ -5,7 +5,7 @@
     <RootNamespace>CKAN</RootNamespace>
     <OutputType>Library</OutputType>
     <!-- Forked integration: converge the upstream multi-target to a single net10.0-windows TFM
-         so Pkl.Ckan can ProjectReference it directly. -->
+         so Pcl.Ckan can ProjectReference it directly. -->
     <TargetFramework>net10.0-windows</TargetFramework>
     <EnableWindowsTargeting>true</EnableWindowsTargeting>
     <LangVersion>latest</LangVersion>
@@ -22,7 +22,7 @@
     <GenerateDocumentationFile>false</GenerateDocumentationFile>
     <!-- Do not pack: this is an internal referenced project, not a shipped NuGet. -->
     <IsPackable>false</IsPackable>
-    <Product>CKAN (PKL fork)</Product>
+    <Product>CKAN (PCL-KSP fork)</Product>
   </PropertyGroup>
 
   <!-- Static version (upstream derived it from CHANGELOG.md via build.ps1, which we don't run). -->

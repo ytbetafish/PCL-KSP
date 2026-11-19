@@ -15,7 +15,7 @@
    - 启动器版本（设置 → 关于）、KSP 版本；
    - 相关日志片段或截图。
 
-**注意**：贴日志时先把 `%USERPROFILE%\...` 这类本机绝对路径换成占位符，也不要提交 `pkl-settings.json`、`build_out.txt` 这类本地文件。
+**注意**：贴日志时先把 `%USERPROFILE%\...` 这类本机绝对路径换成占位符，也不要提交 `pclksp-settings.json`、`build_out.txt` 这类本地文件。
 
 ## 提交代码
 

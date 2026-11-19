@@ -10,7 +10,7 @@ namespace PCL;
 
 /// <summary>
 /// 任务管理页（右下角下载按钮点出来）。原样移植自原版 PCL-CE 的 PageSpeedLeft，
-/// 仅把外部依赖替换为 PKL 现有实现：AniDispose 改为控件上的静态方法，卡片按加载器 Uuid 索引
+/// 仅把外部依赖替换为 PCL-KSP 现有实现：AniDispose 改为控件上的静态方法，卡片按加载器 Uuid 索引
 /// （CKAN 任务的标题会随进度变化），并为非 LoaderCombo 的加载器（CKAN 下载）提供逐行子任务。
 /// </summary>
 public partial class PageSpeedLeft : IPageView

@@ -89,7 +89,7 @@ public static class Paths
         Directory.CreateDirectory(_sharedLocalData);
         Directory.CreateDirectory(_temp);
 #if !DEBUG
-        // 旧版数据目录为 %APPDATA%\PKL，新目录为空时整目录复制一次，避免设置与缓存丢失。
+        // 旧版（工程名为 PKL 时期）数据目录为 %APPDATA%\PKL，新目录为空时整目录复制一次，避免设置与缓存丢失。
         try
         {
             var legacyShared = GetSpecialPath(Special.ApplicationData, "PKL");

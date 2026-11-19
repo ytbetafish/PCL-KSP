@@ -86,7 +86,7 @@ public sealed partial class TelemetryService
     // 错误上报
     public static void ReportException(Exception ex, string plain, LogLevel level)
     {
-        // PKL: 已掐断异常上报到 Sentry，方法保留为空实现以兼容日志调用。
+        // PCL-KSP: 已掐断异常上报到 Sentry，方法保留为空实现以兼容日志调用。
         return;
     }
 
@@ -138,7 +138,7 @@ public sealed partial class TelemetryService
     [LifecycleStart]
     private static async Task _StartAsync()
     {
-        // PKL: 已掐断 Sentry 初始化、STUN 探测与设备环境上报，不再向 PCL-CE 后端发送任何数据。
+        // PCL-KSP: 已掐断 Sentry 初始化、STUN 探测与设备环境上报，不再向 PCL-CE 后端发送任何数据。
         await Task.CompletedTask;
     }
     

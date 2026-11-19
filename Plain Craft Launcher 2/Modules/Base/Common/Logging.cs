@@ -361,7 +361,7 @@ public static partial class Common
                 == 1);
         if (shouldOpenLogFolder)
             OpenExplorer(ExePath + @"PCL\Log\");
-        // PKL: Do not open PCL-CE official GitHub issues page.
+        // PCL-KSP: Do not open PCL-CE official GitHub issues page.
     }
 
     /// <summary>

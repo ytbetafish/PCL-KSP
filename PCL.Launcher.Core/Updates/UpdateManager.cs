@@ -47,7 +47,7 @@ public static class UpdateManager
 
     public static UpdateEnums.VersionStatus GetVersionStatus()
     {
-        // PKL: 不再联网检查 PCL-CE 官方更新服务器，固定返回未知状态（不触发更新提示与反馈可用性判断）。
+        // PCL-KSP: 不再联网检查 PCL-CE 官方更新服务器，固定返回未知状态（不触发更新提示与反馈可用性判断）。
         return UpdateEnums.VersionStatus.Unknown;
     }
 
@@ -56,7 +56,7 @@ public static class UpdateManager
         string? receivedKey = null,
         bool forceValidated = false)
     {
-        // PKL: 已掐断从 PCL-CE 官方服务器下载/安装更新。
+        // PCL-KSP: 已掐断从 PCL-CE 官方服务器下载/安装更新。
         return;
     }
 
@@ -103,7 +103,7 @@ public static class UpdateManager
     }
 
     /// <summary>
-    ///     PKL: 已掐断下载官方最新版 PCL（整合包打包用途），方法保留为空实现以兼容残留调用。
+    ///     PCL-KSP: 已掐断下载官方最新版 PCL（整合包打包用途），方法保留为空实现以兼容残留调用。
     /// </summary>
     internal static void DownloadLatestPcl(Loading.LoaderBase? loaderToSyncProgress = null)
     {
@@ -112,7 +112,7 @@ public static class UpdateManager
 
     private static void LoadOnlineInfo()
     {
-        // PKL: 禁用 PCL-CE 自动更新检查与公告拉取
+        // PCL-KSP: 禁用 PCL-CE 自动更新检查与公告拉取
         return;
     }
 

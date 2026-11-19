@@ -2,7 +2,7 @@ using Microsoft.Win32;
 using System.Linq;
 using System.Threading.Tasks;
 using System.Windows;
-using Pkl.Ckan;
+using Pcl.Ckan;
 
 namespace PCL.Pages;
 
@@ -11,14 +11,14 @@ public partial class PageCkan
     public PageCkan()
     {
         InitializeComponent();
-        LabCkanDataDir.Text = PklSettings.Current.CkanDataDir;
-        TxtMirrorUrls.Text = string.Join("\n", PklSettings.Current.CkanMirrorUrls);
+        LabCkanDataDir.Text = KspSettings.Current.CkanDataDir;
+        TxtMirrorUrls.Text = string.Join("\n", KspSettings.Current.CkanMirrorUrls);
         foreach (var item in CboStrategy.Items)
         {
-            if (item is System.Windows.Controls.ComboBoxItem ci && (string)ci.Tag == PklSettings.Current.CkanRepoStrategy) { CboStrategy.SelectedItem = item; break; }
+            if (item is System.Windows.Controls.ComboBoxItem ci && (string)ci.Tag == KspSettings.Current.CkanRepoStrategy) { CboStrategy.SelectedItem = item; break; }
         }
         if (CboStrategy.SelectedItem == null) CboStrategy.SelectedIndex = 0;
-        switch (PklSettings.Current.CkanStabilityTolerance)
+        switch (KspSettings.Current.CkanStabilityTolerance)
         {
             case "Testing": OptTesting.Checked = true; break;
             case "PreRelease": OptPre.Checked = true; break;
@@ -34,8 +34,8 @@ public partial class PageCkan
         _loadingGitHubAccel = true;
         try
         {
-            var prefix = PklSettings.Current.GitHubAccelerationPrefix ?? "";
-            ChkGitHubAccel.Checked = PklSettings.Current.GitHubAccelerationEnabled;
+            var prefix = KspSettings.Current.GitHubAccelerationPrefix ?? "";
+            ChkGitHubAccel.Checked = KspSettings.Current.GitHubAccelerationEnabled;
             TxtGitHubPrefix.Text = prefix;
             CboGitHubPrefix.SelectedItem = null;
             foreach (var item in CboGitHubPrefix.Items)
@@ -61,8 +61,8 @@ public partial class PageCkan
     private void ChkGitHubAccel_Change(object sender, bool user)
     {
         if (_loadingGitHubAccel || !user) return;
-        PklSettings.Current.GitHubAccelerationEnabled = ChkGitHubAccel.Checked == true;
-        PklSettings.Save();
+        KspSettings.Current.GitHubAccelerationEnabled = ChkGitHubAccel.Checked == true;
+        KspSettings.Save();
         LabCkanStatus.Text = ChkGitHubAccel.Checked == true ? "已启用 GitHub 下载加速。" : "已关闭 GitHub 下载加速。";
     }
 
@@ -87,8 +87,8 @@ public partial class PageCkan
         var prefix = value.Trim();
         if (prefix.Length == 0) prefix = "https://ghfast.top/";
         if (!prefix.EndsWith("/", System.StringComparison.Ordinal)) prefix += "/";
-        PklSettings.Current.GitHubAccelerationPrefix = prefix;
-        PklSettings.Save();
+        KspSettings.Current.GitHubAccelerationPrefix = prefix;
+        KspSettings.Save();
         LabCkanStatus.Text = "加速前缀已保存：" + prefix;
     }
 
@@ -97,8 +97,8 @@ public partial class PageCkan
         var dir = LabCkanDataDir.Text.Trim();
         if (!string.IsNullOrEmpty(dir))
         {
-            PklSettings.Current.CkanDataDir = dir;
-            PklSettings.Save();
+            KspSettings.Current.CkanDataDir = dir;
+            KspSettings.Save();
             LabCkanStatus.Text = "数据目录已保存。";
         }
     }
@@ -111,8 +111,8 @@ public partial class PageCkan
         };
         if (dialog.ShowDialog() == true)
         {
-            PklSettings.Current.CkanDataDir = dialog.FolderName;
-            PklSettings.Save();
+            KspSettings.Current.CkanDataDir = dialog.FolderName;
+            KspSettings.Save();
             LabCkanDataDir.Text = dialog.FolderName;
             LabCkanStatus.Text = "数据目录已保存。";
         }
@@ -124,12 +124,12 @@ public partial class PageCkan
         {
             BtnRefreshRepo.IsEnabled = false;
             LabCkanStatus.Text = "正在刷新模组索引…";
-            PklSettings.Current.CkanDataDir = LabCkanDataDir.Text.Trim();
-            PklSettings.Save();
-            var svc = new ModService(dataDir: PklSettings.Current.CkanDataDir);
+            KspSettings.Current.CkanDataDir = LabCkanDataDir.Text.Trim();
+            KspSettings.Save();
+            var svc = new ModService(dataDir: KspSettings.Current.CkanDataDir);
             svc.MirrorUrls = TxtMirrorUrls.Text.Split(new[]{'\r','\n'}, System.StringSplitOptions.RemoveEmptyEntries)
                             .Select(s => s.Trim()).Where(s => s.Length > 0).ToList();
-            svc.OfficialRepoUrl = PklSettings.Current.CkanMasterRepoUrl;
+            svc.OfficialRepoUrl = KspSettings.Current.CkanMasterRepoUrl;
             svc.RepoStrategy = (CboStrategy.SelectedItem as System.Windows.Controls.ComboBoxItem)?.Tag as string ?? "OfficialFirst";
             await svc.RefreshMasterRegistryAsync();
             LabCkanStatus.Text = "索引刷新完成。";
@@ -148,12 +148,12 @@ public partial class PageCkan
     {
         try
         {
-            var svc = new ModService(dataDir: PklSettings.Current.CkanDataDir);
+            var svc = new ModService(dataDir: KspSettings.Current.CkanDataDir);
             var ksp = new KspInstanceService();
-            svc.AttachInstance(ksp.Load(PklSettings.Current.KspRootPath));
+            svc.AttachInstance(ksp.Load(KspSettings.Current.KspRootPath));
             var installed = await svc.ListInstalledAsync();
             var rows = installed.Select(m => new { name = m.Identifier, version = m.Version ?? "" }).ToList();
-            var dlg = new SaveFileDialog { Filter = "CKAN 清单|*.ckan|JSON|*.json", FileName = "pkl-modlist.ckan" };
+            var dlg = new SaveFileDialog { Filter = "CKAN 清单|*.ckan|JSON|*.json", FileName = "ksp-modlist.ckan" };
             if (dlg.ShowDialog() == true)
             {
                 System.IO.File.WriteAllText(dlg.FileName, System.Text.Json.JsonSerializer.Serialize(rows, new System.Text.Json.JsonSerializerOptions { WriteIndented = true }));
@@ -176,9 +176,9 @@ public partial class PageCkan
             var rows = System.Text.Json.JsonSerializer.Deserialize<System.Collections.Generic.List<ImportRow>>(json);
             if (rows is not { Count: > 0 }) { LabCkanStatus.Text = "清单为空。"; return; }
 
-            var svc = new ModService(dataDir: PklSettings.Current.CkanDataDir);
+            var svc = new ModService(dataDir: KspSettings.Current.CkanDataDir);
             var ksp = new KspInstanceService();
-            svc.AttachInstance(ksp.Load(PklSettings.Current.KspRootPath));
+            svc.AttachInstance(ksp.Load(KspSettings.Current.KspRootPath));
 
             var progress = new Progress<string>(msg => LabCkanStatus.Text = msg);
             foreach (var row in rows)

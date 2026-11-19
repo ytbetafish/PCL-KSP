@@ -7,8 +7,8 @@
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
     <OutputType>Library</OutputType>
-    <RootNamespace>Pkl.Ckan</RootNamespace>
-    <AssemblyName>Pkl.Ckan</AssemblyName>
+    <RootNamespace>Pcl.Ckan</RootNamespace>
+    <AssemblyName>Pcl.Ckan</AssemblyName>
     <AllowUnsafeBlocks>false</AllowUnsafeBlocks>
   </PropertyGroup>
 

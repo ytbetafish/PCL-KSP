@@ -7,7 +7,7 @@ using System.Text.Json;
 using System.Text.Json.Serialization;
 using System.Text.RegularExpressions;
 
-namespace Pkl.Ckan;
+namespace Pcl.Ckan;
 
 /// <summary>SpaceDock 模组详情（仅抽取启动器需要的字段）。</summary>
 public sealed record SpaceDockMod(int Id, string Author, string? Background, int Downloads,
@@ -23,7 +23,7 @@ public sealed class SpaceDockClient
 
     private static readonly HttpClient _http = new()
     {
-        DefaultRequestHeaders = { UserAgent = { ProductInfoHeaderValue.Parse("Pkl.Ckan/1.0") } }
+        DefaultRequestHeaders = { UserAgent = { ProductInfoHeaderValue.Parse("Pcl.Ckan/1.0") } }
     };
 
     private readonly ConcurrentDictionary<int, SpaceDockMod?> _cache = new();

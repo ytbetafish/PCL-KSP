@@ -170,7 +170,7 @@ public partial class FormMain
             AddResizer();
         else
             RemoveResizer();
-        // PKL 品牌：隐藏原版 PCL 矢量 logo + CE 角标，显示 PKL 文字
+        // PCL-KSP 品牌：隐藏原版 PCL 矢量 logo + CE 角标，显示 PCL-KSP 文字
         try
         {
             ShapeTitleLogo.Visibility = Visibility.Collapsed;
@@ -293,7 +293,7 @@ public partial class FormMain
                             }
                     }
 
-                // PKL: Telemetry consent prompt removed; telemetry is disabled at service level.
+                // PCL-KSP: Telemetry consent prompt removed; telemetry is disabled at service level.
                 // 启动加载器池
                 try
                 {

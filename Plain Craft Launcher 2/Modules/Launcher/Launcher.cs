@@ -5,7 +5,7 @@ using System.Windows.Controls;
 using Microsoft.Win32;
 using PCL.Core.Utils;
 using PCL.Core.Utils.OS;
-using Pkl.Ckan;
+using Pcl.Ckan;
 
 namespace PCL;
 
@@ -54,7 +54,7 @@ public static partial class Launcher
         _ckanInitialized = true;
         try
         {
-            var settings = PklSettings.Current;
+            var settings = KspSettings.Current;
             ModService.ApplyNetworkSettings(
                 settings.HttpProxy,
                 settings.DownloadConcurrency,

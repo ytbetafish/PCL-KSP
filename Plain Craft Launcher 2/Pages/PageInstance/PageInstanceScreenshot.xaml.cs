@@ -40,7 +40,7 @@ public partial class PageInstanceScreenshot : IPageView
         Load.State = new MyLoadingStateSimulator { LoadingState = LoadingState.Run };
         PanListCard.Visibility = Visibility.Collapsed;
 
-        var root = PklSettings.Current.KspRootPath;
+        var root = KspSettings.Current.KspRootPath;
         var shotsDir = string.IsNullOrWhiteSpace(root) ? null : Path.Combine(root, "screenshots");
 
         List<FileInfo> files;

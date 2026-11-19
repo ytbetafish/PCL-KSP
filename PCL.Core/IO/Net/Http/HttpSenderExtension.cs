@@ -26,7 +26,7 @@ public static class HttpSenderExtension
             if(addMetedata)
             {
                 request
-                    .WithHeader("User-Agent", $"PKL/{Basics.VersionName}");
+                    .WithHeader("User-Agent", $"PCL-KSP/{Basics.VersionName}");
             }
 
             var requestId = Guid.NewGuid().ToString();

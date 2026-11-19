@@ -1,5 +1,5 @@
 blank_issues_enabled: true
 contact_links:
   - name: "提问 / 讨论 / Questions / Discussions"
-    url: "https://github.com/ytbetafish/PKL/issues"
+    url: "https://github.com/ytbetafish/PCL-KSP/issues"
     about: "先搜一下是否已有相同问题；没有的话直接开 Issue / Search existing issues first, open a new one if none matches."

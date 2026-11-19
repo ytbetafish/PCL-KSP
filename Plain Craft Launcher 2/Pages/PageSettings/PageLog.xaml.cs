@@ -107,7 +107,7 @@ public partial class PageLog
         var dlg = new SaveFileDialog
         {
             Title = "导出日志",
-            FileName = "PKL_Logs_" + DateTime.Now.ToString("yyyyMMddHHmmss"),
+            FileName = "PCLKSP_Logs_" + DateTime.Now.ToString("yyyyMMddHHmmss"),
             Filter = "日志压缩包|*.zip"
         };
         if (dlg.ShowDialog() != true) return;

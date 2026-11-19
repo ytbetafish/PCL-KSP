@@ -1,4 +1,4 @@
-namespace Pkl.Ckan;
+namespace Pcl.Ckan;
 
 /// <summary>
 /// In-process smoke entry point. Not an executable (so we don't touch the .slnx): hosts call
@@ -37,7 +37,7 @@ public static class SmokeTest
 
         foreach (var line in lines)
         {
-            Console.WriteLine("[Pkl.Ckan] " + line);
+            Console.WriteLine("[Pcl.Ckan] " + line);
         }
 
         return Task.FromResult(candidateCount);

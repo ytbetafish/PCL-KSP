@@ -2,7 +2,7 @@ using System;
 using System.IO;
 using System.Windows;
 using System.Windows.Controls;
-using Pkl.Ckan;
+using Pcl.Ckan;
 
 namespace PCL;
 
@@ -40,7 +40,7 @@ public partial class PageInstanceOverall : IPageView
     private void BuildContent()
     {
         PanMain.Children.Clear();
-        var root = PklSettings.Current.KspRootPath;
+        var root = KspSettings.Current.KspRootPath;
         if (string.IsNullOrWhiteSpace(root) || !Directory.Exists(root))
         {
             PanMain.Children.Add(new TextBlock

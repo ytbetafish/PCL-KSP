@@ -2,7 +2,7 @@ using System;
 using System.Diagnostics;
 using System.IO;
 using System.Windows;
-using Pkl.Ckan;
+using Pcl.Ckan;
 
 namespace PCL;
 
@@ -13,14 +13,14 @@ public partial class PageLaunchLeft
     public PageLaunchLeft()
     {
         InitializeComponent();
-        LabLauncherVersion.Text = "PKL v" + PCL.Core.App.Basics.VersionName;
+        LabLauncherVersion.Text = "PCL-KSP v" + PCL.Core.App.Basics.VersionName;
         Loaded += (_, _) => RefreshPath();
         Unloaded += (_, _) => DetachKspWatcher();
     }
 
     private void RefreshPath()
     {
-        var path = PklSettings.Current.KspRootPath;
+        var path = KspSettings.Current.KspRootPath;
         if (string.IsNullOrWhiteSpace(path))
         {
             LabKspVersion.Text = "未设置 KSP";
@@ -42,7 +42,7 @@ public partial class PageLaunchLeft
 
     private void BtnLaunch_Click(object sender, System.Windows.Input.MouseButtonEventArgs e)
     {
-        var root = PklSettings.Current.KspRootPath;
+        var root = KspSettings.Current.KspRootPath;
         if (string.IsNullOrWhiteSpace(root) || !KspInstanceService.IsKspRoot(root))
         {
             MessageBox.Show("请先在设置页选择有效的 KSP 安装路径。", "PCL KSP 修改版", MessageBoxButton.OK, MessageBoxImage.Information);

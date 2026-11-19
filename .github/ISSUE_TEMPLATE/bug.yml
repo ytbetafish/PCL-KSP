@@ -54,7 +54,7 @@ body:
     id: logs
     attributes:
       label: 日志 / Logs
-      description: 日志在 `%APPDATA%\PKL\Log\`（与启动器数据目录同级）。可直接把相关片段粘贴到这里，**注意去掉本机绝对路径等个人信息**。
+      description: 日志在 `%APPDATA%\PCL-KSP\Log\`（与启动器数据目录同级）。可直接把相关片段粘贴到这里，**注意去掉本机绝对路径等个人信息**。
     validations:
       required: false
 
