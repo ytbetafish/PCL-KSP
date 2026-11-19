@@ -5,13 +5,13 @@
                   PanScroll="{Binding ElementName=PanBack}">
     <local:MyScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled" x:Name="PanBack">
         <StackPanel x:Name="PanMain" Margin="25,10">
-            <local:MyCard Margin="0,15" Title="关于 PKL">
+            <local:MyCard Margin="0,15" Title="关于 PCL KSP 修改版">
                 <StackPanel Margin="25,37,25,15">
                     <TextBlock Text="原版 PCL 作者：龙腾猫跃" FontSize="15" FontWeight="Bold" Margin="0,0,0,5" />
                     <TextBlock Text="本软件基于 PCL / PCL-CE 二次开发，与龙腾猫跃及 PCL 官方无隶属关系。" Foreground="#888" TextWrapping="Wrap" Margin="0,0,0,5" />
                     <TextBlock x:Name="LabSponsor" Text="支持原作者：https://afdian.com/a/LTCat" Foreground="#0969DA" Cursor="Hand" MouseLeftButtonUp="LinkClick" Margin="0,0,0,20" />
 
-                    <TextBlock Text="PKL - Kerbal Space Program Launcher" FontSize="16" FontWeight="Bold" Margin="0,0,0,10" />
+                    <TextBlock Text="PCL KSP 修改版 - Kerbal Space Program Launcher" FontSize="16" FontWeight="Bold" Margin="0,0,0,10" />
                     <TextBlock Text="第三方基于 PCL-CE 独立进行的二次创作，非 PCL 官方产品。" Foreground="#888" Margin="0,0,0,10" />
                     <TextBlock x:Name="LabVersion" Margin="0,0,0,5" />
                     <TextBlock Text="许可：界面外壳沿用《PCL 分发有限许可》（见 Plain Craft Launcher 2\LICENCE）；CKAN 核心为 MIT；本项目新增代码为 Apache-2.0。" TextWrapping="Wrap" Margin="0,0,0,20" />

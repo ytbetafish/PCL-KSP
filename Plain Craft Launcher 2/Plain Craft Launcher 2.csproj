@@ -1,4 +1,4 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk">
     <PropertyGroup>
         <Nullable>enable</Nullable>
         <TargetFramework>net10.0-windows</TargetFramework>
@@ -25,9 +25,9 @@
         <ImplicitUsings>enable</ImplicitUsings>
         <ApplicationManifest>app.manifest</ApplicationManifest>
         <ApplicationIcon>Images\icon.ico</ApplicationIcon>
-        <AssemblyTitle>PKL - KSP Launcher</AssemblyTitle>
+        <AssemblyTitle>PCL KSP 修改版 - Kerbal Space Program Launcher</AssemblyTitle>
         <Description>Minecraft 启动器 (作者: 龙腾猫跃; 经社区二次开发版本)</Description>
-        <Product>PKL - KSP Launcher</Product>
+        <Product>PCL KSP 修改版 - Kerbal Space Program Launcher</Product>
         <Copyright>Copyright © 龙腾猫跃 2016. All Rights Reserved.</Copyright>
         <AssemblyVersion>1.0.0.0</AssemblyVersion>
         <FileVersion>1.0.0.0</FileVersion>

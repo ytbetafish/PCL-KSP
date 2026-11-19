@@ -28,7 +28,7 @@ body:
     attributes:
       label: 复现步骤 / Steps to reproduce
       placeholder: |
-        1. 打开 PKL，进入「下载」
+        1. 打开 PCL KSP 修改版，进入「下载」
         2. 选中某个已安装模组，点「更新」
         3. ...
     validations:

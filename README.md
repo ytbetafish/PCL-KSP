@@ -1,4 +1,4 @@
-# PKL — KSP Launcher
+# PCL KSP 修改版 — KSP Launcher
 
 基于 **PCL-CE**（Plain Craft Launcher Community Edition，dev 分支）改造的 **《坎巴拉太空计划》(Kerbal Space Program, KSP)** 启动器。
 
