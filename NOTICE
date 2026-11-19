@@ -1,0 +1,34 @@
+# 第三方组件与许可声明
+
+PKL 是**第三方独立进行二次创作的产物**，不是 PCL 官方产品，与龙腾猫跃（成都瓜皮龙科技有限公司）及 PCL / PCL-CE 团队均无隶属关系。
+
+## 1. PCL / Plain Craft Launcher 2
+
+- 作者：龙腾猫跃（成都瓜皮龙科技有限公司）
+- 原版仓库：https://github.com/Hex-Dragon/PCL2
+- 作者赞助页：https://afdian.com/a/LTCat
+- 本仓库 `Plain Craft Launcher 2/` 目录的界面外壳源自 PCL，其许可为《PCL 分发有限许可》与《PCL 存储库合理使用指南》，全文见 [`Plain Craft Launcher 2/LICENCE`](Plain%20Craft%20Launcher%202/LICENCE)。本仓库继续以该文件作为使用指南。
+
+## 2. PCL-CE（Plain Craft Launcher Community Edition）
+
+- 仓库：https://github.com/PCL-Community/PCL-CE
+- 许可：Apache License 2.0（`Plain Craft Launcher 2` 目录除外，沿用上条许可），全文见根目录 [`LICENSE`](LICENSE)
+- 本仓库对其做了大量修改：剥离 Minecraft 相关启动/下载/账号功能，集成 CKAN，改造为 KSP 启动器。修改内容见 README 与各提交记录。
+
+## 3. CKAN（Comprehensive Kerbal Archive Network）
+
+- 仓库：https://github.com/KSP-CKAN/CKAN
+- 许可：MIT License，版权归 CKAN Authors
+- 本仓库 `external/CKAN.Core/` 为其核心代码的内联副本（目标框架改为 net10.0），许可全文见 [`external/CKAN.Core/LICENSE.md`](external/CKAN.Core/LICENSE.md)
+
+## 4. Lucide Icons
+
+- 仓库：https://github.com/lucide-icons/lucide
+- 许可：ISC License
+- 许可全文见 [`PCL.Core.Wpf/UI/Assets/IconPacks/lucide/LICENSE.txt`](PCL.Core.Wpf/UI/Assets/IconPacks/lucide/LICENSE.txt)
+
+## 5. 其他依赖与数据
+
+- 其余 NuGet 依赖各自遵循其原始许可，随包分发。
+- 模组索引数据来自 CKAN 公共索引与 SpaceDock；模组本体版权归各自作者，本仓库不分发模组与游戏本体。
+- 国内 CKAN 加速源由坎喵社区（QQ 群 758050820）提供，本项目仅接入使用，不提供该服务。

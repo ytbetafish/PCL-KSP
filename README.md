@@ -148,5 +148,16 @@ dotnet build ".\Plain Craft Launcher 2.slnx" -c Release
 
 ## 七、许可
 
-本仓库为二次开发作品：PCL 外壳部分遵循 PCL-CE 相应许可；CKAN 核心遵循 MIT；新增 PKL 代码可按 Apache-2.0 使用。详见各上游 `LICENSE`。
+本仓库是**第三方基于 PCL / PCL-CE 的二次创作，非 PCL 官方作品**，与龙腾猫跃及 PCL / PCL-CE 团队无隶属关系。
+
+| 部分 | 许可 |
+|---|---|
+| `Plain Craft Launcher 2/`（界面外壳，源自 PCL） | 《PCL 分发有限许可》+《PCL 存储库合理使用指南》，全文见 `Plain Craft Launcher 2/LICENCE` |
+| 其余 PCL-CE 代码 | Apache License 2.0（根目录 `LICENSE`） |
+| `external/CKAN.Core/` | MIT License（`external/CKAN.Core/LICENSE.md`） |
+| 本项目新增代码 | Apache License 2.0 |
+| lucide 图标 | ISC License（`PCL.Core.Wpf/UI/Assets/IconPacks/lucide/LICENSE.txt`） |
+
+第三方组件的署名与许可汇总见 [`NOTICE`](./NOTICE)。
+
 
