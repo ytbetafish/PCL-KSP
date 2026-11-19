@@ -1,7 +1,10 @@
 using System;
 using System.IO;
 using System.Net.Http;
+using System.Linq;
+using System.Net;
 using System.Text;
+using System.Text.Json;
 using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
@@ -18,6 +21,7 @@ public partial class PageHome
         "2026-11-19\n" +
         "· 主页按原版结构恢复：左栏启动面板（含启动中动画、进度、阶段与取消），右栏公告 / 社区 / 更新日志卡片。\n" +
         "· 设置页「主页」可选择显示方式：空白、预设、本地 XAML 文件。\n" +
+        "· 新增「KSP Wiki 随机条目」预设：页面本地渲染，内容从 KSP Wiki 随机拉取。\n" +
         "· 预设主页可选项接入原版中与 Minecraft 无关的第三方预设（Bangumi 番剧 / GitHub 仪表盘 / 今日新闻热点 / PCL CE 公告栏），联网拉取并缓存。\n" +
         "· 切页进入动画补充透明度兜底，修复控件需要悬停才显示的问题。\n" +
         "· 启动页显示 KSP 版本与安装路径，启动失败给出明确提示。\n" +
@@ -47,11 +51,17 @@ public partial class PageHome
     private int _triviaIndex = -1;
     private HomePagePreset _currentPreset = HomePagePreset.All[0];
     private CancellationTokenSource? _presetCts;
+    private CancellationTokenSource? _wikiCts;
+    private string _wikiUrl = string.Empty;
 
     public PageHome()
     {
         InitializeComponent();
-        Unloaded += (_, _) => _presetCts?.Cancel();
+        Unloaded += (_, _) =>
+        {
+            _presetCts?.Cancel();
+            _wikiCts?.Cancel();
+        };
         ApplyHomeMode();
     }
 
@@ -85,6 +95,7 @@ public partial class PageHome
         PanPreset.Visibility = Visibility.Collapsed;
         CardTrivia.Visibility = Visibility.Collapsed;
         CardPresetLoading.Visibility = Visibility.Collapsed;
+        CardWiki.Visibility = Visibility.Collapsed;
         CardCustomError.Visibility = Visibility.Collapsed;
     }
 
@@ -93,9 +104,17 @@ public partial class PageHome
         var preset = HomePagePreset.Find(HomePagePreset.Resolve(id));
         _currentPreset = preset;
         _presetCts?.Cancel();
+        _wikiCts?.Cancel();
         HideAllViews();
         PanCustomHost.Content = null;
         PanCustomHost.Visibility = Visibility.Collapsed;
+
+        if (preset.Id == 6)
+        {
+            CardWiki.Visibility = Visibility.Visible;
+            _ = LoadWikiEntryAsync();
+            return;
+        }
 
         if (preset.Url is not null)
         {
@@ -297,6 +316,154 @@ public partial class PageHome
         _ = LoadNetworkPresetAsync(_currentPreset);
     }
 
+    private const string WikiApi = "https://wiki.kerbalspaceprogram.com/api.php";
+
+    /// <summary>拉取 KSP Wiki 的随机条目并在本地渲染（页面本身是本地 XAML，只有内容联网）。</summary>
+    private async Task LoadWikiEntryAsync()
+    {
+        _wikiCts?.Cancel();
+        var cts = new CancellationTokenSource();
+        _wikiCts = cts;
+        var token = cts.Token;
+
+        LabWikiTitle.Text = "正在拉取随机条目…";
+        LabWikiText.Text = "";
+        BtnWikiOpen.IsEnabled = false;
+        BtnWikiNext.IsEnabled = false;
+        try
+        {
+            var randomUrl = WikiApi +
+                            "?action=query&list=random&rnlimit=1&rnnamespace=0&format=json&formatversion=2";
+            var title = string.Empty;
+            // 随机池里会抽到首页/导航页，这类条目没有可读内容，重抽几次跳过。
+            for (var attempt = 0; attempt < 4 && title.Length == 0; attempt++)
+            {
+                var randomJson = await Http.GetStringAsync(randomUrl, token).ConfigureAwait(true);
+                using var randomDoc = JsonDocument.Parse(randomJson);
+                var candidate = randomDoc.RootElement.GetProperty("query").GetProperty("random")[0]
+                    .GetProperty("title").GetString() ?? string.Empty;
+                var normalized = StripLanguageSuffix(candidate).Trim();
+                if (normalized is "Main Page" or "Wiki Home" or "KSP Wiki") continue;
+                title = candidate;
+            }
+
+            if (title.Length == 0) throw new InvalidOperationException("Wiki 未返回可用的条目名。");
+
+            var baseTitle = StripLanguageSuffix(title);
+            LabWikiTitle.Text = baseTitle;
+
+            // 随机条目常是 /ru、/ko 这类语言子页：优先取中文/英文主条目正文，取不到再退回原条目。
+            // 分类页、Parts/xxx 这类条目首页常常没有正文，这时改抓整页再压成文本。
+            string? plain = null;
+            string? usedTitle = null;
+            foreach (var candidate in new[] { baseTitle + "/zh-cn", baseTitle, title })
+            {
+                if (plain is not null && plain.Length > 0) break;
+                foreach (var section in new[] { 0, -1 })
+                {
+                    var html = await TryFetchSectionTextAsync(candidate, token, section).ConfigureAwait(true);
+                    if (html is null) continue;
+                    var text = CleanWikiText(html, StripLanguageSuffix(candidate));
+                    if (text.Length == 0) continue;
+                    plain = text;
+                    usedTitle = candidate;
+                    break;
+                }
+            }
+
+            _wikiUrl = BuildWikiPageUrl(usedTitle ?? baseTitle);
+            BtnWikiOpen.IsEnabled = true;
+            LabWikiText.Text = plain is { Length: > 0 }
+                ? plain
+                : "这个条目暂时取不到正文，点「在 Wiki 上打开」查看完整页面。";
+        }
+        catch (Exception ex)
+        {
+            if (token.IsCancellationRequested) return;
+            LabWikiTitle.Text = "KSP Wiki 条目加载失败";
+            LabWikiText.Text = ex.Message + "\n点「换一条」重试。";
+        }
+        finally
+        {
+            if (!token.IsCancellationRequested) BtnWikiNext.IsEnabled = true;
+        }
+    }
+
+    private async Task<string?> TryFetchSectionTextAsync(string title, CancellationToken token, int section)
+    {
+        try
+        {
+            var parseUrl = WikiApi + "?action=parse&prop=text&redirects=1&format=json&formatversion=2&page=" +
+                           Uri.EscapeDataString(title) +
+                           (section >= 0 ? "&section=" + section : "");
+            var parseJson = await Http.GetStringAsync(parseUrl, token).ConfigureAwait(true);
+            using var parseDoc = JsonDocument.Parse(parseJson);
+            if (!parseDoc.RootElement.TryGetProperty("parse", out var parse)) return null;
+            return parse.GetProperty("text").GetString();
+        }
+        catch (Exception) when (!token.IsCancellationRequested)
+        {
+            return null;
+        }
+    }
+    /// <summary>把 parse 返回的 HTML 压成可读纯文本：去表格/样式/引用，保留段落。</summary>
+    private static string CleanWikiText(string html, string title)
+    {
+        html = Regex.Replace(html, @"(?is)<table.*?</table>", " ");
+        html = Regex.Replace(html, @"(?is)<style.*?</style>", " ");
+        html = Regex.Replace(html, @"(?is)<(sup|figure|audio|nav|script).*?</\1>", " ");
+        html = Regex.Replace(html, @"(?i)<br\s*/?>", "\n");
+        html = Regex.Replace(html, @"(?is)</(p|div|li|h[1-6]|tr)>", "\n");
+        html = Regex.Replace(html, @"<[^>]+>", " ");
+        html = WebUtility.HtmlDecode(html);
+        html = Regex.Replace(html, @"[ \t\u00A0]+", " ");
+        html = Regex.Replace(html, @"\n[ \t]*", "\n");
+        html = Regex.Replace(html, @"\n{2,}", "\n");
+
+        var lines = html.Split('\n');
+        var builder = new StringBuilder();
+        foreach (var raw in lines)
+        {
+            var line = raw.Trim();
+            if (line.Length == 0) continue;
+            if (string.Equals(line, title, StringComparison.Ordinal)) continue;
+            if (builder.Length > 0) builder.Append('\n');
+            builder.Append(line);
+            if (builder.Length > 1100) break;
+        }
+
+        var text = builder.ToString().Trim();
+        if (text.Length <= 1100) return text;
+        var cut = text.Substring(0, 1100);
+        var dot = Math.Max(cut.LastIndexOf('.'),
+            Math.Max(cut.LastIndexOf('。'), Math.Max(cut.LastIndexOf('!'), cut.LastIndexOf('?'))));
+        return (dot > 400 ? cut.Substring(0, dot + 1) : cut) + "…";
+    }
+
+    private static string StripLanguageSuffix(string title)
+    {
+        foreach (var suffix in new[]
+                 {
+                     "/zh-cn", "/zh-tw", "/zh", "/ru", "/ko", "/de", "/fr", "/es", "/ja", "/pl", "/pt", "/pt-br",
+                     "/it", "/nl", "/tr", "/uk", "/cs", "/hu", "/sv"
+                 })
+            if (title.EndsWith(suffix, StringComparison.OrdinalIgnoreCase))
+                return title.Substring(0, title.Length - suffix.Length);
+        return title;
+    }
+
+    private static string BuildWikiPageUrl(string title)
+    {
+        var segments = title.Replace(' ', '_').Split('/');
+        return "https://wiki.kerbalspaceprogram.com/wiki/" + string.Join("/", segments.Select(Uri.EscapeDataString));
+    }
+
+    private void BtnWikiNext_Click(object sender, MouseButtonEventArgs e) => _ = LoadWikiEntryAsync();
+
+    private void BtnWikiOpen_Click(object sender, MouseButtonEventArgs e)
+    {
+        if (_wikiUrl.Length > 0) PCL.Core.App.Basics.OpenPath(_wikiUrl);
+    }
     private void BtnCommunityClose_Click(object sender, EventArgs e)
     {
         CardCommunity.Visibility = Visibility.Collapsed;

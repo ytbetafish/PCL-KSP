@@ -48,6 +48,17 @@
                 </StackPanel>
             </local:MyCard>
 
+            <!-- 预设：KSP Wiki 随机条目（本地渲染，内容联网） -->
+            <local:MyCard x:Name="CardWiki" Title="KSP Wiki 随机条目" Margin="0,0,0,15" Visibility="Collapsed">
+                <StackPanel Margin="25,38,23,16">
+                    <TextBlock x:Name="LabWikiTitle" FontSize="15" FontWeight="SemiBold" TextWrapping="Wrap" />
+                    <TextBlock x:Name="LabWikiText" Margin="0,8,0,0" FontSize="13" TextWrapping="Wrap" LineHeight="21" />
+                    <StackPanel Orientation="Horizontal" Margin="0,14,0,0">
+                        <local:MyButton x:Name="BtnWikiNext" MinWidth="110" Height="28" Padding="13,0" Text="换一条" Click="BtnWikiNext_Click" />
+                        <local:MyButton x:Name="BtnWikiOpen" MinWidth="130" Height="28" Margin="10,0,0,0" Padding="13,0" Text="在 Wiki 上打开" Click="BtnWikiOpen_Click" />
+                    </StackPanel>
+                </StackPanel>
+            </local:MyCard>
             <!-- 本地文件主页 -->
             <ContentControl x:Name="PanCustomHost" Visibility="Collapsed" />
 

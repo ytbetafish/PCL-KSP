@@ -16,6 +16,7 @@ public sealed class HomePagePreset
     [
         new() { Id = 0, Title = "PCL-KSP 内置主页" },
         new() { Id = 1, Title = "你知道吗" },
+        new() { Id = 6, Title = "KSP Wiki 随机条目" },
         new() { Id = 2, Title = "Bangumi 番剧主页", Url = "https://bangumi.p.kaphia.qzz.io" },
         new() { Id = 3, Title = "PCL GitHub 仪表盘", Url = "https://ddf.pcl-community.org/Custom.xaml" },
         new() { Id = 4, Title = "今日新闻热点", Url = "https://pcl.wyc-w.top/index.xaml" },

@@ -18,7 +18,7 @@
         Style="{StaticResource MyWindow}"
         AllowDrop="True"
         Topmost="True"
-        Title="PCL KSP 修改版 - Kerbal Space Program Launcher"
+        Title="PCL KSP - Kerbal Space Program Launcher"
         MinHeight="470"
         MinWidth="810"
         ScrollViewer.VerticalScrollBarVisibility="Disabled"
@@ -319,7 +319,7 @@
                                   Width="52" />
                             <TextBlock Grid.Column="0"
                                        x:Name="LabTitleLogo"
-                                       Text="PCL KSP 修改版"
+                                       Text="PCL KSP"
                                        Visibility="Visible"
                                        SnapsToDevicePixels="False"
                                        UseLayoutRounding="False"

@@ -176,7 +176,7 @@ public partial class FormMain
             ShapeTitleLogo.Visibility = Visibility.Collapsed;
             ShapeHMCLTitleLogo.Visibility = Visibility.Collapsed;
             CELogo.Visibility = Visibility.Collapsed;
-            LabTitleLogo.Text = "PCL KSP 修改版";
+            LabTitleLogo.Text = "PCL KSP";
             LabTitleLogo.Visibility = Visibility.Visible;
         }
         catch { }
