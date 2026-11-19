@@ -387,14 +387,15 @@
                                                  Check="BtnTitleSelect_Click"
                                                  LogoScale="1.1"
                                                  SvgIcon="lucide/settings" />
-                            <local:MyRadioButton x:Name="BtnTitleSelect3" Visibility="Collapsed"
-                                                 Text="KSP 启动"
+                                                        <local:MyRadioButton x:Name="BtnTitleSelect3"
+                                                 Text="更多"
                                                  Tag="3"
                                                  Margin="5,0"
                                                  Padding="2,0"
                                                  Check="BtnTitleSelect_Click"
                                                  LogoScale="1"
                                                  SvgIcon="lucide/wrench" />
+
                         </StackPanel>
                     </Grid>
                     <Grid x:Name="PanTitleInner"

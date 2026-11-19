@@ -1,4 +1,4 @@
-﻿using System.ComponentModel;
+using System.ComponentModel;
 using System.IO;
 using System.Net;
 using System.Runtime.InteropServices;
@@ -27,6 +27,8 @@ public partial class FormMain
 {
     private static PageSettingsLeft? settingsLeft;
     private static string settingsNav = "appearance";
+    private static PageToolsLeft? toolsLeft;
+    private static string toolsNav = "mods";
     // 愚人节鼠标位置
     public MouseEventArgs lastMouseArg;
 
@@ -1355,6 +1357,7 @@ public partial class FormMain
         {
             "1" => BtnTitleSelect1,
             "2" => BtnTitleSelect2,
+            "3" => BtnTitleSelect3,
             _ => BtnTitleSelect0,
         };
         if (btn is not null) btn.Checked = true;
@@ -1501,6 +1504,34 @@ public partial class FormMain
                 case PageType.InstanceSetup: // 实例设置
                 {
                     PageChangeAnim(new PageInstanceLeft(), new PageInstanceOverall());
+                    break;
+                }
+                case PageType.TaskManager: // task manager: download tasks page
+                {
+                    Launcher.frmSpeedLeft ??= new PageSpeedLeft();
+                    Launcher.frmSpeedRight ??= new PageSpeedRight();
+                    PageChangeAnim(Launcher.frmSpeedLeft, Launcher.frmSpeedRight);
+                    break;
+                }
+                case PageType.Tools: // 更多：外部链接合集
+                {
+                    if (toolsLeft is null)
+                    {
+                        toolsLeft = new PageToolsLeft();
+                        toolsLeft.NavChanged += key =>
+                        {
+                            toolsNav = key;
+                            var rightPage = new PageToolsLinks();
+                            rightPage.ShowGroup(key);
+                            if (PanMainRight.Child is MyPageRight oldRight) oldRight.PageOnExit();
+                            PanMainRight.Child = rightPage;
+                            rightPage.PageOnEnter();
+                        };
+                    }
+                    toolsLeft.SelectNav(toolsNav);
+                    var firstRight = new PageToolsLinks();
+                    firstRight.ShowGroup(toolsNav);
+                    PageChangeAnim(toolsLeft, firstRight);
                     break;
                 }
                 default: break;
@@ -1760,7 +1791,10 @@ public partial class FormMain
 
     private bool BtnExtraDownload_ShowCheck()
     {
-        return NetFacade.HasDownloadingTask() && !(pageCurrent == PageType.TaskManager);
+        // 除 PCL 自己的下载队列外，CKAN 等外部下载任务也会进入任务列表，此时同样要显示按钮
+        var hasTask = NetFacade.HasDownloadingTask() ||
+                      Loading.loaderTaskbar.Any(l => l.show && l.State is LoadState.Loading or LoadState.Waiting);
+        return hasTask && !(pageCurrent == PageType.TaskManager);
     }
 
     // 投降

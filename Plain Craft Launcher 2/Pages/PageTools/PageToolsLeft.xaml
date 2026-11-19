@@ -1,0 +1,22 @@
+<local:MyPageLeft x:Class="PCL.PageToolsLeft"
+                  xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                  xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+                  xmlns:local="clr-namespace:PCL"
+                  Width="132"
+                  AnimatedControl="{Binding ElementName=PanItem, Mode=OneWay}">
+    <local:MyScrollViewer HorizontalScrollBarVisibility="Disabled" VerticalScrollBarVisibility="Auto"
+                          Style="{StaticResource ScrollViewerFullMargin}">
+        <StackPanel Margin="0,12,0,0" x:Name="PanItem">
+            <TextBlock Text="链接分类" Margin="13,6,5,4" Opacity="0.6" FontSize="12" />
+            <local:MyListItem x:Name="NavMods" IsScaleAnimationEnabled="False" Type="RadioBox"
+                              MinPaddingRight="18" Height="36" VerticalAlignment="Top"
+                              Title="模组与加速" SvgIcon="lucide/package" />
+            <local:MyListItem x:Name="NavCommunity" IsScaleAnimationEnabled="False" Type="RadioBox"
+                              MinPaddingRight="18" Height="36" VerticalAlignment="Top"
+                              Title="社区与资料" SvgIcon="lucide/globe" />
+            <local:MyListItem x:Name="NavTools" IsScaleAnimationEnabled="False" Type="RadioBox"
+                              MinPaddingRight="18" Height="36" VerticalAlignment="Top"
+                              Title="实用工具" SvgIcon="lucide/wrench" />
+        </StackPanel>
+    </local:MyScrollViewer>
+</local:MyPageLeft>
