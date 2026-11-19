@@ -1,7 +1,8 @@
-﻿using System.Windows;
+using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Documents;
 using System.Windows.Media;
+using System.Windows.Threading;
 using PCL.Core.App.Localization;
 using static PCL.Loading;
 
@@ -632,6 +633,24 @@ public class MyPageRight : AdornerDecorator
         // 结束
         aniList.Add(Animations.AaCode(() => PageOnEnterAnimationFinished(), after: true));
         Animations.AniStart(aniList, "PageRight PageChange " + pageUuid, true);
+        ScheduleOpacityFallback(realElements, delay + 400);
+    }
+
+    /// <summary>
+    ///     动画兜底：进入补间被打断时，控件可能停留在 Opacity=0（表现为“碰到才显示”）。
+    ///     定时一次性复位仍可见容器的透明度；已折叠的内容不处理。
+    /// </summary>
+    private void ScheduleOpacityFallback(IEnumerable<FrameworkElement> roots, double totalMs)
+    {
+        var timer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(totalMs < 200d ? 200d : totalMs) };
+        timer.Tick += (_, _) =>
+        {
+            timer.Stop();
+            foreach (var root in roots)
+                if (root is not null && root.Visibility == Visibility.Visible)
+                    ResetAnimState(root);
+        };
+        timer.Start();
     }
 
     // 逐个退出动画

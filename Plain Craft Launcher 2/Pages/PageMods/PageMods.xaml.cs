@@ -159,6 +159,8 @@ public partial class PageMods
         }
         else
         {
+            // 无可用图标时统一用 puzzle 占位：MyListItem 不支持下载页卡片那种首字母色块，
+            // 强行改造共用控件会波及其它列表，故实例级列表保持单一 SVG 占位。
             item.SvgIcon = "lucide/puzzle";
         }
         item.Click += (_, _) => SelectMod(mod);

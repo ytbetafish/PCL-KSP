@@ -1,6 +1,7 @@
-﻿using System.Windows;
+using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Media;
+using System.Windows.Threading;
 using PCL.Core.App.Localization;
 
 namespace PCL;
@@ -119,7 +120,30 @@ public class MyPageLeft : Grid
             }
 
             Animations.AniStart(aniList, "PageLeft PageChange " + uuid);
+            ScheduleShowAnimationFallback(delay + 400);
         }
+    }
+
+    /// <summary>
+    ///     动画兜底：切页过快导致补间被打断时，控件可能停留在 Opacity=0（表现为“碰到才显示”）。
+    ///     定时一次性复位可见控件的透明度与位移；已折叠的控件保持原状。
+    /// </summary>
+    private void ScheduleShowAnimationFallback(double totalMs)
+    {
+        var timer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(totalMs < 200d ? 200d : totalMs) };
+        timer.Tick += (_, _) =>
+        {
+            timer.Stop();
+            foreach (var element in GetAllAnimControls())
+            {
+                if (element.Visibility == Visibility.Collapsed)
+                    continue;
+                element.Opacity = element is TextBlock ? 0.6d : 1d;
+                if (element.RenderTransform is TranslateTransform)
+                    element.RenderTransform = new TranslateTransform(0d, 0d);
+            }
+        };
+        timer.Start();
     }
 
     public void TriggerHideAnimation()
