@@ -30,9 +30,11 @@ public static class PklSettings
         public string CkanDataDir { get; set; } =
             Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "PKL", "Ckan");
         public string CkanMasterRepoUrl { get; set; } = "https://github.com/KSP-CKAN/CKAN-meta/archive/master.tar.gz";
-        public List<string> CkanMirrorUrls { get; set; } = new();
+        public List<string> CkanMirrorUrls { get; set; } = new() { DefaultMirrorUrl };
         // MirrorOnly / OfficialFirst / OfficialOnly
         public string CkanRepoStrategy { get; set; } = "MirrorOnly";
+        /// <summary>是否已做过「补默认镜像」的一次性迁移，避免用户清空镜像列表后又被写回来。</summary>
+        public bool CkanMirrorSeeded { get; set; }
         public string CkanStabilityTolerance { get; set; } = "Stable";
 
         public string HttpProxy { get; set; } = "";
@@ -44,6 +46,9 @@ public static class PklSettings
         public string KspGameDataPath { get; set; } = "";
         public string KspLogsPath { get; set; } = "";
     }
+
+    /// <summary>国内公开的 CKAN 元数据镜像（坎喵 KerbCat 公共加速源）。</summary>
+    private const string DefaultMirrorUrl = "https://api.kerbcat.cn/ckan/public/master.tar.gz";
 
     private static string ResolvePath()
     {
@@ -80,6 +85,23 @@ public static class PklSettings
         catch
         {
             Current = new SettingsData();
+        }
+
+        // 一次性迁移：老配置里镜像列表为空时补上默认国内镜像；用户之后手动清空则不再回填。
+        try
+        {
+            if (!Current.CkanMirrorSeeded)
+            {
+                Current.CkanMirrorUrls ??= new List<string>();
+                if (Current.CkanMirrorUrls.Count == 0)
+                    Current.CkanMirrorUrls.Add(DefaultMirrorUrl);
+                Current.CkanMirrorSeeded = true;
+                Save();
+            }
+        }
+        catch
+        {
+            // 回填失败不致命
         }
     }
 
