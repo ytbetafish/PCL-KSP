@@ -7,10 +7,14 @@
     <local:MyScrollViewer HorizontalScrollBarVisibility="Disabled" VerticalScrollBarVisibility="Auto"
                           Style="{StaticResource ScrollViewerFullMargin}">
         <StackPanel Margin="0,12,0,0" x:Name="PanItem">
-            <TextBlock Text="链接分类" Margin="13,6,5,4" Opacity="0.6" FontSize="12" />
-            <local:MyListItem x:Name="NavMods" IsScaleAnimationEnabled="False" Type="RadioBox"
+            <TextBlock Text="下载与资源" Margin="13,6,5,4" Opacity="0.6" FontSize="12" />
+            <local:MyListItem x:Name="NavDownload" IsScaleAnimationEnabled="False" Type="RadioBox"
                               MinPaddingRight="18" Height="36" VerticalAlignment="Top"
-                              Title="模组与加速" SvgIcon="lucide/package" />
+                              Title="下载与加速" SvgIcon="lucide/download" />
+            <local:MyListItem x:Name="NavGuide" IsScaleAnimationEnabled="False" Type="RadioBox"
+                              MinPaddingRight="18" Height="36" VerticalAlignment="Top"
+                              Title="教程与文档" SvgIcon="lucide/scroll-text" />
+            <TextBlock Text="社区与工具" Margin="13,14,5,4" Opacity="0.6" FontSize="12" />
             <local:MyListItem x:Name="NavCommunity" IsScaleAnimationEnabled="False" Type="RadioBox"
                               MinPaddingRight="18" Height="36" VerticalAlignment="Top"
                               Title="社区与资料" SvgIcon="lucide/globe" />

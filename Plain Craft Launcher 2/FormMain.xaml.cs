@@ -28,7 +28,7 @@ public partial class FormMain
     private static PageSettingsLeft? settingsLeft;
     private static string settingsNav = "appearance";
     private static PageToolsLeft? toolsLeft;
-    private static string toolsNav = "mods";
+    private static string toolsNav = "download";
     // 愚人节鼠标位置
     public MouseEventArgs lastMouseArg;
 

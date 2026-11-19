@@ -9,48 +9,33 @@
     <local:MyScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled" x:Name="PanBack">
         <StackPanel x:Name="PanMain" Margin="25,25,25,10">
 
-            <StackPanel x:Name="PanMods" Orientation="Vertical">
-                <local:MyCard Margin="0,15" Title="模组与加速">
+            <StackPanel x:Name="PanDownload" Orientation="Vertical">
+                <local:MyCard Margin="0,15" Title="下载渠道">
                     <StackPanel Margin="20,40,18,14">
                         <local:MyListItem Title="坎喵 KerbCat 官网"
-                                          Info="CKAN 国内加速服务与模组社区，本启动器的镜像源就来自这里"
+                                          Info="CKAN 国内加速服务与模组社区，本启动器的默认镜像源来自这里"
                                           Type="Clickable" Click="LinkClick"
                                           tag="https://kerbcat.com/" SvgIcon="lucide/link-2" />
                         <local:MyListItem Title="3DM Mod 站 · 坎巴拉太空计划"
-                                          Info="国内第三方模组站，手动下载为主，不参与 CKAN 依赖解析"
+                                          Info="国内第三方模组站，手动下载安装，不参与 CKAN 依赖解析"
                                           Type="Clickable" Click="LinkClick"
                                           tag="https://mod.3dmgame.com/KerbalSpaceProgram" SvgIcon="lucide/package" />
                     </StackPanel>
                 </local:MyCard>
-                <local:MyHint Margin="0,5" MinHeight="36"
-                              Text="加速源由坎喵社区 QQ 群 758050820 的群友集资提供，本启动器只是接入，不提供该服务。公共加速仅覆盖 CKAN 的 GitHub 下载源（SpaceDock 等不加速），单模组上限 300MB（2026/07/23 起调整），加速链接有效期 24 小时，需刷新源重新签发；更大模组可走赞助专属链接（2GB）。"
-                              Theme="Blue" />
-            </StackPanel>
-
-            <StackPanel x:Name="PanCommunity" Orientation="Vertical" Visibility="Collapsed">
-                <local:MyCard Margin="0,15" Title="社区与资料">
+                <local:MyCard Margin="0,15" Title="关于加速源">
                     <StackPanel Margin="20,40,18,14">
-                        <local:MyListItem Title="KSP Wiki 中文主页"
-                                          Info="原版游戏机制、星球与部件资料的官方 Wiki"
-                                          Type="Clickable" Click="LinkClick"
-                                          tag="https://wiki.kerbalspaceprogram.com/wiki/Main_Page/zh-cn" SvgIcon="lucide/globe" />
-                        <local:MyListItem Title="坎巴拉太空计划吧（百度贴吧）"
-                                          Info="国内玩家交流区，模组推荐与问题求助"
-                                          Type="Clickable" Click="LinkClick"
-                                          tag="https://tieba.baidu.com/f?kw=%E5%9D%8E%E5%B7%B4%E6%8B%89%E5%A4%AA%E7%A9%BA%E8%AE%A1%E5%88%92" SvgIcon="lucide/bubbles" />
+                        <TextBlock TextWrapping="Wrap" Margin="2,0,2,8"
+                                   Text="加速源由坎喵社区 QQ 群 758050820 的群友集资提供，本启动器只是接入，不提供该服务。" />
+                        <TextBlock TextWrapping="Wrap" Margin="2,0,2,8"
+                                   Text="公共加速仅覆盖 CKAN 中的 GitHub 下载源，SpaceDock 等不加速；单模组上限 300MB，加速链接 24 小时内有效，过期需刷新源重新签发。" />
+                        <TextBlock TextWrapping="Wrap" Margin="2,0,2,0"
+                                   Text="更大的模组可走赞助专属链接（上限 2GB），详见「教程与文档」。"
+                                   Foreground="#888" />
                     </StackPanel>
                 </local:MyCard>
             </StackPanel>
 
-            <StackPanel x:Name="PanTools" Orientation="Vertical" Visibility="Collapsed">
-                <local:MyCard Margin="0,15" Title="实用工具">
-                    <StackPanel Margin="20,40,18,14">
-                        <local:MyListItem Title="发射窗口计算器"
-                                          Info="中文版 KSP Launch Window Planner，算星球间转移窗口与所需 Δv"
-                                          Type="Clickable" Click="LinkClick"
-                                          tag="https://yuanze31.com/static/KSP_LWP/index.html" SvgIcon="lucide/rocket" />
-                    </StackPanel>
-                </local:MyCard>
+            <StackPanel x:Name="PanGuide" Orientation="Vertical" Visibility="Collapsed">
                 <local:MyCard Margin="0,15" Title="坎喵 CKAN 加速教程">
                     <StackPanel Margin="20,40,18,14">
                         <local:MyListItem Title="CKAN 下载加速（国内 repo）"
@@ -74,6 +59,36 @@
                 <local:MyHint Margin="0,5" MinHeight="36"
                               Text="以上教程均以原版 CKAN 客户端为对象编写，本启动器已内置加速源配置，步骤与界面与教程并不完全一致，仅供理解原理时参考。"
                               Theme="Blue" />
+            </StackPanel>
+
+            <StackPanel x:Name="PanCommunity" Orientation="Vertical" Visibility="Collapsed">
+                <local:MyCard Margin="0,15" Title="社区">
+                    <StackPanel Margin="20,40,18,14">
+                        <local:MyListItem Title="坎巴拉太空计划吧（百度贴吧）"
+                                          Info="国内玩家交流区，模组推荐与问题求助"
+                                          Type="Clickable" Click="LinkClick"
+                                          tag="https://tieba.baidu.com/f?kw=%E5%9D%8E%E5%B7%B4%E6%8B%89%E5%A4%AA%E7%A9%BA%E8%AE%A1%E5%88%92" SvgIcon="lucide/bubbles" />
+                    </StackPanel>
+                </local:MyCard>
+                <local:MyCard Margin="0,15" Title="资料">
+                    <StackPanel Margin="20,40,18,14">
+                        <local:MyListItem Title="KSP Wiki 中文主页"
+                                          Info="原版游戏机制、星球与部件资料"
+                                          Type="Clickable" Click="LinkClick"
+                                          tag="https://wiki.kerbalspaceprogram.com/wiki/Main_Page/zh-cn" SvgIcon="lucide/globe" />
+                    </StackPanel>
+                </local:MyCard>
+            </StackPanel>
+
+            <StackPanel x:Name="PanTools" Orientation="Vertical" Visibility="Collapsed">
+                <local:MyCard Margin="0,15" Title="实用工具">
+                    <StackPanel Margin="20,40,18,14">
+                        <local:MyListItem Title="发射窗口计算器"
+                                          Info="中文版 KSP Launch Window Planner，算星球间转移窗口与所需 Δv"
+                                          Type="Clickable" Click="LinkClick"
+                                          tag="https://yuanze31.com/static/KSP_LWP/index.html" SvgIcon="lucide/rocket" />
+                    </StackPanel>
+                </local:MyCard>
             </StackPanel>
 
         </StackPanel>

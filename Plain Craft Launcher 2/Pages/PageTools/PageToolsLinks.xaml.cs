@@ -12,7 +12,8 @@ public partial class PageToolsLinks
 
     public void ShowGroup(string key)
     {
-        PanMods.Visibility = key == "mods" ? Visibility.Visible : Visibility.Collapsed;
+        PanDownload.Visibility = key == "download" ? Visibility.Visible : Visibility.Collapsed;
+        PanGuide.Visibility = key == "guide" ? Visibility.Visible : Visibility.Collapsed;
         PanCommunity.Visibility = key == "community" ? Visibility.Visible : Visibility.Collapsed;
         PanTools.Visibility = key == "tools" ? Visibility.Visible : Visibility.Collapsed;
     }
