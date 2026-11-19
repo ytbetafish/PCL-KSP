@@ -358,7 +358,7 @@ rewrite_*.py
 unwrap_*.py
 wrap_*.py
 write_*.py
-PCLKSP-v*.zip
+PCL-KSP-v*.zip
 
 .nuget/
 
@@ -373,5 +373,5 @@ PCLKSP-v*.zip
 /*.xaml
 
 # 本地发布暂存目录（构建产物，不入库）
-/PCLKSP-release-stage/
+/PCL-KSP-release-stage/
 /PKL-release-stage/
