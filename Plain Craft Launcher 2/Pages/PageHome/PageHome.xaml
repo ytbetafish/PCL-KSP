@@ -32,6 +32,14 @@
                 </local:MyCard>
             </StackPanel>
 
+            <!-- 预设：你知道吗 -->
+            <local:MyCard x:Name="CardTrivia" Title="你知道吗" Margin="0,0,0,15" Visibility="Collapsed">
+                <local:MyIconButton x:Name="BtnTriviaRefresh" SvgIcon="lucide/refresh-cw" Height="22" Width="22"
+                                    Margin="9" HorizontalAlignment="Right" VerticalAlignment="Top"
+                                    Click="BtnTriviaRefresh_Click" />
+                <TextBlock x:Name="LabTrivia" Margin="25,38,52,18" FontSize="13.5" TextWrapping="Wrap" LineHeight="22" />
+            </local:MyCard>
+
             <!-- 本地文件主页 -->
             <ContentControl x:Name="PanCustomHost" Visibility="Collapsed" />
 

@@ -80,6 +80,8 @@ public partial class PageAppearance
         RadioHomeLocal.Checked = mode == 2;
         TextHomeFile.Text = KspSettings.Current.HomePageLocalFile ?? "";
         PanHomeLocal.Visibility = mode == 2 ? System.Windows.Visibility.Visible : System.Windows.Visibility.Collapsed;
+        PanHomePreset.Visibility = mode == 1 ? System.Windows.Visibility.Visible : System.Windows.Visibility.Collapsed;
+        SelectComboByTag(ComboHomePreset, KspSettings.Current.HomePagePreset.ToString());
         _homeModeSyncing = false;
     }
 
@@ -96,6 +98,7 @@ public partial class PageAppearance
         KspSettings.Current.HomePageMode = mode;
         KspSettings.Save();
         PanHomeLocal.Visibility = mode == 2 ? System.Windows.Visibility.Visible : System.Windows.Visibility.Collapsed;
+        PanHomePreset.Visibility = mode == 1 ? System.Windows.Visibility.Visible : System.Windows.Visibility.Collapsed;
     }
 
     private void BtnHomeBrowse_Click(object sender, System.Windows.Input.MouseButtonEventArgs e)
@@ -117,9 +120,20 @@ public partial class PageAppearance
             _homeModeSyncing = false;
             KspSettings.Current.HomePageMode = 2;
             PanHomeLocal.Visibility = System.Windows.Visibility.Visible;
+            PanHomePreset.Visibility = System.Windows.Visibility.Collapsed;
         }
         KspSettings.Save();
     }
 
+
+    private void ComboHomePreset_SelectionChanged(object sender, SelectionChangedEventArgs e)
+    {
+        if (_homeModeSyncing) return;
+        if (ComboHomePreset.SelectedItem is not MyComboBoxItem item) return;
+        if (!int.TryParse(item.Tag?.ToString(), out var preset)) return;
+        KspSettings.Current.HomePagePreset = preset;
+        KspSettings.Save();
+    }
+    
     #endregion
 }
