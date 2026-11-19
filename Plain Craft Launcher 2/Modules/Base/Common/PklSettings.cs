@@ -37,6 +37,11 @@ public static class PklSettings
         public bool CkanMirrorSeeded { get; set; }
         public string CkanStabilityTolerance { get; set; } = "Stable";
 
+        /// <summary>是否对 CKAN 的 GitHub 下载链接套用公共加速前缀。</summary>
+        public bool GitHubAccelerationEnabled { get; set; } = true;
+        /// <summary>加速前缀，直接拼在原地址前。默认 ghfast.top。</summary>
+        public string GitHubAccelerationPrefix { get; set; } = "https://ghfast.top/";
+
         public string HttpProxy { get; set; } = "";
         public int DownloadConcurrency { get; set; } = 4;
         public int HttpTimeoutSeconds { get; set; } = 30;

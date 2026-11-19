@@ -162,6 +162,13 @@ public sealed class ModService : IModService, IDisposable
     public string OfficialRepoUrl { get; set; } = "https://github.com/KSP-CKAN/CKAN-meta/archive/master.tar.gz";
     /// <summary>One of "MirrorOnly" / "OfficialFirst" / "OfficialOnly".</summary>
     public string RepoStrategy { get; set; } = "OfficialFirst";
+    /// <summary>是否对 CKAN 模块的 GitHub 下载链接套用公共加速前缀。</summary>
+    public bool GitHubAccelerationEnabled { get; set; }
+    /// <summary>加速前缀，如 https://ghfast.top/，直接拼在原地址前。</summary>
+    public string GitHubAccelerationPrefix { get; set; } = "";
+
+    /// <summary>被加速改写前的原始下载地址，用于失败回退。</summary>
+    private readonly System.Collections.Generic.Dictionary<CkanModule, System.Collections.Generic.List<Uri>> _accelOriginals = new();
 
     /// <inheritdoc />
     public async Task RefreshMasterRegistryAsync(CancellationToken cancellationToken = default)
@@ -632,13 +639,25 @@ public sealed class ModService : IModService, IDisposable
             // 部分模组元数据缺 download_size / install_size，CKAN 的进度分母会是 0（百分比恒 0），
             // 这里按目录里的模块大小估一个总量，交给 StringBuilderUser 换算百分比。
             Log.ExpectedBytes = desired.Sum(m => Math.Max(0L, m.download_size) + Math.Max(0L, m.install_size));
+            var accelerated = ApplyGitHubAcceleration(desired);
             try
             {
-                installer.InstallList(desired, opts, _registryManager, ref possibleConfigOnlyDirs,
-                    userAgent: UserAgent, ConfirmPrompt: false);
+                try
+                {
+                    installer.InstallList(desired, opts, _registryManager, ref possibleConfigOnlyDirs,
+                        userAgent: UserAgent, ConfirmPrompt: false);
+                }
+                catch when (accelerated)
+                {
+                    // 加速前缀失效时回退到原始地址重试一次，避免卡在下载失败。
+                    RestoreGitHubAcceleration();
+                    installer.InstallList(desired, opts, _registryManager, ref possibleConfigOnlyDirs,
+                        userAgent: UserAgent, ConfirmPrompt: false);
+                }
             }
             finally
             {
+                RestoreGitHubAcceleration();
                 Log.ExpectedBytes = 0;
             }
         }
@@ -653,6 +672,64 @@ public sealed class ModService : IModService, IDisposable
 
         progress?.Report($"Plan for '{plan.Target}' applied.");
         return Task.CompletedTask;
+    }
+
+    /// <summary>把 github.com 的下载地址改写成「加速前缀 + 原地址」，返回是否改写了任何模组。</summary>
+    private bool ApplyGitHubAcceleration(System.Collections.Generic.IEnumerable<CkanModule> mods)
+    {
+        _accelOriginals.Clear();
+        if (!GitHubAccelerationEnabled)
+        {
+            return false;
+        }
+        var prefix = GitHubAccelerationPrefix?.Trim() ?? "";
+        if (prefix.Length == 0)
+        {
+            return false;
+        }
+        if (!prefix.EndsWith("/", System.StringComparison.Ordinal))
+        {
+            prefix += "/";
+        }
+        foreach (var mod in mods)
+        {
+            if (mod.download == null || mod.download.Count == 0)
+            {
+                continue;
+            }
+            var copy = new System.Collections.Generic.List<Uri>(mod.download.Count);
+            var changed = false;
+            foreach (var u in mod.download)
+            {
+                if (string.Equals(u.Scheme, "https", System.StringComparison.OrdinalIgnoreCase) &&
+                    string.Equals(u.Host, "github.com", System.StringComparison.OrdinalIgnoreCase))
+                {
+                    copy.Add(new Uri(prefix + u.AbsoluteUri));
+                    changed = true;
+                }
+                else
+                {
+                    copy.Add(u);
+                }
+            }
+            if (!changed)
+            {
+                continue;
+            }
+            _accelOriginals[mod] = mod.download;
+            mod.download = copy;
+        }
+        return _accelOriginals.Count > 0;
+    }
+
+    /// <summary>恢复被改写的下载地址。</summary>
+    private void RestoreGitHubAcceleration()
+    {
+        foreach (var pair in _accelOriginals)
+        {
+            pair.Key.download = pair.Value;
+        }
+        _accelOriginals.Clear();
     }
 
     /// <inheritdoc />

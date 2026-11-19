@@ -63,6 +63,8 @@ public static partial class Launcher
             service.MirrorUrls = new System.Collections.Generic.List<string>(settings.CkanMirrorUrls);
             service.OfficialRepoUrl = settings.CkanMasterRepoUrl;
             service.RepoStrategy = settings.CkanRepoStrategy;
+            service.GitHubAccelerationEnabled = settings.GitHubAccelerationEnabled;
+            service.GitHubAccelerationPrefix = settings.GitHubAccelerationPrefix;
             service.TraceSink = msg => Common.Log("[CKAN] " + msg);
             var detector = new KspInstanceService();
             var root = detector.FindCandidateRoots().FirstOrDefault();

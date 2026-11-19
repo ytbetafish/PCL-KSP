@@ -88,6 +88,8 @@ public partial class PageInstanceCompResource : IPageView
         _modService.MirrorUrls = new List<string>(PklSettings.Current.CkanMirrorUrls);
         _modService.OfficialRepoUrl = PklSettings.Current.CkanMasterRepoUrl;
         _modService.RepoStrategy = PklSettings.Current.CkanRepoStrategy;
+        _modService.GitHubAccelerationEnabled = PklSettings.Current.GitHubAccelerationEnabled;
+        _modService.GitHubAccelerationPrefix = PklSettings.Current.GitHubAccelerationPrefix;
         return _modService;
     }
 

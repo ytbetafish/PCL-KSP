@@ -71,6 +71,44 @@
                     </StackPanel>
                 </StackPanel>
             </local:MyCard>
+
+            <local:MyCard Margin="0,15" Title="GitHub 下载加速">
+                <StackPanel Margin="25,37,25,15">
+                    <Grid IsSharedSizeScope="True">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto" SharedSizeGroup="Name" />
+                            <ColumnDefinition Width="1*" />
+                            <ColumnDefinition Width="100" />
+                        </Grid.ColumnDefinitions>
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="34" />
+                            <RowDefinition Height="9" />
+                            <RowDefinition Height="34" />
+                        </Grid.RowDefinitions>
+                        <TextBlock Grid.Row="0" VerticalAlignment="Center" Margin="0,0,25,0" Text="下载加速" />
+                        <local:MyCheckBox Grid.Row="0" Grid.Column="1" Grid.ColumnSpan="2" x:Name="ChkGitHubAccel"
+                                          Text="对 github.com 的下载链接套用公共镜像"
+                                          VerticalAlignment="Center" Change="ChkGitHubAccel_Change" />
+                        <TextBlock Grid.Row="2" VerticalAlignment="Center" Margin="0,0,25,0" Text="加速前缀" />
+                        <Grid Grid.Row="2" Grid.Column="1" Grid.ColumnSpan="2">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="1*" />
+                                <ColumnDefinition Width="1*" />
+                            </Grid.ColumnDefinitions>
+                            <local:MyComboBox x:Name="CboGitHubPrefix" Height="34" SelectionChanged="CboGitHubPrefix_SelectionChanged">
+                                <ComboBoxItem Content="ghfast.top" Tag="https://ghfast.top/" />
+                                <ComboBoxItem Content="gh-proxy.com" Tag="https://gh-proxy.com/" />
+                                <ComboBoxItem Content="ghproxy.net" Tag="https://ghproxy.net/" />
+                                <ComboBoxItem Content="自定义" Tag="" />
+                            </local:MyComboBox>
+                            <local:MyTextBox Grid.Column="1" x:Name="TxtGitHubPrefix" Height="34" Margin="10,0,0,0"
+                                             LostFocus="TxtGitHubPrefix_LostFocus" />
+                        </Grid>
+                    </Grid>
+                    <local:MyHint Margin="0,14,0,0" Theme="Blue"
+                                  Text="加速前缀由第三方公开服务提供，与坎喵的 CKAN 镜像无关；只对 github.com 的下载链接生效，下载失败会自动回退到原地址重试一次。" />
+                </StackPanel>
+            </local:MyCard>
         </StackPanel>
     </local:MyScrollViewer>
 </local:MyPageRight>

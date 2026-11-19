@@ -24,6 +24,72 @@ public partial class PageCkan
             case "PreRelease": OptPre.Checked = true; break;
             default: OptStable.Checked = true; break;
         }
+        LoadGitHubAcceleration();
+    }
+
+    private bool _loadingGitHubAccel;
+
+    private void LoadGitHubAcceleration()
+    {
+        _loadingGitHubAccel = true;
+        try
+        {
+            var prefix = PklSettings.Current.GitHubAccelerationPrefix ?? "";
+            ChkGitHubAccel.Checked = PklSettings.Current.GitHubAccelerationEnabled;
+            TxtGitHubPrefix.Text = prefix;
+            CboGitHubPrefix.SelectedItem = null;
+            foreach (var item in CboGitHubPrefix.Items)
+            {
+                if (item is System.Windows.Controls.ComboBoxItem ci && ci.Tag is string tag && tag.Length > 0 &&
+                    string.Equals(tag, prefix, System.StringComparison.OrdinalIgnoreCase))
+                {
+                    CboGitHubPrefix.SelectedItem = item;
+                    break;
+                }
+            }
+            if (CboGitHubPrefix.SelectedItem == null)
+            {
+                CboGitHubPrefix.SelectedIndex = CboGitHubPrefix.Items.Count - 1;
+            }
+        }
+        finally
+        {
+            _loadingGitHubAccel = false;
+        }
+    }
+
+    private void ChkGitHubAccel_Change(object sender, bool user)
+    {
+        if (_loadingGitHubAccel || !user) return;
+        PklSettings.Current.GitHubAccelerationEnabled = ChkGitHubAccel.Checked == true;
+        PklSettings.Save();
+        LabCkanStatus.Text = ChkGitHubAccel.Checked == true ? "已启用 GitHub 下载加速。" : "已关闭 GitHub 下载加速。";
+    }
+
+    private void CboGitHubPrefix_SelectionChanged(object sender, System.Windows.Controls.SelectionChangedEventArgs e)
+    {
+        if (_loadingGitHubAccel) return;
+        if (CboGitHubPrefix.SelectedItem is System.Windows.Controls.ComboBoxItem ci && ci.Tag is string tag && tag.Length > 0)
+        {
+            TxtGitHubPrefix.Text = tag;
+            SaveGitHubPrefix(tag);
+        }
+    }
+
+    private void TxtGitHubPrefix_LostFocus(object sender, RoutedEventArgs e)
+    {
+        if (_loadingGitHubAccel) return;
+        SaveGitHubPrefix(TxtGitHubPrefix.Text);
+    }
+
+    private void SaveGitHubPrefix(string value)
+    {
+        var prefix = value.Trim();
+        if (prefix.Length == 0) prefix = "https://ghfast.top/";
+        if (!prefix.EndsWith("/", System.StringComparison.Ordinal)) prefix += "/";
+        PklSettings.Current.GitHubAccelerationPrefix = prefix;
+        PklSettings.Save();
+        LabCkanStatus.Text = "加速前缀已保存：" + prefix;
     }
 
     private void SaveDataDir(object sender, RoutedEventArgs e)
