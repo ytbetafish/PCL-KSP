@@ -1,0 +1,67 @@
+name: Bug 反馈 / Bug Report
+description: 启动器本身的问题（窗口、下载、安装、模组列表等）/ Problem with the launcher itself
+title: "[Bug]: "
+labels: ["bug"]
+body:
+  - type: checkboxes
+    id: checklist
+    attributes:
+      label: 检查项 / Checklist
+      options:
+        - label: 我已在 Issues 中搜索过，确认这个问题没有被重复提交
+          required: true
+        - label: 我使用的不是旧版本，问题可以稳定复现（偶发问题请说明复现概率）
+          required: true
+
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: 问题描述 / What happened
+      description: 具体表现，越具体越好（点了什么、出现了什么、期望是什么）
+      placeholder: |
+        例：在「下载」页点击「更新」后，进度条一直停在 0%，列表不动。
+    validations:
+      required: true
+
+  - type: textarea
+    id: steps
+    attributes:
+      label: 复现步骤 / Steps to reproduce
+      placeholder: |
+        1. 打开 PKL，进入「下载」
+        2. 选中某个已安装模组，点「更新」
+        3. ...
+    validations:
+      required: true
+
+  - type: input
+    id: launcher-version
+    attributes:
+      label: 启动器版本 / Launcher version
+      description: 设置 → 关于 里显示的版本号，或自己本地构建的 commit
+    validations:
+      required: true
+
+  - type: input
+    id: ksp-version
+    attributes:
+      label: KSP 版本 / KSP version
+      description: 例如 1.12.5（GOG / Steam / 其他）
+    validations:
+      required: false
+
+  - type: textarea
+    id: logs
+    attributes:
+      label: 日志 / Logs
+      description: 日志在 `%APPDATA%\PKL\Log\`（与启动器数据目录同级）。可直接把相关片段粘贴到这里，**注意去掉本机绝对路径等个人信息**。
+    validations:
+      required: false
+
+  - type: textarea
+    id: screenshots
+    attributes:
+      label: 截图 / Screenshots
+      description: 直接拖入图片即可
+    validations:
+      required: false
