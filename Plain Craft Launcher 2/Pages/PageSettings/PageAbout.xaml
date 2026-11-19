@@ -7,14 +7,19 @@
         <StackPanel x:Name="PanMain" Margin="25,10">
             <local:MyCard Margin="0,15" Title="关于 PKL">
                 <StackPanel Margin="25,37,25,15">
-                    <TextBlock Text="PKL - Kerbal Space Program Launcher" FontSize="16" FontWeight="Bold" Margin="0,0,0,15" />
-                    <TextBlock Text="基于 PCL-CE 二次开发的 KSP 启动器" Margin="0,0,0,10" Foreground="#888" />
+                    <TextBlock Text="原版 PCL 作者：龙腾猫跃" FontSize="15" FontWeight="Bold" Margin="0,0,0,5" />
+                    <TextBlock Text="本软件基于 PCL / PCL-CE 二次开发，与龙腾猫跃及 PCL 官方无隶属关系。" Foreground="#888" TextWrapping="Wrap" Margin="0,0,0,5" />
+                    <TextBlock x:Name="LabSponsor" Text="支持原作者：https://afdian.com/a/LTCat" Foreground="#0969DA" Cursor="Hand" MouseLeftButtonUp="LinkClick" Margin="0,0,0,20" />
+
+                    <TextBlock Text="PKL - Kerbal Space Program Launcher" FontSize="16" FontWeight="Bold" Margin="0,0,0,10" />
+                    <TextBlock Text="第三方基于 PCL-CE 独立进行的二次创作，非 PCL 官方产品。" Foreground="#888" Margin="0,0,0,10" />
                     <TextBlock x:Name="LabVersion" Margin="0,0,0,5" />
-                    <TextBlock Text="开源协议: GPL-3.0" Margin="0,0,0,20" />
+                    <TextBlock Text="许可：界面外壳沿用《PCL 分发有限许可》（见 Plain Craft Launcher 2\LICENCE）；CKAN 核心为 MIT；本项目新增代码为 Apache-2.0。" TextWrapping="Wrap" Margin="0,0,0,20" />
+
                     <TextBlock Text="致谢" FontSize="14" FontWeight="Bold" Margin="0,0,0,10" />
-                    <TextBlock Text="• PCL-CE (Plain Craft Launcher Community Edition) - 原版启动器框架" Margin="0,0,0,5" />
+                    <TextBlock Text="• PCL / PCL-CE (Plain Craft Launcher Community Edition) — 启动器框架" Margin="0,0,0,5" />
                     <TextBlock Text="• CKAN - KSP 模组管理工具" Margin="0,0,0,5" />
-                    <TextBlock Text="• Kerbal Space Program - 游戏本身" Margin="0,0,0,20" />
+                    <TextBlock Text="• Kerbal Space Program - 游戏本身" Margin="0,0,0,10" />
                     <TextBlock Text="本项目仅供学习交流使用，请勿用于商业用途。" Foreground="#666" FontSize="12" />
                 </StackPanel>
             </local:MyCard>
