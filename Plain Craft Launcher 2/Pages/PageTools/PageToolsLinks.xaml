@@ -71,6 +71,9 @@
                                           tag="https://afdian.com/@hyx5020" SvgIcon="lucide/heart" />
                     </StackPanel>
                 </local:MyCard>
+                <local:MyHint Margin="0,5" MinHeight="36"
+                              Text="以上教程均以原版 CKAN 客户端为对象编写，本启动器已内置加速源配置，步骤与界面与教程并不完全一致，仅供理解原理时参考。"
+                              Theme="Blue" />
             </StackPanel>
 
         </StackPanel>
