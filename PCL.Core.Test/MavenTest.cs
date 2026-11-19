@@ -1,4 +1,5 @@
 using System;
+using System.IO;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using PCL.Core.Minecraft;
 
@@ -15,7 +16,7 @@ public class MavenTest
         {
             var maven = new MavenArtifact(id);
             Console.WriteLine($"Uri: {maven.Resolve("https://copytiao.github.io/maven/copytiao/")}");
-            Console.WriteLine($"Path: {maven.Resolve("%USERPROFILE%/AppData/Roaming/.minecraft/library/maven")}");
+            Console.WriteLine($"Path: {maven.Resolve(Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), ".minecraft", "library", "maven"))}");
         }
     }
     [TestMethod]

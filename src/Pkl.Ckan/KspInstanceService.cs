@@ -48,7 +48,7 @@ public sealed class KspInstanceService
         var candidates = new List<string>();
 
         // 0) Explicitly known install (GOG bundle on this machine).
-        AddIfKspRoot(candidates, @"%KSP_ROOT%");
+        
 
         // 1) Common GOG / Steam locations.
         foreach (var path in WellKnownPaths())
@@ -187,11 +187,18 @@ public sealed class KspInstanceService
             yield return Path.Combine(progFiles64, "Steam", "steamapps", "common", "Kerbal Space Program");
         }
 
-        // GOG / manual layouts.
-        yield return @"%DRIVE%\Games\Kerbal Space Program";
-        yield return @"%DRIVE%\Steam\steamapps\common\Kerbal Space Program";
-        yield return @"%DRIVE%\Games\Kerbal Space Program";
-        yield return @"%DRIVE%\Kerbal Space Program";
+        // GOG / manual layouts：遍历各固定磁盘的常见安装目录，避免硬编码具体盘符。
+        foreach (var drive in DriveInfo.GetDrives())
+        {
+            if (drive.DriveType != DriveType.Fixed || !drive.IsReady)
+            {
+                continue;
+            }
+            var root = drive.RootDirectory.FullName;
+            yield return Path.Combine(root, "Steam", "steamapps", "common", "Kerbal Space Program");
+            yield return Path.Combine(root, "Games", "Kerbal Space Program");
+            yield return Path.Combine(root, "Kerbal Space Program");
+        }
     }
 
     private static IEnumerable<string> SafeEnumerateDirectories(string path)
