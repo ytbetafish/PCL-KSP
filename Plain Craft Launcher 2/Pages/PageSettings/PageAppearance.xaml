@@ -63,6 +63,37 @@
                                Text="主题与窗口外观修改后实时生效。" />
                 </StackPanel>
             </local:MyCard>
+            <local:MyCard Margin="0,15" Title="主页">
+                <StackPanel Margin="25,37,25,15">
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="1*" />
+                            <ColumnDefinition Width="1*" />
+                            <ColumnDefinition Width="1*" />
+                            <ColumnDefinition Width="0.2*" />
+                        </Grid.ColumnDefinitions>
+                        <local:MyRadioBox x:Name="RadioHomeBlank" Grid.Column="0" Height="22" Text="空白"
+                                          Tag="0" Check="HomeMode_Check" />
+                        <local:MyRadioBox x:Name="RadioHomePreset" Grid.Column="1" Height="22" Text="预设"
+                                          Tag="1" Check="HomeMode_Check" />
+                        <local:MyRadioBox x:Name="RadioHomeLocal" Grid.Column="2" Height="22" Text="本地文件"
+                                          Tag="2" Check="HomeMode_Check" />
+                    </Grid>
+                    <Grid x:Name="PanHomeLocal" Margin="0,14,0,0" Height="34" Visibility="Collapsed">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto" />
+                            <ColumnDefinition Width="1*" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+                        <TextBlock VerticalAlignment="Center" Margin="0,0,15,0" Text="主页文件" />
+                        <local:MyTextBox x:Name="TextHomeFile" Grid.Column="1" Height="34" />
+                        <local:MyButton x:Name="BtnHomeBrowse" Grid.Column="2" Height="34" Margin="10,0,0,0"
+                                        MinWidth="90" Padding="13,0" Text="浏览…" Click="BtnHomeBrowse_Click" />
+                    </Grid>
+                    <TextBlock Margin="0,16,0,0" Opacity="0.6" FontSize="12" TextWrapping="Wrap"
+                               Text="预设为内置主页（公告、社区与更新日志）；空白不显示任何内容；本地文件会加载所选 XAML 文件作为主页内容。设置后返回主页生效。" />
+                </StackPanel>
+            </local:MyCard>
         </StackPanel>
     </local:MyScrollViewer>
 </local:MyPageRight>

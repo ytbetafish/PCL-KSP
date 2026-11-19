@@ -1,9 +1,48 @@
 <local:MyPageRight x:Class="PCL.Pages.PageHome"
                    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-                   xmlns:local="clr-namespace:PCL">
-    <Grid>
-        <TextBlock Text="欢迎使用 PCL-KSP" FontSize="22" FontWeight="Light" Opacity="0.5"
-                   HorizontalAlignment="Center" VerticalAlignment="Center" />
-    </Grid>
+                   xmlns:local="clr-namespace:PCL"
+                   PanScroll="{Binding ElementName=PanBack}">
+    <local:MyScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled" x:Name="PanBack">
+        <Grid Margin="25,25,25,10">
+            <!-- 预设主页（原版主页的三块卡片） -->
+            <StackPanel x:Name="PanPreset">
+                <local:MyCard x:Name="CardWelcome" Title="欢迎使用 PCL-KSP" Margin="0,0,0,15">
+                    <StackPanel Margin="25,38,23,16">
+                        <TextBlock x:Name="LabWelcome" FontSize="19" FontWeight="Light" Text="PCL KSP 修改版" />
+                        <TextBlock x:Name="LabWelcomeSub" FontSize="12.5" Opacity="0.6" TextWrapping="Wrap" Margin="0,6,0,10" />
+                        <TextBlock x:Name="LabWelcomeNotice" FontSize="13" TextWrapping="Wrap" />
+                    </StackPanel>
+                </local:MyCard>
+                <local:MyCard x:Name="CardCommunity" Title="社区与支持" Margin="0,0,0,15">
+                    <local:MyIconButton x:Name="BtnCommunityClose" SvgIcon="lucide/x" Height="20" Width="20"
+                                        Margin="10" HorizontalAlignment="Right" VerticalAlignment="Top"
+                                        Click="BtnCommunityClose_Click" />
+                    <StackPanel Margin="25,38,23,16">
+                        <TextBlock FontSize="13.5" TextWrapping="Wrap" Margin="0,0,0,6"
+                                   Text="本项目的 CKAN 公共索引使用坎喵社区提供的加速镜像（api.kerbcat.cn），此处仅为第三方资源归属说明，与坎喵社区无隶属关系。" />
+                        <TextBlock FontSize="13.5" TextWrapping="Wrap" Margin="0,0,0,6"
+                                   Text="坎喵社区交流群 758050820（kerbcat.com/p/28）" />
+                        <TextBlock FontSize="13.5" TextWrapping="Wrap"
+                                   Text="问题反馈：github.com/ytbetafish/PCL-KSP/issues" />
+                    </StackPanel>
+                </local:MyCard>
+                <local:MyCard x:Name="CardLog" Title="更新日志" Margin="0,0,0,15">
+                    <TextBlock x:Name="LabLog" Margin="20,38,20,18" TextWrapping="Wrap" FontSize="13" LineHeight="20" />
+                </local:MyCard>
+            </StackPanel>
+
+            <!-- 本地文件主页 -->
+            <ContentControl x:Name="PanCustomHost" Visibility="Collapsed" />
+
+            <!-- 加载失败提示 -->
+            <local:MyCard x:Name="CardCustomError" Title="主页加载失败" Margin="0,0,0,15" Visibility="Collapsed">
+                <StackPanel Margin="25,38,23,16">
+                    <TextBlock x:Name="LabCustomError" TextWrapping="Wrap" FontSize="13" />
+                    <TextBlock Margin="0,10,0,0" FontSize="12" Opacity="0.6" TextWrapping="Wrap"
+                               Text="可在「设置 → 个性化 → 主页」里改为预设主页或空白主页。" />
+                </StackPanel>
+            </local:MyCard>
+        </Grid>
+    </local:MyScrollViewer>
 </local:MyPageRight>
