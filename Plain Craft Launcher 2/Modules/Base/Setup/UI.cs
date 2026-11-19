@@ -214,7 +214,7 @@ public partial class Setup
     /// <summary>
     ///     标题栏默认品牌标题：PCL-KSP 品牌名 + 自有版本号（不含上游版本）。
     /// </summary>
-    public static string BrandTitle => "PCL KSP 修改版 " + Basics.VersionName;
+    public static string BrandTitle => "PCL KSP " + Basics.VersionName;
 
     public static void UiLogoText(string value)
     {
@@ -227,7 +227,7 @@ public partial class Setup
             text.Equals("Plain Craft Launcher", StringComparison.OrdinalIgnoreCase) ||
             text.Equals("Plain Craft Launcher 2", StringComparison.OrdinalIgnoreCase))
         {
-            text = "PCL KSP 修改版";
+            text = "PCL KSP";
         }
         Launcher.frmMain?.LabTitleLogo.Text = text;
     }

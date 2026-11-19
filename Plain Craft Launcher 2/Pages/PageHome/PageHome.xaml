@@ -9,7 +9,7 @@
             <StackPanel x:Name="PanPreset">
                 <local:MyCard x:Name="CardWelcome" Title="欢迎使用 PCL-KSP" Margin="0,0,0,15">
                     <StackPanel Margin="25,38,23,16">
-                        <TextBlock x:Name="LabWelcome" FontSize="19" FontWeight="Light" Text="PCL KSP 修改版" />
+                        <TextBlock x:Name="LabWelcome" FontSize="19" FontWeight="Light" Text="PCL KSP" />
                         <TextBlock x:Name="LabWelcomeSub" FontSize="12.5" Opacity="0.6" TextWrapping="Wrap" Margin="0,6,0,10" />
                         <TextBlock x:Name="LabWelcomeNotice" FontSize="13" TextWrapping="Wrap" />
                     </StackPanel>

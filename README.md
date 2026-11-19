@@ -1,6 +1,6 @@
-# PCL KSP 修改版 — KSP Launcher
+# PCL KSP — KSP Launcher
 
-基于 **PCL-CE**（Plain Craft Launcher Community Edition，dev 分支）改造的 **《坎巴拉太空计划》(Kerbal Space Program, KSP)** 启动器。
+**PCL KSP 是《PCL》的修改版**：在 PCL-CE（Plain Craft Launcher Community Edition）基础上修改而来，面向 **《坎巴拉太空计划》(Kerbal Space Program, KSP)** 的启动器，非 PCL 官方产品。
 
 - 以 PCL-CE 的 WPF 程序骨架为底座，移除 Minecraft 专属的启动、下载与账号功能（少量 MC 兼容代码与素材暂留）；
 - 集成 **CKAN**（Comprehensive Kerbal Archive Network）核心，实现 KSP 模组的浏览 / 搜索 / 安装 / 依赖解析；

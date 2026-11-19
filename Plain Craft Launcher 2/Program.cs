@@ -24,7 +24,7 @@ internal static class Program
             while (!Debugger.IsAttached) Thread.Sleep(50);
         }
 #endif
-        Console.WriteLine("Welcome to PCL KSP 修改版 - KSP Launcher!");
+        Console.WriteLine("Welcome to PCL KSP - KSP Launcher!");
         // Preloading tasks
         ApplicationService.Loading = static () =>
         {

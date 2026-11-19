@@ -78,20 +78,20 @@ public partial class PageLaunchLeft
         var root = KspSettings.Current.KspRootPath;
         if (string.IsNullOrWhiteSpace(root) || !KspInstanceService.IsKspRoot(root))
         {
-            MessageBox.Show("请先在设置页选择有效的 KSP 安装路径。", "PCL KSP 修改版", MessageBoxButton.OK,
+            MessageBox.Show("请先在设置页选择有效的 KSP 安装路径。", "PCL KSP", MessageBoxButton.OK,
                 MessageBoxImage.Information);
             return;
         }
         if (IsKspRunning())
         {
-            MessageBox.Show("KSP 已经在运行中。", "PCL KSP 修改版", MessageBoxButton.OK, MessageBoxImage.Information);
+            MessageBox.Show("KSP 已经在运行中。", "PCL KSP", MessageBoxButton.OK, MessageBoxImage.Information);
             return;
         }
         var exe = Path.Combine(root, "KSP_x64.exe");
         if (!File.Exists(exe)) exe = Path.Combine(root, "KSP.exe");
         if (!File.Exists(exe))
         {
-            MessageBox.Show("未找到 KSP_x64.exe / KSP.exe。", "PCL KSP 修改版", MessageBoxButton.OK, MessageBoxImage.Error);
+            MessageBox.Show("未找到 KSP_x64.exe / KSP.exe。", "PCL KSP", MessageBoxButton.OK, MessageBoxImage.Error);
             return;
         }
 
@@ -111,7 +111,7 @@ public partial class PageLaunchLeft
         }
         catch (Exception ex)
         {
-            MessageBox.Show("启动失败：" + ex.Message, "PCL KSP 修改版", MessageBoxButton.OK, MessageBoxImage.Error);
+            MessageBox.Show("启动失败：" + ex.Message, "PCL KSP", MessageBoxButton.OK, MessageBoxImage.Error);
             HideLaunching();
             return;
         }

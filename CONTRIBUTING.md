@@ -1,4 +1,4 @@
-# 如何为 PCL KSP 修改版 做贡献
+# 如何为 PCL KSP 做贡献
 
 本仓库是对 [PCL-CE](https://github.com/PCL-Community/PCL-CE) 的二次开发，改造目标是 KSP 启动器，**不再接受与上游同步相关的改动**；与 PCL-CE 本体有关的问题请提交到上游仓库。
 
