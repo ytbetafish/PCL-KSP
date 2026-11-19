@@ -370,3 +370,4 @@ PKL-v*.zip
 /[0-9]*
 /*.xaml.txt
 /*.cs.txt
+/*.xaml
