@@ -85,10 +85,8 @@
                             <ColumnDefinition Width="1*" />
                         </Grid.ColumnDefinitions>
                         <TextBlock VerticalAlignment="Center" Margin="0,0,25,0" Text="预设主页" />
-                        <local:MyComboBox x:Name="ComboHomePreset" Grid.Column="1" Height="28"
+                        <local:MyComboBox x:Name="ComboHomePreset" Grid.Column="1" Height="28" MaxDropDownHeight="320"
                                           SelectionChanged="ComboHomePreset_SelectionChanged">
-                            <local:MyComboBoxItem Content="PCL-KSP 内置主页" Tag="0" />
-                            <local:MyComboBoxItem Content="你知道吗" Tag="1" />
                         </local:MyComboBox>
                     </Grid>
                                         <Grid x:Name="PanHomeLocal" Margin="0,14,0,0" Height="34" Visibility="Collapsed">
@@ -103,7 +101,7 @@
                                         MinWidth="90" Padding="13,0" Text="浏览…" Click="BtnHomeBrowse_Click" />
                     </Grid>
                     <TextBlock Margin="0,16,0,0" Opacity="0.6" FontSize="12" TextWrapping="Wrap"
-                               Text="预设档可选择「PCL-KSP 内置主页」（公告、社区与更新日志）或「你知道吗」（一条随机小贴士）；空白不显示任何内容；本地文件会加载所选 XAML 文件作为主页内容。设置后返回主页生效。" />
+                               Text="未选择时默认空白，不显示任何内容；预设档可选择内置主页（公告、社区与更新日志）、你知道吗（一条随机小贴士），以及原版中与 Minecraft 无关的第三方预设（Bangumi 番剧、GitHub 仪表盘、今日新闻热点、PCL CE 公告栏等联网主页）；本地文件会加载所选 XAML 文件作为主页内容。设置后返回主页生效。" />
                 </StackPanel>
             </local:MyCard>
         </StackPanel>

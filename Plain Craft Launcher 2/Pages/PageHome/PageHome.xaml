@@ -40,6 +40,14 @@
                 <TextBlock x:Name="LabTrivia" Margin="25,38,52,18" FontSize="13.5" TextWrapping="Wrap" LineHeight="22" />
             </local:MyCard>
 
+            <!-- 联网预设加载中等 -->
+            <local:MyCard x:Name="CardPresetLoading" Title="正在加载主页" Margin="0,0,0,15" Visibility="Collapsed">
+                <StackPanel Margin="25,38,23,16">
+                    <TextBlock x:Name="LabPresetLoading" FontSize="13" TextWrapping="Wrap" />
+                    <local:MyLoading x:Name="LoadPresetLoading" Margin="4,10,0,0" HorizontalAlignment="Left" />
+                </StackPanel>
+            </local:MyCard>
+
             <!-- 本地文件主页 -->
             <ContentControl x:Name="PanCustomHost" Visibility="Collapsed" />
 
@@ -49,7 +57,9 @@
                     <TextBlock x:Name="LabCustomError" TextWrapping="Wrap" FontSize="13" />
                     <TextBlock Margin="0,10,0,0" FontSize="12" Opacity="0.6" TextWrapping="Wrap"
                                Text="可在「设置 → 个性化 → 主页」里改为预设主页或空白主页。" />
-                </StackPanel>
+                    <local:MyButton x:Name="BtnPresetRetry" MinWidth="110" Height="28" Margin="0,12,0,0"
+                                    HorizontalAlignment="Left" Text="重新加载"
+                                    Visibility="Collapsed" Click="BtnPresetRetry_Click" />                </StackPanel>
             </local:MyCard>
         </Grid>
     </local:MyScrollViewer>

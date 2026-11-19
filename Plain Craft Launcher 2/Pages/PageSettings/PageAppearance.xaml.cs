@@ -75,13 +75,20 @@ public partial class PageAppearance
     {
         _homeModeSyncing = true;
         var mode = KspSettings.Current.HomePageMode;
+        if (mode == 2 && string.IsNullOrWhiteSpace(KspSettings.Current.HomePageLocalFile))
+        {
+            mode = 0;
+            KspSettings.Current.HomePageMode = 0;
+            KspSettings.Save();
+        }
         RadioHomeBlank.Checked = mode == 0;
         RadioHomePreset.Checked = mode == 1;
         RadioHomeLocal.Checked = mode == 2;
         TextHomeFile.Text = KspSettings.Current.HomePageLocalFile ?? "";
         PanHomeLocal.Visibility = mode == 2 ? System.Windows.Visibility.Visible : System.Windows.Visibility.Collapsed;
         PanHomePreset.Visibility = mode == 1 ? System.Windows.Visibility.Visible : System.Windows.Visibility.Collapsed;
-        SelectComboByTag(ComboHomePreset, KspSettings.Current.HomePagePreset.ToString());
+        EnsurePresetItems();
+        SelectComboByTag(ComboHomePreset, HomePagePreset.Resolve(KspSettings.Current.HomePagePreset).ToString());
         _homeModeSyncing = false;
     }
 
@@ -125,6 +132,15 @@ public partial class PageAppearance
         KspSettings.Save();
     }
 
+
+
+    private void EnsurePresetItems()
+    {
+        if (ComboHomePreset.Items.Count == HomePagePreset.All.Length && ComboHomePreset.Items.Count > 0) return;
+        ComboHomePreset.Items.Clear();
+        foreach (var preset in HomePagePreset.All)
+            ComboHomePreset.Items.Add(new MyComboBoxItem { Content = preset.Title, Tag = preset.Id.ToString() });
+    }
 
     private void ComboHomePreset_SelectionChanged(object sender, SelectionChangedEventArgs e)
     {

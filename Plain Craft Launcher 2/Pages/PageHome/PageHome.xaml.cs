@@ -1,6 +1,13 @@
 using System;
 using System.IO;
+using System.Net.Http;
+using System.Text;
+using System.Text.RegularExpressions;
+using System.Threading;
+using System.Threading.Tasks;
 using System.Windows;
+using System.Windows.Controls;
+using System.Windows.Input;
 using System.Windows.Markup;
 
 namespace PCL.Pages;
@@ -10,7 +17,8 @@ public partial class PageHome
     private const string UpdateLogText =
         "2026-11-19\n" +
         "· 主页按原版结构恢复：左栏启动面板（含启动中动画、进度、阶段与取消），右栏公告 / 社区 / 更新日志卡片。\n" +
-        "· 设置页「主页」可选择显示方式：空白、预设（内置主页 / 你知道吗）、本地 XAML 文件。\n" +
+        "· 设置页「主页」可选择显示方式：空白、预设、本地 XAML 文件。\n" +
+        "· 预设主页可选项接入原版中与 Minecraft 无关的第三方预设（Bangumi 番剧 / GitHub 仪表盘 / 今日新闻热点 / PCL CE 公告栏），联网拉取并缓存。\n" +
         "· 切页进入动画补充透明度兜底，修复控件需要悬停才显示的问题。\n" +
         "· 启动页显示 KSP 版本与安装路径，启动失败给出明确提示。\n" +
         "· 日志文件列表补齐文件图标；历史提交清理本机路径并更名 PCL-KSP。";
@@ -34,42 +42,192 @@ public partial class PageHome
         "Mun 的转移窗口不像现实里那么苛刻：先把圆轨道铺到 80 km，再点火基本都能到。"
     };
 
+    private static readonly HttpClient Http = CreateHttp();
+
     private int _triviaIndex = -1;
+    private HomePagePreset _currentPreset = HomePagePreset.All[0];
+    private CancellationTokenSource? _presetCts;
 
     public PageHome()
     {
         InitializeComponent();
+        Unloaded += (_, _) => _presetCts?.Cancel();
         ApplyHomeMode();
     }
+
+    private static HttpClient CreateHttp()
+    {
+        var client = new HttpClient { Timeout = TimeSpan.FromSeconds(20) };
+        client.DefaultRequestHeaders.UserAgent.ParseAdd("PCL-KSP/1.0");
+        return client;
+    }
+
+    private static string CacheDir
+        => Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "PCL-KSP",
+            "homepage-presets");
 
     private void ApplyHomeMode()
     {
         var mode = KspSettings.Current.HomePageMode;
+        // 本地文件档未选择文件时，按原版语义回落到空白
+        if (mode == 2 && string.IsNullOrWhiteSpace(KspSettings.Current.HomePageLocalFile)) mode = 0;
         if (mode == 1)
         {
             LoadPreset(KspSettings.Current.HomePagePreset);
             return;
         }
-        PanPreset.Visibility = Visibility.Collapsed;
-        CardTrivia.Visibility = Visibility.Collapsed;
-        if (mode == 2)
-        {
-            LoadCustom(KspSettings.Current.HomePageLocalFile);
-        }
+        HideAllViews();
+        if (mode == 2) LoadCustom(KspSettings.Current.HomePageLocalFile);
     }
 
-    private void LoadPreset(int preset)
+    private void HideAllViews()
     {
-        if (preset == 1)
+        PanPreset.Visibility = Visibility.Collapsed;
+        CardTrivia.Visibility = Visibility.Collapsed;
+        CardPresetLoading.Visibility = Visibility.Collapsed;
+        CardCustomError.Visibility = Visibility.Collapsed;
+    }
+
+    private void LoadPreset(int id)
+    {
+        var preset = HomePagePreset.Find(HomePagePreset.Resolve(id));
+        _currentPreset = preset;
+        _presetCts?.Cancel();
+        HideAllViews();
+        PanCustomHost.Content = null;
+        PanCustomHost.Visibility = Visibility.Collapsed;
+
+        if (preset.Url is not null)
         {
-            PanPreset.Visibility = Visibility.Collapsed;
+            _ = LoadNetworkPresetAsync(preset);
+            return;
+        }
+
+        if (preset.Id == 1)
+        {
             CardTrivia.Visibility = Visibility.Visible;
             ShowNextTrivia();
             return;
         }
-        CardTrivia.Visibility = Visibility.Collapsed;
+
         PanPreset.Visibility = Visibility.Visible;
         LoadBuiltinPreset();
+    }
+
+    /// <summary>联网预设：先取缓存立即显示，再拉远端覆盖（与原版 LoadFromNetwork 的做法一致）。</summary>
+    private async Task LoadNetworkPresetAsync(HomePagePreset preset)
+    {
+        var cts = new CancellationTokenSource();
+        _presetCts = cts;
+        var token = cts.Token;
+
+        CardCustomError.Visibility = Visibility.Collapsed;
+        LabPresetLoading.Text = "正在加载「" + preset.Title + "」…";
+        CardPresetLoading.Visibility = Visibility.Visible;
+
+        var cache = Path.Combine(CacheDir, "preset-" + preset.Id + ".xaml");
+        var hasCache = false;
+        if (File.Exists(cache))
+        {
+            try
+            {
+                if (TryShowFragment(File.ReadAllText(cache, Encoding.UTF8), out _))
+                    hasCache = true;
+            }
+            catch
+            {
+                // 缓存损坏，忽略，等待网络
+            }
+        }
+        if (hasCache) CardPresetLoading.Visibility = Visibility.Collapsed;
+
+        try
+        {
+            var text = await Http.GetStringAsync(preset.Url!, token).ConfigureAwait(true);
+            if (token.IsCancellationRequested) return;
+            if (string.IsNullOrWhiteSpace(text)) throw new InvalidOperationException("服务器返回内容为空。");
+            try
+            {
+                Directory.CreateDirectory(CacheDir);
+                File.WriteAllText(cache, text, new UTF8Encoding(false));
+            }
+            catch
+            {
+                // 缓存写失败不影响显示
+            }
+            if (TryShowFragment(text, out var parseError))
+            {
+                CardPresetLoading.Visibility = Visibility.Collapsed;
+                CardCustomError.Visibility = Visibility.Collapsed;
+            }
+            else
+            {
+                CardPresetLoading.Visibility = Visibility.Collapsed;
+                if (!hasCache) ShowError("预设主页解析失败：" + parseError);
+            }
+        }
+        catch (Exception ex)
+        {
+            if (token.IsCancellationRequested) return;
+            CardPresetLoading.Visibility = Visibility.Collapsed;
+            if (!hasCache)
+                ShowError("预设主页加载失败：" + ex.Message);
+        }
+    }
+
+    /// <summary>将上游 XAML 片段清洗、包裹成可解析页面并挂到宿主。</summary>
+    private bool TryShowFragment(string raw, out string error)
+    {
+        try
+        {
+            var element = XamlReader.Parse(PrepareFragment(raw)) as UIElement;
+            if (element is null)
+            {
+                error = "预设内容不是可显示的 XAML。";
+                return false;
+            }
+            if (element is FrameworkElement frameworkElement) frameworkElement.Margin = new Thickness(0);
+            WireButtons(element);
+            PanCustomHost.Content = element;
+            PanCustomHost.Visibility = Visibility.Visible;
+            error = string.Empty;
+            return true;
+        }
+        catch (Exception ex)
+        {
+            error = ex.Message;
+            return false;
+        }
+    }
+
+    /// <summary>
+    /// 上游预设是片段而非完整页面：剥掉 xmlns 声明后包进 StackPanel；
+    /// 同时把 EventType="打开网页" 的按钮降级为 Tag 携带链接，其余自定义事件属性直接剥除，
+    /// 否则 XamlReader 会因未知属性解析失败。
+    /// </summary>
+    private static string PrepareFragment(string raw)
+    {
+        raw = raw.Replace("\uFEFF", string.Empty);
+        raw = Regex.Replace(raw, @"\sxmlns(?::[A-Za-z0-9_]+)?=""[^""]*""", string.Empty);
+        raw = Regex.Replace(raw, @"\sEventType=""打开网页""\s+EventData=""([^""]+)""", @" Tag=""$1""");
+        raw = Regex.Replace(raw, @"\sEventData=""([^""]+)""\s+EventType=""打开网页""", @" Tag=""$1""");
+        raw = Regex.Replace(raw, @"\sEvent(Type|Data)=""[^""]*""", string.Empty);
+        var assembly = typeof(PageHome).Assembly.GetName().Name;
+        return "<StackPanel xmlns=\"http://schemas.microsoft.com/winfx/2006/xaml/presentation\"" +
+               " xmlns:x=\"http://schemas.microsoft.com/winfx/2006/xaml\"" +
+               " xmlns:sys=\"clr-namespace:System;assembly=mscorlib\"" +
+               " xmlns:local=\"clr-namespace:PCL;assembly=" + assembly + "\">" + raw + "</StackPanel>";
+    }
+
+    /// <summary>预设里的按钮只保留了 Tag 里的网址，这里统一接上「打开网页」。</summary>
+    private static void WireButtons(DependencyObject root)
+    {
+        if (root is MyButton button && button.Tag is string url &&
+            url.StartsWith("http", StringComparison.OrdinalIgnoreCase))
+            button.Click += (_, _) => PCL.Core.App.Basics.OpenPath(url);
+        foreach (var child in LogicalTreeHelper.GetChildren(root))
+            if (child is DependencyObject childObject)
+                WireButtons(childObject);
     }
 
     private void LoadBuiltinPreset()
@@ -128,7 +286,15 @@ public partial class PageHome
     private void ShowError(string message)
     {
         LabCustomError.Text = message;
+        BtnPresetRetry.Visibility = _currentPreset.Url is not null ? Visibility.Visible : Visibility.Collapsed;
         CardCustomError.Visibility = Visibility.Visible;
+    }
+
+    private void BtnPresetRetry_Click(object sender, MouseButtonEventArgs e)
+    {
+        if (_currentPreset.Url is null) return;
+        CardCustomError.Visibility = Visibility.Collapsed;
+        _ = LoadNetworkPresetAsync(_currentPreset);
     }
 
     private void BtnCommunityClose_Click(object sender, EventArgs e)
