@@ -33,7 +33,7 @@
 
 ## 二、目录结构
 
-> 本节由 GitHub Trees API 生成（`GET /repos/ytbetafish/PCL-KSP/git/trees/main?recursive=1`，截至 `1782731` 共 1 654 个文件），括号内为该目录文件数。结构变动后重新拉取即可，不必手写维护。
+> 本节由 GitHub Trees API 生成（`GET /repos/ytbetafish/PCL-KSP/git/trees/main?recursive=1`，截至 `53d4536` 共 1 327 个文件），括号内为该目录文件数。结构变动后重新拉取即可，不必手写维护。
 
 ```
 PCL-KSP/
@@ -42,18 +42,18 @@ PCL-KSP/
 ├─ PCL.Core.SourceGenerators/      (9)  源生成器
 ├─ PCL.Core.Test/                 (49)  上游单元测试，改造后未再维护
 ├─ PCL.Launcher.Core/            (175)  业务核心：启动、下载、实例、更新、翻译
-├─ Plain Craft Launcher 2/       (279)  WPF 主程序
+├─ Plain Craft Launcher 2/       (257)  WPF 主程序
 │   ├─ Pages/                    (100)  页面（见下表）
 │   ├─ Controls/                  (61)  PCL 自定义控件
 │   ├─ Modules/                   (47)  业务模块（设置、启动器、横幅缓存等）
-│   ├─ Images/                    (47)  位图资源（含部分 MC 遗留素材）
+│   ├─ Images/                    (25)  位图资源（含部分 MC 遗留素材）
 │   ├─ Resources/                 (14)  本地化与提示文本
 │   └─ FormMain.xaml(.cs)                主窗口外壳与顶栏导航
-├─ external/CKAN.Core/           (172)  内联 CKAN 核心（MIT，目标 net10.0）
+├─ external/CKAN.Core/           (173)  内联 CKAN 核心（MIT，目标 net10.0）
 ├─ src/Pcl.Ckan/                   (8)  CKAN 适配层（无头，不依赖 WPF）
 ├─ docs/                           (2)  改造方案与参考样例分析
-├─ .github/                       (12)  issue / PR 模板与 CI（继承自上游，尚未适配）
-└─ 根目录                         (11)  slnx / README / LICENSE / CONTRIBUTING / cliff.toml 等
+├─ .github/                        (4)  issue / PR 模板与 CI（已按本项目适配）
+└─ 根目录                          (9)  slnx / README / LICENSE / CONTRIBUTING / cliff.toml 等
 ```
 
 `Plain Craft Launcher 2/Pages` 明细：
