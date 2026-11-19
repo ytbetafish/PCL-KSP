@@ -1,7 +1,8 @@
-﻿using System.Windows;
+using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Media;
 using PCL.Core.App.Localization;
+using PCL.Core.UI.Threading;
 
 namespace PCL;
 
@@ -113,6 +114,13 @@ public static class CompProjectUiExtensions
 
         public MyListItem ToListItem()
         {
+            // 命中磁盘缓存直接用本地文件，未命中先用 URL 并排进后台缓存队列
+            var logo = string.IsNullOrEmpty(project.LogoUrl)
+                ? $"{LauncherPaths.ImageRoot}Icons/NoIcon.png"
+                : BannerCache.TryGetLocal(project.LogoUrl) ?? project.LogoUrl;
+            if (!string.IsNullOrEmpty(project.LogoUrl) && logo == project.LogoUrl)
+                _ = BannerCache.EnsureAsync(project.LogoUrl);
+
             return new MyListItem
             {
                 Title = project.TranslatedName,
@@ -120,9 +128,7 @@ public static class CompProjectUiExtensions
                     .Description
                     .Replace("\r", "")
                     .Replace("\n", ""),
-                Logo = string.IsNullOrEmpty(project.LogoUrl)
-                    ? $"{LauncherPaths.ImageRoot}Icons/NoIcon.png"
-                    : project.LogoUrl,
+                Logo = logo,
                 Tags = project.Tags,
                 Tag = project,
                 LogoCornerRadius = new CornerRadius(6)
@@ -144,10 +150,30 @@ public static class CompProjectUiExtensions
             }
             else
             {
-                // 先保持首字母色块，图片加载成功后由 OnLogoLoaded 切换，避免下载期间显示立方体兜底。
+                // 先保持首字母色块；横幅命中本地缓存就直接秒出，未命中才排队下载，下载完再替换。
                 item.ShowLetter = true;
-                item.PathLogo.Source = project.LogoUrl;
-                item.PathLogo.FallbackSource = GameDownload.DlSourceModGet(project.LogoUrl);
+                var logoUrl = project.LogoUrl;
+                var cachedLogo = BannerCache.TryGetLocal(logoUrl);
+                if (cachedLogo is not null)
+                {
+                    item.PathLogo.Source = cachedLogo;
+                }
+                else
+                {
+                    item.PathLogo.Source = null;
+                    var target = item;
+                    _ = BannerCache.EnsureAsync(logoUrl).ContinueWith(t =>
+                    {
+                        var path = t.Result;
+                        if (string.IsNullOrEmpty(path))
+                            return;
+                        UiDispatcher.Post(() =>
+                        {
+                            if (target.PathLogo.Source is null)
+                                target.PathLogo.Source = path;
+                        });
+                    }, TaskScheduler.Default);
+                }
             }
         }
     }
