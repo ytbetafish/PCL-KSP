@@ -55,8 +55,9 @@ public partial class PageLog
                 Title = title,
                 Info = full,
                 tag = full,
-                Height = 46d,
-                Type = MyListItem.CheckType.Clickable
+                Height = 53d,
+                Type = MyListItem.CheckType.Clickable,
+                SvgIcon = "lucide/file-text"
             };
             item.Click += LogItem_Click;
             PanList.Children.Add(item);
