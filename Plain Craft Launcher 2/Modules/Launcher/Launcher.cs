@@ -25,6 +25,13 @@ public static partial class Launcher
     /// <summary>模组详情页实例。</summary>
     public static PageModDetail? frmDownloadCompDetail;
 
+    /// <summary>任务管理页（右下角下载按钮打开的下载任务页）左侧栏。</summary>
+    public static PageSpeedLeft? frmSpeedLeft;
+
+    /// <summary>任务管理页右侧栏（下载任务卡片列表）。</summary>
+    public static PageSpeedRight? frmSpeedRight;
+
+
     private static ModService? _ckanService;
     private static bool _ckanInitialized;
 

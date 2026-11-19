@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -105,9 +105,20 @@ public partial class PageInstanceCompResource : IPageView
         try
         {
             await AttachInstanceAsync();
-            var list = await Task.Run(() => GetService().ListInstalledAsync()).ConfigureAwait(true);
+
+            // 第一阶段：直接读注册表里的已装模组先渲染出来（不枚举 CKAN 目录，秒开）
+            var quick = await Task.Run(() => GetService().ListInstalledQuickAsync()).ConfigureAwait(true);
             _results.Clear();
-            _results.AddRange(list);
+            _results.AddRange(quick);
+            _selected.Clear();
+            _bottomBarShownCount = 0;
+            RenderList();
+            PanLoad.Visibility = Visibility.Collapsed;
+
+            // 第二阶段：后台补齐可更新标记、依赖、冲突与下载量，再刷新一次（勾选状态保留）
+            var full = await Task.Run(() => GetService().ListInstalledAsync()).ConfigureAwait(true);
+            _results.Clear();
+            _results.AddRange(full);
         }
         catch (Exception ex)
         {
@@ -115,8 +126,6 @@ public partial class PageInstanceCompResource : IPageView
             _results.Clear();
         }
 
-        _selected.Clear();
-        _bottomBarShownCount = 0;
         RenderList();
         PanLoad.Visibility = Visibility.Collapsed;
     }
@@ -598,14 +607,21 @@ public partial class PageInstanceCompResource : IPageView
 
     private bool _busy;
 
-    private void ShowProgress(string text)
+    /// <summary>判断异常是否只是用户主动取消（点了任务卡片上的 ×），这种情况不应报错。</summary>
+    private static bool IsUserCancel(Exception? ex)
     {
-        LabProgress.Text = text;
-        BarProgress.IsIndeterminate = true;
-        PanProgress.Visibility = Visibility.Visible;
+        while (ex is not null)
+        {
+            if (ex is OperationCanceledException)
+                return true;
+            if (ex.GetType().Name == "CancelledActionKraken")
+                return true;
+            ex = ex.InnerException;
+        }
+
+        return false;
     }
 
-    private void HideProgress() => PanProgress.Visibility = Visibility.Collapsed;
 
     /// <summary>
     /// 可见性自愈：页面进入动画被打断时，参与动画的控件会停在 Opacity 0，
@@ -675,45 +691,82 @@ public partial class PageInstanceCompResource : IPageView
         if (choice != 1)
             return; // 按钮编号从 1 开始：1 = 确认，0 = 未点击，2 = 取消
 
-        if (_busy) return;
+        if (_busy)
+        {
+            // 上一次批量操作可能还在收尾（取消后 CKAN 需要时间自行退出），排到它结束再继续，而不是静默丢弃这次点击
+            Common.Log("[ModUpdate] 上一次操作尚未收尾，本次点击排队等待");
+            DialogCompat.ShowHint("上一次操作正在收尾，稍后自动继续…", NotificationType.Info);
+            while (_busy)
+                await Task.Delay(150).ConfigureAwait(true);
+            Common.Log("[ModUpdate] 上一次操作已结束，继续本次操作");
+        }
+
         _busy = true;
-        ShowProgress($"准备更新 {targets.Count} 个模组…");
-        var ok = 0;
+       var ok = 0;
         var failed = new List<string>();
-        IProgress<string> progress = new Progress<string>(msg => LabProgress.Text = msg);
+        var service = GetService();
+
+        // 把这次更新作为任务挂到任务管理页（右下角下载按钮），与其它下载任务并列显示
+        var loader = new CkanUpdateLoader($"更新 {targets.Count} 个模组", targets.Select(t => t.Name));
+        Loading.loaderTaskbar.Add(loader);
+        Launcher.frmMain?.BtnExtraDownload.ShowRefresh();
+
+        void OnCkanProgress(string msg, int percent) => loader.Report(percent);
+
+        service.Log.ProgressReported += OnCkanProgress;
+        void OnCkanSpeed(long bytesPerSecond) => loader.ReportSpeed(bytesPerSecond);
+        service.SpeedReported += OnCkanSpeed;
+        IProgress<string>? progress = null;
         var index = 0;
-        try
+        Common.Log($"[ModUpdate] 开始批量更新 {targets.Count} 个模组，可取消={true}");
+        loader.StartTask();        try
         {
             foreach (var m in targets)
             {
+                if (loader.IsCancelled)
+                    break;
+
                 index++;
                 var current = m;
-                progress.Report($"正在更新 {index}/{targets.Count}：{current.Name}…");
-                try
+               try
                 {
                     // CKAN 的依赖解析与下载安装都是同步阻塞调用，必须放到后台线程，否则界面会卡死
                     var mod = current;
-                    var plan = await Task.Run(() => GetService().GetInstallPlanAsync(mod.Identifier)).ConfigureAwait(true);
-                    if (plan is null)
+                    var plan = await Task.Run(() => service.GetInstallPlanAsync(mod.Identifier)).ConfigureAwait(true);
+                    if (plan is null || !string.IsNullOrEmpty(plan.FailureReason))
                     {
                         failed.Add(mod.Name);
-                        continue;
+                        loader.Current?.Fail(new InvalidOperationException(plan?.FailureReason ?? "未找到安装计划"));
                     }
-
-                    await Task.Run(() => GetService().ExecutePlanAsync(plan, progress)).ConfigureAwait(true);
-                    ok++;
+                    else
+                    {
+                        await Task.Run(() => service.ExecutePlanAsync(plan, progress, loader.Token)).ConfigureAwait(true);
+                        ok++;
+                    }
+                }
+                catch (Exception ex) when (IsUserCancel(ex))
+                {
+                    // 用户主动取消，不算失败
+                    break;
                 }
                 catch (Exception ex)
                 {
                     Common.Log(ex, "批量更新失败：" + current.Identifier);
                     failed.Add(current.Name);
+                    loader.Current?.Fail(ex);
                 }
+
+                loader.Advance();
             }
         }
         finally
         {
-            HideProgress();
-            _busy = false;
+            service.Log.ProgressReported -= OnCkanProgress;
+            service.SpeedReported -= OnCkanSpeed;
+            if (!loader.IsCancelled)
+                loader.Finish();
+            Launcher.frmMain?.BtnExtraDownload.ShowRefresh();
+           _busy = false;
         }
 
         ChangeAllSelected(false);
@@ -810,10 +863,18 @@ public partial class PageInstanceCompResource : IPageView
         if (choice != 1)
             return; // 按钮编号从 1 开始：1 = 确认，0 = 未点击，2 = 取消
 
-        if (_busy) return;
+        if (_busy)
+        {
+            // 上一次批量操作可能还在收尾（取消后 CKAN 需要时间自行退出），排到它结束再继续，而不是静默丢弃这次点击
+            Common.Log("[ModUpdate] 上一次操作尚未收尾，本次点击排队等待");
+            DialogCompat.ShowHint("上一次操作正在收尾，稍后自动继续…", NotificationType.Info);
+            while (_busy)
+                await Task.Delay(150).ConfigureAwait(true);
+            Common.Log("[ModUpdate] 上一次操作已结束，继续本次操作");
+        }
+
         _busy = true;
-        ShowProgress($"准备卸载 {targets.Count} 个模组…");
-        var ok = 0;
+       var ok = 0;
         var failed = new List<string>();
         var index = 0;
         try
@@ -822,8 +883,7 @@ public partial class PageInstanceCompResource : IPageView
             {
                 index++;
                 var current = m;
-                LabProgress.Text = $"正在卸载 {index}/{targets.Count}：{current.Name}…";
-                try
+               try
                 {
                     var mod = current;
                     await Task.Run(() => GetService().UninstallAsync(mod.Identifier)).ConfigureAwait(true);
@@ -838,8 +898,7 @@ public partial class PageInstanceCompResource : IPageView
         }
         finally
         {
-            HideProgress();
-            _busy = false;
+           _busy = false;
         }
 
         ChangeAllSelected(false);

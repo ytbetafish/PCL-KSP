@@ -24,13 +24,7 @@
                                          ToolTip="将已安装模组清单导出为文本或 CSV 文件" />
                     </WrapPanel>
                 </local:MyCard>
-                <local:MyCard Margin="0,0,0,15" Title="更新进度" x:Name="PanProgress" Visibility="Collapsed">
-                    <StackPanel Margin="25,38,23,18">
-                        <TextBlock x:Name="LabProgress" Text="准备中…" FontSize="12" Opacity="0.8" Margin="0,0,0,6"
-                                   TextTrimming="CharacterEllipsis" />
-                        <ProgressBar x:Name="BarProgress" Height="6" IsIndeterminate="True" />
-                    </StackPanel>
-                </local:MyCard>
+
                 <local:MyCard x:Name="PanListCard" Margin="0,0,0,15" Title=" " MinHeight="55" Visibility="Collapsed">
                     <StackPanel x:Name="PanFilter" Margin="15,13,0,0" Orientation="Horizontal"
                                 VerticalAlignment="Top" HorizontalAlignment="Left" Height="28">

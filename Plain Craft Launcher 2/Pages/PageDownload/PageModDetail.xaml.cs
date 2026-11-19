@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections;
 using System.Collections.ObjectModel;
 using System.Diagnostics.Eventing.Reader;
@@ -99,6 +99,21 @@ public partial class PageModDetail : IPageView
         Common.Log("[CKAN] 世界存档下载在 KSP 场景下不可用");
     }
 
+    /// <summary>判断异常是否只是用户主动取消（点了任务卡片上的 ×），这种情况不应弹错误。</summary>
+    private static bool IsUserCancelException(Exception? ex)
+    {
+        while (ex is not null)
+        {
+            if (ex is OperationCanceledException)
+                return true;
+            if (ex.GetType().Name == "CancelledActionKraken")
+                return true;
+            ex = ex.InnerException;
+        }
+
+        return false;
+    }
+
     public void Save_Click(object sender, EventArgs e)
     {
         var file = sender switch
@@ -130,11 +145,40 @@ public partial class PageModDetail : IPageView
                     return;
                 }
 
-                var progress = new Progress<string>(msg => Common.Log($"[CKAN] {msg}"));
-                Launcher.Ckan.ExecutePlanAsync(plan, progress).GetAwaiter().GetResult();
+                // 这次安装同样挂到任务管理页（右下角下载按钮），与其它下载任务并列
+                var loader = new CkanUpdateLoader($"安装 {_project.TranslatedName}", new[] { _project.TranslatedName });
+                Loading.loaderTaskbar.Add(loader);
+                Launcher.frmMain?.BtnExtraDownload.ShowRefresh();
+                void OnCkanProgress(string msg, int percent) => loader.Report(percent);
+                void OnCkanSpeed(long bytesPerSecond) => loader.ReportSpeed(bytesPerSecond);
+                Launcher.Ckan.ProgressReported += OnCkanProgress;
+                Launcher.Ckan.SpeedReported += OnCkanSpeed;
+                loader.StartTask();
+                try
+                {
+                    var progress = new Progress<string>(msg => Common.Log($"[CKAN] {msg}"));
+                    Launcher.Ckan.ExecutePlanAsync(plan, progress, loader.Token).GetAwaiter().GetResult();
+                }
+                catch (Exception ex) when (IsUserCancelException(ex))
+                {
+                    // 用户在任务管理页点了 × 主动取消，属正常操作，不弹错误
+                    Common.Log($"[CKAN] 用户取消安装：{_project.TranslatedName}");
+                }
+                catch (Exception ex)
+                {
+                    loader.Current?.Fail(ex);
+                    throw;
+                }
+                finally
+                {
+                    Launcher.Ckan.ProgressReported -= OnCkanProgress;
+                    Launcher.Ckan.SpeedReported -= OnCkanSpeed;
+                    if (!loader.IsCancelled)
+                        loader.Finish();
+                    Launcher.frmMain?.BtnExtraDownload.ShowRefresh();
+                }
 
                 Common.Log($"[CKAN] 已安装 {_project.TranslatedName}");
-                Launcher.frmMain?.BtnExtraDownload.ShowRefresh();
                 Launcher.frmMain?.BtnExtraDownload.Ribble();
             }
             catch (InstanceReadOnlyException ex)

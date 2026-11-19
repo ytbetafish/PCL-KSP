@@ -88,6 +88,22 @@ public sealed class ModService : IModService, IDisposable
         try { ServicePointManager.MaxServicePointIdleTime = Math.Max(5, timeoutSeconds) * 1000; } catch { }
     }
 
+    /// <inheritdoc />
+    public event Action<string, int>? ProgressReported
+    {
+        add { Log.ProgressReported += value; }
+        remove { Log.ProgressReported -= value; }
+    }
+
+    /// <inheritdoc />
+    public event Action<long>? SpeedReported
+    {
+        add { Log.SpeedReported += value; }
+        remove { Log.SpeedReported -= value; }
+    }
+
+    /// <inheritdoc />
+    public long CurrentSpeed => Log.LastBytesPerSecond;
     /// <summary>Accumulated log sink (for the "view log" window).</summary>
     public StringBuilderUser Log { get; }
 
@@ -349,6 +365,53 @@ public sealed class ModService : IModService, IDisposable
         await Task.WhenAll(tasks).ConfigureAwait(false);
     }
 
+    /// <summary>
+    /// 首屏用的快速列表：只读注册表里已安装的模组（标识、名称、版本），不枚举 CKAN 目录、
+    /// 不解析依赖与更新状态，通常在一秒内返回。页面应先用它把列表渲染出来，
+    /// 再调用 <see cref="ListInstalledAsync"/> 补齐可更新标记、依赖、冲突、下载量等信息。
+    /// </summary>
+    public Task<IReadOnlyList<ModSearchResult>> ListInstalledQuickAsync(CancellationToken cancellationToken = default)
+    {
+        var reg = Registry;
+        if (_instance == null || reg == null)
+        {
+            return Task.FromResult<IReadOnlyList<ModSearchResult>>(Array.Empty<ModSearchResult>());
+        }
+
+        return Task.Run<IReadOnlyList<ModSearchResult>>(() =>
+        {
+            var list = new List<ModSearchResult>();
+            foreach (var installed in reg.InstalledModules)
+            {
+                if (cancellationToken.IsCancellationRequested)
+                {
+                    break;
+                }
+
+                var identifier = installed.identifier;
+                var displayName = installed.Module?.name;
+                if (string.IsNullOrWhiteSpace(displayName))
+                {
+                    displayName = identifier;
+                }
+
+                list.Add(new ModSearchResult(
+                    identifier,
+                    displayName,
+                    null,
+                    null,
+                    null,
+                    installed.Module?.version?.ToString(),
+                    null,
+                    IsInstalled: true,
+                    HasUpdate: false));
+            }
+
+            list.Sort((a, b) => string.Compare(a.Name, b.Name, StringComparison.OrdinalIgnoreCase));
+            return list;
+        }, cancellationToken);
+    }
+
     /// <inheritdoc />
     public async Task<IReadOnlyList<ModSearchResult>> ListInstalledAsync(CancellationToken cancellationToken = default)
     {
@@ -565,8 +628,19 @@ public sealed class ModService : IModService, IDisposable
         if (desired.Count > 0)
         {
             HashSet<string>? possibleConfigOnlyDirs = null;
-            installer.InstallList(desired, opts, _registryManager, ref possibleConfigOnlyDirs,
-                userAgent: UserAgent, ConfirmPrompt: false);
+
+            // 部分模组元数据缺 download_size / install_size，CKAN 的进度分母会是 0（百分比恒 0），
+            // 这里按目录里的模块大小估一个总量，交给 StringBuilderUser 换算百分比。
+            Log.ExpectedBytes = desired.Sum(m => Math.Max(0L, m.download_size) + Math.Max(0L, m.install_size));
+            try
+            {
+                installer.InstallList(desired, opts, _registryManager, ref possibleConfigOnlyDirs,
+                    userAgent: UserAgent, ConfirmPrompt: false);
+            }
+            finally
+            {
+                Log.ExpectedBytes = 0;
+            }
         }
 
         if (plan.ToRemove.Count > 0)

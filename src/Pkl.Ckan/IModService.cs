@@ -29,6 +29,17 @@ public interface IModService
     Task EnrichRangeAsync(IList<ModSearchResult> results, int start, int count, CancellationToken cancellationToken = default);
 
     /// <summary>
+    /// CKAN 报告的下载/安装进度（消息原文 + 0-100 百分比），供任务管理页展示。
+    /// 没有进度时不会触发。
+    /// </summary>
+    event Action<string, int>? ProgressReported;
+
+    /// <summary>CKAN 报告的下载速率（字节/秒），供任务管理页左边栏显示。</summary>
+    event Action<long>? SpeedReported;
+
+    /// <summary>最近一次 CKAN 下载速率（字节/秒）。</summary>
+    long CurrentSpeed { get; }
+    /// <summary>
     /// List mods currently installed in the attached KSP instance.
     /// </summary>
     Task<IReadOnlyList<ModSearchResult>> ListInstalledAsync(CancellationToken cancellationToken = default);
