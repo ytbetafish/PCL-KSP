@@ -124,6 +124,31 @@ public static class KspSettings
         {
             // 回填失败不致命
         }
+
+        // 一次性迁移：旧版（工程名 PKL 时期）把 CKAN 数据目录放在 %APPDATA%\PKL\Ckan。
+        try
+        {
+            var appData = Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData);
+            var legacyCkan = Path.Combine(appData, "PKL", "Ckan");
+            var newCkan = Path.Combine(appData, "PCL-KSP", "Ckan");
+            var current = (Current.CkanDataDir ?? "").TrimEnd('\\', '/');
+            if (current.Length > 0
+                && current.Equals(legacyCkan.TrimEnd('\\', '/'), StringComparison.OrdinalIgnoreCase))
+            {
+                // 旧目录还在、新目录还没有时才整体搬过去，避免覆盖新目录里已有的数据。
+                if (Directory.Exists(legacyCkan) && !Directory.Exists(newCkan))
+                {
+                    try { Directory.Move(legacyCkan, newCkan); }
+                    catch { /* 搬家失败就用新路径重新初始化 */ }
+                }
+                Current.CkanDataDir = newCkan;
+                Save();
+            }
+        }
+        catch
+        {
+            // 迁移失败不致命
+        }
     }
 
     /// <summary>实例在下拉框/列表里显示的名字：有自定义名用自定义名，否则用目录名。</summary>
