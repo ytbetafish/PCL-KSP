@@ -244,7 +244,7 @@ public partial class PageModDetail : IPageView
         try
         {
             HintService.Show(Hints.Info(Lang.Text("Download.Comp.Detail.DescriptionTranslating", _project.TranslatedName)));
-            var svc = new OpenAiTranslationService(new TranslationOptions
+            var svc = TranslationServiceFactory.Create(new TranslationOptions
             {
                 BaseUrl = KspSettings.Current.TranslateBaseUrl,
                 ApiKey = KspSettings.Current.TranslateApiKey,

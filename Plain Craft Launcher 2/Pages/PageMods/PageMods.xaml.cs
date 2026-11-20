@@ -433,7 +433,7 @@ public partial class PageMods
             return;
         }
 
-        var svc = new OpenAiTranslationService(new TranslationOptions
+        var svc = TranslationServiceFactory.Create(new TranslationOptions
         {
             BaseUrl = KspSettings.Current.TranslateBaseUrl,
             ApiKey = KspSettings.Current.TranslateApiKey,

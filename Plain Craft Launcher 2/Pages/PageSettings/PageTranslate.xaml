@@ -7,6 +7,8 @@
         <StackPanel x:Name="PanMain" Margin="25,10">
             <local:MyCard Margin="0,15" Title="翻译服务">
                 <StackPanel Margin="25,37,25,15">
+                    <TextBlock Text="留空 API 密钥即可使用内置免费接口（腾讯交互翻译，失败自动回退 MyMemory），无需注册；填写密钥后改走 OpenAI 兼容接口。"
+                               FontSize="12" Opacity="0.7" TextWrapping="Wrap" Margin="0,0,0,16" />
                     <Grid IsSharedSizeScope="True">
                         <Grid.ColumnDefinitions>
                             <ColumnDefinition Width="Auto" SharedSizeGroup="Name" />
@@ -26,6 +28,11 @@
                         <TextBlock Grid.Row="4" VerticalAlignment="Center" Margin="0,0,25,0" Text="模型" />
                         <local:MyTextBox Grid.Row="4" Grid.Column="1" x:Name="TxtModel" Height="34" />
                     </Grid>
+                    <StackPanel Orientation="Horizontal" Margin="0,20,0,0">
+                        <local:MyButton Text="测试翻译" Height="34" Width="100" Click="BtnTest_Click" />
+                    </StackPanel>
+                    <TextBlock x:Name="LabTestResult" Text="" Margin="0,10,0,0" FontSize="12"
+                               TextWrapping="Wrap" Opacity="0.85" />
                 </StackPanel>
             </local:MyCard>
 
