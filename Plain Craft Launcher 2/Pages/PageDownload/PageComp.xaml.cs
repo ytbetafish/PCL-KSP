@@ -142,37 +142,19 @@ public partial class PageComp : Grid
     /// <summary>应用高级检索条件。依赖过滤走注册表的反向依赖表（与 CKAN 的筛选口径一致）。</summary>
     private List<ModSearchResult> ApplyAdvancedFilter(List<ModSearchResult> source, ModSearchFilter adv)
     {
-        var query = source.AsEnumerable();
-        if (!string.IsNullOrWhiteSpace(adv.Author))
+        return ModAdvFilter.Apply(source, adv, target =>
         {
-            query = query.Where(m => m.Author?.Contains(adv.Author, StringComparison.OrdinalIgnoreCase) == true);
-        }
-        if (!string.IsNullOrWhiteSpace(adv.Description))
-        {
-            query = query.Where(m => m.Description?.Contains(adv.Description, StringComparison.OrdinalIgnoreCase) == true);
-        }
-        if (!string.IsNullOrWhiteSpace(adv.License))
-        {
-            query = query.Where(m => m.License?.Contains(adv.License, StringComparison.OrdinalIgnoreCase) == true);
-        }
-        if (!string.IsNullOrWhiteSpace(adv.DependsOn))
-        {
-            var target = adv.DependsOn.Trim();
-            IReadOnlyList<string> dependents;
             try
             {
-                var result = Launcher.Ckan.GetReverseAndConflicts(target);
-                dependents = result.Item1;
+                return Launcher.Ckan.GetReverseAndConflicts(target).Item1;
             }
             catch
             {
-                dependents = Array.Empty<string>();
+                return Array.Empty<string>();
             }
-            var names = dependents.ToHashSet(StringComparer.OrdinalIgnoreCase);
-            query = query.Where(m => names.Contains(m.Name) || names.Contains(m.Identifier));
-        }
-        return query.ToList();
+        });
     }
+
 
     private void RebuildFromRaw()
     {

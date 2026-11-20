@@ -342,6 +342,44 @@ public static class SelfTestRunner
             return $"已装 {list.Count} 个（CKAN 管理 {managed}，扫描识别 {auto}）；样例：{names}";
         });
 
+        await CaseAsync("ckan/advanced-filter", async () =>
+        {
+            var all = await svc.SearchAsync(null);
+            if (all.Count == 0) throw new InvalidOperationException("目录为空，无法验证高级检索");
+
+            var byAuthor = PCL.ModAdvFilter.Apply(all,
+                new PCL.ModSearchFilter("sarbian", null, null, null), _ => Array.Empty<string>());
+            if (byAuthor.Count == 0) throw new InvalidOperationException("作者=sarbian 无命中");
+            if (byAuthor.Any(m => m.Author?.IndexOf("sarbian", StringComparison.OrdinalIgnoreCase) < 0))
+                throw new InvalidOperationException("作者过滤混入了不匹配项");
+            if (byAuthor.Count >= all.Count) throw new InvalidOperationException("作者过滤没有缩小结果集");
+
+            var byDesc = PCL.ModAdvFilter.Apply(all,
+                new PCL.ModSearchFilter(null, "science", null, null), _ => Array.Empty<string>());
+            if (byDesc.Count == 0) throw new InvalidOperationException("描述=science 无命中");
+            if (byDesc.Any(m => m.Description?.IndexOf("science", StringComparison.OrdinalIgnoreCase) < 0))
+                throw new InvalidOperationException("描述过滤混入了不匹配项");
+
+            var byLicense = PCL.ModAdvFilter.Apply(all,
+                new PCL.ModSearchFilter(null, null, "MIT", null), _ => Array.Empty<string>());
+            if (byLicense.Count == 0) throw new InvalidOperationException("许可=MIT 无命中");
+
+            var reverse = Launcher.Ckan.GetReverseAndConflicts("ModuleManager").Item1;
+            var byDep = PCL.ModAdvFilter.Apply(all,
+                new PCL.ModSearchFilter(null, null, null, "ModuleManager"), _ => reverse);
+            if (byDep.Count == 0) throw new InvalidOperationException("依赖=ModuleManager 无命中（反向依赖表 " + reverse.Count + " 条）");
+            if (byDep.Any(m => !reverse.Contains(m.Identifier, StringComparer.OrdinalIgnoreCase)
+                && !reverse.Contains(m.Name, StringComparer.OrdinalIgnoreCase)))
+                throw new InvalidOperationException("依赖过滤混入了非依赖方");
+
+            var combined = PCL.ModAdvFilter.Apply(all,
+                new PCL.ModSearchFilter("sarbian", "science", null, null), _ => Array.Empty<string>());
+            var empty = PCL.ModAdvFilter.Apply(all, new PCL.ModSearchFilter(null, null, null, null), _ => Array.Empty<string>());
+            if (empty.Count != all.Count)
+                throw new InvalidOperationException($"空条件应原样返回 {all.Count} 条，实际 {empty.Count} 条");
+
+            return $"作者={byAuthor.Count} / 描述={byDesc.Count} / 许可={byLicense.Count} / 依赖={byDep.Count} / 组合={combined.Count} / 空条件={empty.Count}";
+        });
         await CaseAsync("ckan/versions", async () =>
         {
             if (sampleId.Length == 0) throw new InvalidOperationException("没有取到样例模组标识");
