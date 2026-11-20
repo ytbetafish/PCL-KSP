@@ -47,6 +47,8 @@ public static class KspSettings
         public int HttpTimeoutSeconds { get; set; } = 30;
 
         public List<string> Instances { get; set; } = new();
+        /// <summary>实例的自定义显示名（键为实例根目录，值为用户起的名字）。</summary>
+        public Dictionary<string, string> InstanceNames { get; set; } = new();
         public string KspExePath { get; set; } = "";
         public string KspGameDataPath { get; set; } = "";
         public string KspLogsPath { get; set; } = "";
@@ -121,6 +123,41 @@ public static class KspSettings
         catch
         {
             // 回填失败不致命
+        }
+    }
+
+    /// <summary>实例在下拉框/列表里显示的名字：有自定义名用自定义名，否则用目录名。</summary>
+    public static string GetDisplayName(string? path)
+    {
+        if (string.IsNullOrWhiteSpace(path))
+        {
+            return "（未设置）";
+        }
+        if (Current.InstanceNames != null
+            && Current.InstanceNames.TryGetValue(path, out var name)
+            && !string.IsNullOrWhiteSpace(name))
+        {
+            return name;
+        }
+        var dirName = Path.GetFileName(path.TrimEnd('\\', '/'));
+        return string.IsNullOrWhiteSpace(dirName) ? path : dirName;
+    }
+
+    /// <summary>设置实例显示名；传空表示恢复为目录名。</summary>
+    public static void SetDisplayName(string path, string? name)
+    {
+        if (string.IsNullOrWhiteSpace(path))
+        {
+            return;
+        }
+        Current.InstanceNames ??= new Dictionary<string, string>();
+        if (string.IsNullOrWhiteSpace(name))
+        {
+            Current.InstanceNames.Remove(path);
+        }
+        else
+        {
+            Current.InstanceNames[path] = name.Trim();
         }
     }
 

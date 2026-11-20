@@ -1,6 +1,11 @@
 using Microsoft.Win32;
+using System;
+using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Windows;
+using System.Windows.Controls;
+using System.Windows.Input;
 
 namespace PCL.Pages;
 
@@ -9,29 +14,68 @@ public partial class PageKspInstance
     public PageKspInstance()
     {
         InitializeComponent();
+        CboInstances.SelectionChanged += CboInstances_SelectionChanged;
         RefreshInstancesList();
         RefreshKspInfo();
     }
 
+    /// <summary>重建实例下拉框：显示名为「自定义名」或目录名，Tag 存完整路径。</summary>
     private void RefreshInstancesList()
     {
+        var previous = KspSettings.Current.KspRootPath;
         CboInstances.Items.Clear();
-        foreach (var p in KspSettings.Current.Instances) CboInstances.Items.Add(p);
-        if (!string.IsNullOrEmpty(KspSettings.Current.KspRootPath)
-            && !KspSettings.Current.Instances.Contains(KspSettings.Current.KspRootPath))
+
+        var paths = new List<string>(KspSettings.Current.Instances);
+        if (!string.IsNullOrEmpty(previous) && !paths.Contains(previous))
         {
-            CboInstances.Items.Insert(0, KspSettings.Current.KspRootPath);
+            paths.Insert(0, previous);
         }
-        CboInstances.SelectedItem = KspSettings.Current.KspRootPath;
-        CboInstances.SelectionChanged += (_, _) =>
+
+        foreach (var path in paths)
         {
-            if (CboInstances.SelectedItem is string s && !string.IsNullOrEmpty(s))
+            CboInstances.Items.Add(new MyComboBoxItem
             {
-                KspSettings.Current.KspRootPath = s;
-                KspSettings.Save();
-                RefreshKspInfo();
+                Content = KspSettings.GetDisplayName(path),
+                Tag = path,
+                ToolTip = path
+            });
+        }
+
+        var index = 0;
+        for (var i = 0; i < CboInstances.Items.Count; i++)
+        {
+            if (CboInstances.Items[i] is FrameworkElement fe
+                && string.Equals(fe.Tag as string, previous, StringComparison.OrdinalIgnoreCase))
+            {
+                index = i;
+                break;
             }
-        };
+        }
+        if (CboInstances.Items.Count > 0)
+        {
+            CboInstances.SelectedIndex = index;
+        }
+    }
+
+    private void CboInstances_SelectionChanged(object sender, SelectionChangedEventArgs e)
+    {
+        var path = GetSelectedInstancePath();
+        if (path is null || string.Equals(path, KspSettings.Current.KspRootPath, StringComparison.OrdinalIgnoreCase))
+        {
+            return;
+        }
+        KspSettings.Current.KspRootPath = path;
+        KspSettings.Save();
+        RefreshKspInfo();
+    }
+
+    private string? GetSelectedInstancePath()
+    {
+        if (CboInstances.SelectedItem is FrameworkElement fe && fe.Tag is string path && path.Length > 0)
+        {
+            return path;
+        }
+        return null;
     }
 
     private void RefreshKspInfo()
@@ -58,11 +102,15 @@ public partial class PageKspInstance
                 LabKspVersion.Text = File.ReadAllText(versionTxt).Trim();
             else
                 LabKspVersion.Text = "未知";
-        } catch { LabKspVersion.Text = "读取失败"; }
+        }
+        catch
+        {
+            LabKspVersion.Text = "读取失败";
+        }
 
         LabKspExe.Text = string.IsNullOrEmpty(settings.KspExePath)
             ? (File.Exists(Path.Combine(root, "KSP_x64.exe")) ? Path.Combine(root, "KSP_x64.exe") :
-               File.Exists(Path.Combine(root, "ksp.exe")) ? Path.Combine(root, "ksp.exe") : "未找到")
+                File.Exists(Path.Combine(root, "ksp.exe")) ? Path.Combine(root, "ksp.exe") : "未找到")
             : settings.KspExePath;
         var gd = Path.Combine(root, "GameData");
         LabKspGameData.Text = string.IsNullOrEmpty(settings.KspGameDataPath)
@@ -86,7 +134,7 @@ public partial class PageKspInstance
         RefreshKspInfo();
     }
 
-    private void BtnAddInstance_Click(object sender, System.Windows.Input.MouseButtonEventArgs e)
+    private void BtnAddInstance_Click(object sender, MouseButtonEventArgs e)
     {
         var dialog = new OpenFolderDialog { Title = "添加 KSP 实例目录" };
         if (dialog.ShowDialog() == true)
@@ -98,5 +146,122 @@ public partial class PageKspInstance
             RefreshInstancesList();
             RefreshKspInfo();
         }
+    }
+
+    private void BtnRenameInstance_Click(object sender, MouseButtonEventArgs e)
+    {
+        var path = GetSelectedInstancePath();
+        if (path is null)
+        {
+            MessageBox.Show("请先选择一个实例。", "重命名实例", MessageBoxButton.OK, MessageBoxImage.Information);
+            return;
+        }
+        var currentName = KspSettings.GetDisplayName(path);
+        var input = PromptText("重命名实例", "给这个实例起一个显示名（留空则恢复为目录名）：", currentName);
+        if (input is null)
+        {
+            return;
+        }
+        KspSettings.SetDisplayName(path, input);
+        KspSettings.Save();
+        RefreshInstancesList();
+        MessageBox.Show("已重命名为：" + KspSettings.GetDisplayName(path),
+            "重命名实例", MessageBoxButton.OK, MessageBoxImage.Information);
+    }
+
+    private void BtnSetDefaultInstance_Click(object sender, MouseButtonEventArgs e)
+    {
+        var path = GetSelectedInstancePath();
+        if (path is null)
+        {
+            MessageBox.Show("请先选择一个实例。", "设为默认", MessageBoxButton.OK, MessageBoxImage.Information);
+            return;
+        }
+        KspSettings.Current.KspRootPath = path;
+        KspSettings.Save();
+        RefreshKspInfo();
+        MessageBox.Show($"已把「{KspSettings.GetDisplayName(path)}」设为默认实例。",
+            "设为默认", MessageBoxButton.OK, MessageBoxImage.Information);
+    }
+
+    private void BtnForgetInstance_Click(object sender, MouseButtonEventArgs e)
+    {
+        var path = GetSelectedInstancePath();
+        if (path is null)
+        {
+            MessageBox.Show("请先选择一个实例。", "忘记实例", MessageBoxButton.OK, MessageBoxImage.Information);
+            return;
+        }
+
+        var answer = MessageBox.Show(
+            $"从列表里移除「{KspSettings.GetDisplayName(path)}」？\n\n{path}\n\n只移除记录，不会删除硬盘上的任何文件。",
+            "忘记此实例", MessageBoxButton.YesNo, MessageBoxImage.Warning);
+        if (answer != MessageBoxResult.Yes)
+        {
+            return;
+        }
+
+        KspSettings.Current.Instances.Remove(path);
+        KspSettings.SetDisplayName(path, null);
+        if (string.Equals(KspSettings.Current.KspRootPath, path, StringComparison.OrdinalIgnoreCase))
+        {
+            KspSettings.Current.KspRootPath = KspSettings.Current.Instances.FirstOrDefault() ?? "";
+        }
+        KspSettings.Save();
+        RefreshInstancesList();
+        RefreshKspInfo();
+    }
+
+    /// <summary>简易文本输入框（原版 PCL 的 MsgBox 输入样式在 KSP 版里未移植，此处自建）。</summary>
+    private static string? PromptText(string title, string message, string defaultValue)
+    {
+        var window = new Window
+        {
+            Title = title,
+            Width = 460,
+            SizeToContent = SizeToContent.Height,
+            WindowStartupLocation = WindowStartupLocation.CenterOwner,
+            ResizeMode = ResizeMode.NoResize,
+            ShowInTaskbar = false
+        };
+        var main = Application.Current?.MainWindow;
+        if (main is { IsVisible: true })
+        {
+            window.Owner = main;
+        }
+
+        var root = new StackPanel { Margin = new Thickness(18, 16, 18, 16) };
+        root.Children.Add(new TextBlock
+        {
+            Text = message,
+            TextWrapping = TextWrapping.Wrap,
+            Margin = new Thickness(0, 0, 0, 10)
+        });
+
+        var box = new MyTextBox { Text = defaultValue, Height = 34 };
+        root.Children.Add(box);
+
+        var buttons = new StackPanel
+        {
+            Orientation = Orientation.Horizontal,
+            HorizontalAlignment = HorizontalAlignment.Right,
+            Margin = new Thickness(0, 14, 0, 0)
+        };
+        string? result = null;
+        var ok = new MyButton { Text = "确定", Width = 100, Margin = new Thickness(0, 0, 10, 0) };
+        ok.Click += (_, _) =>
+        {
+            result = box.Text;
+            window.DialogResult = true;
+        };
+        buttons.Children.Add(ok);
+        var cancel = new MyButton { Text = "取消", Width = 100 };
+        cancel.Click += (_, _) => window.DialogResult = false;
+        buttons.Children.Add(cancel);
+        root.Children.Add(buttons);
+
+        window.Content = root;
+        window.ShowDialog();
+        return window.DialogResult == true ? result : null;
     }
 }
