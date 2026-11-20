@@ -39,7 +39,7 @@
                                     Click="BtnTriviaRefresh_Click" />
                 <TextBlock x:Name="LabTrivia" Margin="25,38,52,18" FontSize="13.5" TextWrapping="Wrap" LineHeight="22" />
             </local:MyCard>
-
+
             <!-- 联网预设加载中等 -->
             <local:MyCard x:Name="CardPresetLoading" Title="正在加载主页" Margin="0,0,0,15" Visibility="Collapsed">
                 <StackPanel Margin="25,38,23,16">
@@ -48,17 +48,55 @@
                 </StackPanel>
             </local:MyCard>
 
-            <!-- 预设：KSP Wiki 随机条目（本地渲染，内容联网） -->
-            <local:MyCard x:Name="CardWiki" Title="KSP Wiki 随机条目" Margin="0,0,0,15" Visibility="Collapsed">
-                <StackPanel Margin="25,38,23,16">
-                    <TextBlock x:Name="LabWikiTitle" FontSize="15" FontWeight="SemiBold" TextWrapping="Wrap" />
-                    <TextBlock x:Name="LabWikiText" Margin="0,8,0,0" FontSize="13" TextWrapping="Wrap" LineHeight="21" />
-                    <StackPanel Orientation="Horizontal" Margin="0,14,0,0">
-                        <local:MyButton x:Name="BtnWikiNext" MinWidth="110" Height="28" Padding="13,0" Text="换一条" Click="BtnWikiNext_Click" />
-                        <local:MyButton x:Name="BtnWikiOpen" MinWidth="130" Height="28" Margin="10,0,0,0" Padding="13,0" Text="在 Wiki 上打开" Click="BtnWikiOpen_Click" />
+            <!-- 预设：KSP Wiki 随机条目（多卡片 + 配图，版式对标原版新闻主页） -->
+            <StackPanel x:Name="PanWiki" Visibility="Collapsed">
+                <!-- 顶部横幅：说明 + 换一条 -->
+                <local:MyCard x:Name="CardWikiBanner" Title="KSP Wiki 随机条目" Margin="0,0,0,15">
+                    <Grid Margin="22,38,18,16">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto" />
+                            <ColumnDefinition Width="1*" />
+                        </Grid.ColumnDefinitions>
+                        <Border Grid.Column="0" Width="56" Height="56" CornerRadius="28" Margin="0,0,16,0"
+                                VerticalAlignment="Center" Background="{DynamicResource ColorBrushSemiTransparent}">
+                            <local:MyIconButton x:Name="BtnWikiNext" SvgIcon="lucide/refresh-cw" Height="24" Width="24"
+                                                HorizontalAlignment="Center" VerticalAlignment="Center"
+                                                Click="BtnWikiNext_Click" />
+                        </Border>
+                        <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                            <TextBlock x:Name="LabWikiBanner" FontSize="17" FontWeight="Light" Text="每日一个 KSP Wiki 条目" />
+                            <TextBlock FontSize="12.5" Opacity="0.6" TextWrapping="Wrap" Margin="0,5,0,0"
+                                       Text="条目随机取自 wiki.kerbalspaceprogram.com，正文、配图与相关条目均来自该站点。" />
+                        </StackPanel>
+                    </Grid>
+                </local:MyCard>
+
+                <!-- 主条目：大横幅图 + 标题胶囊 + 正文 -->
+                <local:MyCard x:Name="CardWikiHero" Title="随机条目" Margin="0,0,0,15">
+                    <StackPanel Margin="0,38,0,0">
+                        <Grid Height="230" Margin="20,0,20,0" ClipToBounds="True">
+                            <Border CornerRadius="4" Background="{DynamicResource ColorBrushSemiTransparent}" />
+                            <TextBlock x:Name="LabWikiHeroPlaceholder" HorizontalAlignment="Center" VerticalAlignment="Center"
+                                       FontSize="12.5" Opacity="0.5" Text="正在获取条目配图…" IsHitTestVisible="False" />
+                            <local:MyImage x:Name="ImgWikiHero" Stretch="UniformToFill" CornerRadius="4" Visibility="Collapsed" />
+                            <Border x:Name="BorWikiHeroTag" HorizontalAlignment="Left" VerticalAlignment="Bottom"
+                                    Margin="14" Padding="12,4" CornerRadius="13" Background="#B3000000">
+                                <TextBlock x:Name="LabWikiHeroTag" FontSize="12.5" Foreground="White" TextWrapping="Wrap" />
+                            </Border>
+                        </Grid>
+                        <TextBlock x:Name="LabWikiTitle" Margin="24,14,20,0" FontSize="17" FontWeight="SemiBold" TextWrapping="Wrap" />
+                        <TextBlock x:Name="LabWikiText" Margin="24,8,20,0" FontSize="13" TextWrapping="Wrap" LineHeight="21" />
+                        <StackPanel Orientation="Horizontal" Margin="20,16,20,18">
+                            <local:MyButton x:Name="BtnWikiOpen" MinWidth="150" Height="28" Padding="13,0" Text="在 Wiki 上打开" Click="BtnWikiOpen_Click" />
+                        </StackPanel>
                     </StackPanel>
-                </StackPanel>
-            </local:MyCard>
+                </local:MyCard>
+
+                <!-- 相关条目：代码动态填充的带图卡片 -->
+                <local:MyCard x:Name="CardWikiRelatedHost" Title="相关条目" Margin="0,0,0,15" Visibility="Collapsed">
+                    <StackPanel x:Name="PanWikiRelated" Margin="20,38,20,4" />
+                </local:MyCard>
+            </StackPanel>
             <!-- 本地文件主页 -->
             <ContentControl x:Name="PanCustomHost" Visibility="Collapsed" />
 

@@ -12,6 +12,7 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
 using System.Windows.Markup;
+using System.Windows.Media;
 
 namespace PCL.Pages;
 
@@ -19,6 +20,8 @@ public partial class PageHome
 {
     private const string UpdateLogText =
         "2026-11-20\n" +
+        "· 主页「KSP Wiki 随机条目」改为多卡片 + 配图版式：说明横幅卡、带大图的主条目卡、三张相关条目卡。\n" +
+        "· 日志文件列表补齐 lucide/file-text 图标资源，条目左侧图标恢复显示。\n" +
         "· 设置页「主页」新增「自定义网址」档：从远端 XAML 地址拉取主页内容，带本地缓存与失败重试。\n" +
         "2026-11-19\n" +
         "· 主页按原版结构恢复：左栏启动面板（含启动中动画、进度、阶段与取消），右栏公告 / 社区 / 更新日志卡片。\n" +
@@ -66,6 +69,17 @@ public partial class PageHome
             _presetCts?.Cancel();
             _wikiCts?.Cancel();
         };
+        ImgWikiHero.ImageLoaded += () =>
+        {
+            ImgWikiHero.Visibility = Visibility.Visible;
+            LabWikiHeroPlaceholder.Visibility = Visibility.Collapsed;
+        };
+        ImgWikiHero.ImageLoadFailed += () =>
+        {
+            ImgWikiHero.Visibility = Visibility.Collapsed;
+            LabWikiHeroPlaceholder.Visibility = Visibility.Visible;
+            LabWikiHeroPlaceholder.Text = "配图加载失败，可点「换一条」重试。";
+        };
         ApplyHomeMode();
     }
 
@@ -106,7 +120,7 @@ public partial class PageHome
         PanPreset.Visibility = Visibility.Collapsed;
         CardTrivia.Visibility = Visibility.Collapsed;
         CardPresetLoading.Visibility = Visibility.Collapsed;
-        CardWiki.Visibility = Visibility.Collapsed;
+        PanWiki.Visibility = Visibility.Collapsed;
         CardCustomError.Visibility = Visibility.Collapsed;
     }
 
@@ -124,7 +138,7 @@ public partial class PageHome
 
         if (preset.Id == 6)
         {
-            CardWiki.Visibility = Visibility.Visible;
+            PanWiki.Visibility = Visibility.Visible;
             _ = LoadWikiEntryAsync();
             return;
         }
@@ -379,10 +393,7 @@ public partial class PageHome
         _wikiCts = cts;
         var token = cts.Token;
 
-        LabWikiTitle.Text = "正在拉取随机条目…";
-        LabWikiText.Text = "";
-        BtnWikiOpen.IsEnabled = false;
-        BtnWikiNext.IsEnabled = false;
+        ShowWikiLoading();
         try
         {
             var randomUrl = WikiApi +
@@ -409,6 +420,7 @@ public partial class PageHome
             // 分类页、Parts/xxx 这类条目首页常常没有正文，这时改抓整页再压成文本。
             string? plain = null;
             string? usedTitle = null;
+            string? usedHtml = null;
             foreach (var candidate in new[] { baseTitle + "/zh-cn", baseTitle, title })
             {
                 if (plain is not null && plain.Length > 0) break;
@@ -420,6 +432,7 @@ public partial class PageHome
                     if (text.Length == 0) continue;
                     plain = text;
                     usedTitle = candidate;
+                    usedHtml = html;
                     break;
                 }
             }
@@ -429,17 +442,223 @@ public partial class PageHome
             LabWikiText.Text = plain is { Length: > 0 }
                 ? plain
                 : "这个条目暂时取不到正文，点「在 Wiki 上打开」查看完整页面。";
+
+            // 主卡大图与相关条目卡都在这里补上，形成「多卡片 + 每卡带图」的版式
+            ShowWikiHeroImage(baseTitle, ExtractWikiImage(usedHtml));
+            await LoadWikiRelatedAsync(usedTitle ?? baseTitle, baseTitle, token).ConfigureAwait(true);
         }
         catch (Exception ex)
         {
             if (token.IsCancellationRequested) return;
             LabWikiTitle.Text = "KSP Wiki 条目加载失败";
             LabWikiText.Text = ex.Message + "\n点「换一条」重试。";
+            LabWikiHeroPlaceholder.Visibility = Visibility.Visible;
+            LabWikiHeroPlaceholder.Text = "条目加载失败";
         }
         finally
         {
             if (!token.IsCancellationRequested) BtnWikiNext.IsEnabled = true;
         }
+    }
+
+    /// <summary>把页面恢复成「加载中」的状态。</summary>
+    private void ShowWikiLoading()
+    {
+        LabWikiTitle.Text = "正在拉取随机条目…";
+        LabWikiText.Text = "";
+        LabWikiHeroTag.Text = "";
+        BorWikiHeroTag.Visibility = Visibility.Collapsed;
+        ImgWikiHero.Visibility = Visibility.Collapsed;
+        ImgWikiHero.Source = "";
+        LabWikiHeroPlaceholder.Visibility = Visibility.Visible;
+        LabWikiHeroPlaceholder.Text = "正在获取条目配图…";
+        PanWikiRelated.Children.Clear();
+        CardWikiRelatedHost.Visibility = Visibility.Collapsed;
+        BtnWikiOpen.IsEnabled = false;
+        BtnWikiNext.IsEnabled = false;
+    }
+
+    /// <summary>设置主卡的大横幅图；没有配图时退回文字占位。</summary>
+    private void ShowWikiHeroImage(string title, string? imageUrl)
+    {
+        LabWikiHeroTag.Text = title;
+        if (imageUrl is null)
+        {
+            BorWikiHeroTag.Visibility = Visibility.Collapsed;
+            ImgWikiHero.Visibility = Visibility.Collapsed;
+            ImgWikiHero.Source = "";
+            LabWikiHeroPlaceholder.Visibility = Visibility.Visible;
+            LabWikiHeroPlaceholder.Text = "这个条目在 Wiki 上没有配图";
+            return;
+        }
+
+        BorWikiHeroTag.Visibility = Visibility.Visible;
+        LabWikiHeroPlaceholder.Visibility = Visibility.Visible;
+        LabWikiHeroPlaceholder.Text = "正在加载配图…";
+        ImgWikiHero.Visibility = Visibility.Collapsed;
+        ImgWikiHero.Source = imageUrl;
+    }
+
+    /// <summary>拉取主条目左下角的「相关条目」链接，逐张补上带图小卡。</summary>
+    private async Task LoadWikiRelatedAsync(string title, string baseTitle, CancellationToken token)
+    {
+        var linksUrl = WikiApi +
+                       "?action=query&prop=links&redirects=1&pllimit=40&plnamespace=0&format=json&formatversion=2&titles=" +
+                       Uri.EscapeDataString(title);
+        string[] candidates;
+        try
+        {
+            var json = await Http.GetStringAsync(linksUrl, token).ConfigureAwait(true);
+            using var doc = JsonDocument.Parse(json);
+            var pages = doc.RootElement.GetProperty("query").GetProperty("pages");
+            if (pages.GetArrayLength() == 0) return;
+            if (!pages[0].TryGetProperty("links", out var linksElement)) return;
+            candidates = linksElement.EnumerateArray()
+                .Select(link => link.TryGetProperty("title", out var t) ? t.GetString() : null)
+                .Where(link => IsUsableRelatedTitle(link, baseTitle))
+                .Select(link => link!)
+                .Take(8)
+                .ToArray();
+        }
+        catch (Exception)
+        {
+            return;
+        }
+
+        var added = 0;
+        foreach (var candidate in candidates)
+        {
+            if (added >= 3 || token.IsCancellationRequested) break;
+            string? html = null;
+            foreach (var section in new[] { 0, -1 })
+            {
+                html = await TryFetchSectionTextAsync(candidate, token, section).ConfigureAwait(true);
+                if (!string.IsNullOrWhiteSpace(html)) break;
+            }
+            if (token.IsCancellationRequested) return;
+            if (string.IsNullOrWhiteSpace(html)) continue;
+
+            var snippet = CleanWikiText(html, StripLanguageSuffix(candidate), 200);
+            if (snippet.Length < 40) continue;
+
+            AddWikiRelatedCard(candidate, BuildWikiPageUrl(candidate), ExtractWikiImage(html), snippet);
+            CardWikiRelatedHost.Visibility = Visibility.Visible;
+            added++;
+        }
+    }
+
+    /// <summary>相关条目候选：跳过版本号页、命名空间页、语言子页与自身。</summary>
+    private static bool IsUsableRelatedTitle(string? title, string baseTitle)
+    {
+        if (string.IsNullOrWhiteSpace(title)) return false;
+        if (title.Contains('/') || title.Contains(':')) return false;
+        if (title.Length > 46) return false;
+        if (string.Equals(title, baseTitle, StringComparison.OrdinalIgnoreCase)) return false;
+        if (Regex.IsMatch(title, @"^[0-9]+(\.[0-9]+)*$")) return false;
+        return true;
+    }
+
+    /// <summary>代码构建一张「横幅图 + 摘要 + 打开按钮」的相关条目卡片。</summary>
+    private void AddWikiRelatedCard(string title, string url, string? imageUrl, string snippet)
+    {
+        var card = new MyCard { Title = title, Margin = new Thickness(0, 0, 0, 12) };
+        var stack = new StackPanel { Margin = new Thickness(0, 38, 0, 0) };
+
+        var imageHost = new Grid { Height = 132, Margin = new Thickness(16, 0, 16, 0), ClipToBounds = true };
+        var back = new Border { CornerRadius = new CornerRadius(4) };
+        back.SetResourceReference(Border.BackgroundProperty, "ColorBrushSemiTransparent");
+        imageHost.Children.Add(back);
+        if (imageUrl is null)
+        {
+            var placeholder = new TextBlock
+            {
+                Text = "该条目没有配图",
+                FontSize = 12,
+                Opacity = 0.5,
+                HorizontalAlignment = HorizontalAlignment.Center,
+                VerticalAlignment = VerticalAlignment.Center
+            };
+            imageHost.Children.Add(placeholder);
+        }
+        else
+        {
+            var image = new MyImage
+            {
+                Source = imageUrl,
+                Stretch = Stretch.UniformToFill,
+                CornerRadius = new CornerRadius(4)
+            };
+            imageHost.Children.Add(image);
+        }
+
+        stack.Children.Add(imageHost);
+
+        var text = new TextBlock
+        {
+            Text = snippet,
+            Margin = new Thickness(20, 9, 20, 0),
+            FontSize = 12.5,
+            Opacity = 0.75,
+            TextTrimming = TextTrimming.CharacterEllipsis,
+            TextWrapping = TextWrapping.NoWrap
+        };
+        stack.Children.Add(text);
+
+        var button = new MyButton
+        {
+            Text = "在 Wiki 上打开",
+            MinWidth = 120,
+            Height = 28,
+            Padding = new Thickness(13, 0, 13, 0),
+            Margin = new Thickness(20, 10, 0, 16),
+            HorizontalAlignment = HorizontalAlignment.Left
+        };
+        button.Click += (_, _) => PCL.Core.App.Basics.OpenPath(url);
+        stack.Children.Add(button);
+
+        card.Children.Add(stack);
+        PanWikiRelated.Children.Add(card);
+    }
+
+    /// <summary>从条目 HTML 里取一张足够大的配图，转成绝对地址并换成更大的缩略图。</summary>
+    private static string? ExtractWikiImage(string? html)
+    {
+        if (string.IsNullOrWhiteSpace(html)) return null;
+        const string host = "https://wiki.kerbalspaceprogram.com";
+        string? fallback = null;
+        foreach (Match match in Regex.Matches(html, @"<img\b[^>]*>", RegexOptions.IgnoreCase))
+        {
+            var tag = match.Value;
+            var srcMatch = Regex.Match(tag, @"src=""([^""]+)""", RegexOptions.IgnoreCase);
+            if (!srcMatch.Success) continue;
+            var src = srcMatch.Groups[1].Value;
+            if (!src.Contains("/images/") || src.Contains("/skins/")) continue;
+            if (src.Contains("Symbol", StringComparison.OrdinalIgnoreCase) ||
+                src.Contains("Icon", StringComparison.OrdinalIgnoreCase) ||
+                src.Contains("Fund_char", StringComparison.OrdinalIgnoreCase))
+                continue;
+
+            var width = 0;
+            var widthMatch = Regex.Match(src, @"/thumb/[^/]+/[^/]+/[^/]+/(\d+)px-", RegexOptions.IgnoreCase);
+            if (widthMatch.Success)
+                width = int.Parse(widthMatch.Groups[1].Value);
+            else
+            {
+                var attrMatch = Regex.Match(tag, @"width=""(\d+)""", RegexOptions.IgnoreCase);
+                if (attrMatch.Success) width = int.Parse(attrMatch.Groups[1].Value);
+            }
+
+            // 缩略图直接沿用 Wiki 给出的尺寸：更大的尺寸会被 301 到原图，跨域重定向容易失败。
+            var absolute = src.StartsWith("http", StringComparison.OrdinalIgnoreCase)
+                ? src
+                : host + (src.StartsWith('/') ? src : "/" + src);
+
+            if (width >= 240) return absolute;
+            if (width > 0 && width < 120) continue;
+            fallback ??= absolute;
+        }
+
+        return fallback;
     }
 
     private async Task<string?> TryFetchSectionTextAsync(string title, CancellationToken token, int section)
@@ -460,7 +679,7 @@ public partial class PageHome
         }
     }
     /// <summary>把 parse 返回的 HTML 压成可读纯文本：去表格/样式/引用，保留段落。</summary>
-    private static string CleanWikiText(string html, string title)
+    private static string CleanWikiText(string html, string title, int maxLength = 1100)
     {
         html = Regex.Replace(html, @"(?is)<table.*?</table>", " ");
         html = Regex.Replace(html, @"(?is)<style.*?</style>", " ");
@@ -482,15 +701,15 @@ public partial class PageHome
             if (string.Equals(line, title, StringComparison.Ordinal)) continue;
             if (builder.Length > 0) builder.Append('\n');
             builder.Append(line);
-            if (builder.Length > 1100) break;
+            if (builder.Length > maxLength) break;
         }
 
         var text = builder.ToString().Trim();
-        if (text.Length <= 1100) return text;
-        var cut = text.Substring(0, 1100);
+        if (text.Length <= maxLength) return text;
+        var cut = text.Substring(0, maxLength);
         var dot = Math.Max(cut.LastIndexOf('.'),
             Math.Max(cut.LastIndexOf('。'), Math.Max(cut.LastIndexOf('!'), cut.LastIndexOf('?'))));
-        return (dot > 400 ? cut.Substring(0, dot + 1) : cut) + "…";
+        return (dot > maxLength / 3 ? cut.Substring(0, dot + 1) : cut) + "…";
     }
 
     private static string StripLanguageSuffix(string title)
@@ -511,7 +730,7 @@ public partial class PageHome
         return "https://wiki.kerbalspaceprogram.com/wiki/" + string.Join("/", segments.Select(Uri.EscapeDataString));
     }
 
-    private void BtnWikiNext_Click(object sender, MouseButtonEventArgs e) => _ = LoadWikiEntryAsync();
+    private void BtnWikiNext_Click(object sender, EventArgs e) => _ = LoadWikiEntryAsync();
 
     private void BtnWikiOpen_Click(object sender, MouseButtonEventArgs e)
     {
