@@ -82,15 +82,9 @@ public sealed class KspInstanceService
             try
             {
                 var root = drive.Name.TrimEnd('\\');
-                if (Directory.Exists(root))
+                foreach (var sub in FindCandidatesUnder(root))
                 {
-                    foreach (var sub in SafeEnumerateDirectories(root))
-                    {
-                        if (sub.StartsWith("Kerbal Space Program", StringComparison.OrdinalIgnoreCase))
-                        {
-                            TryAdd(candidates, sub);
-                        }
-                    }
+                    TryAdd(candidates, sub);
                 }
             }
             catch
@@ -100,6 +94,29 @@ public sealed class KspInstanceService
         }
 
         return candidates.Distinct(StringComparer.OrdinalIgnoreCase).ToList();
+    }
+
+    /// <summary>
+    /// Scan the direct children of <paramref name="root"/> for "Kerbal Space Program*" directories
+    /// that are a real install (KSP_x64.exe/KSP.exe + GameData). Never throws.
+    /// </summary>
+    public IReadOnlyList<string> FindCandidatesUnder(string root)
+    {
+        var found = new List<string>();
+        if (string.IsNullOrWhiteSpace(root) || !Directory.Exists(root))
+        {
+            return found;
+        }
+        foreach (var sub in SafeEnumerateDirectories(root))
+        {
+            // sub 是完整路径（如 C:\Kerbal Space Program），只能比较末段目录名。
+            var name = Path.GetFileName(sub);
+            if (name.StartsWith("Kerbal Space Program", StringComparison.OrdinalIgnoreCase) && IsKspRoot(sub))
+            {
+                found.Add(sub);
+            }
+        }
+        return found;
     }
 
     /// <summary>
@@ -210,14 +227,6 @@ public sealed class KspInstanceService
         catch
         {
             return Array.Empty<string>();
-        }
-    }
-
-    private static void AddIfKspRoot(List<string> list, string path)
-    {
-        if (IsKspRoot(path))
-        {
-            list.Add(path);
         }
     }
 

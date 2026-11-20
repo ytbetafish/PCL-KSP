@@ -202,6 +202,29 @@ public static class SelfTestRunner
             return Task.FromResult($"候选 {roots.Count} 个：{joined}");
         });
 
+        await CaseAsync("instance/scan-drive-root-name-match", () =>
+        {
+            // 回归：盘符扫描曾经用 sub.StartsWith("Kerbal Space Program") 比较完整路径，永远匹配不到。
+            var driveRoot = Path.GetPathRoot(configured);
+            if (string.IsNullOrWhiteSpace(driveRoot))
+                throw new InvalidOperationException("无法从已配置路径取盘符：" + configured);
+            var scanned = probe.FindCandidatesUnder(driveRoot);
+            var want = Path.GetFullPath(configured).TrimEnd('\\', '/');
+            string? hit = null;
+            foreach (var dir in scanned)
+            {
+                if (string.Equals(Path.GetFullPath(dir).TrimEnd('\\', '/'), want, StringComparison.OrdinalIgnoreCase))
+                {
+                    hit = dir;
+                    break;
+                }
+            }
+            if (hit is null)
+                throw new InvalidOperationException(
+                    $"盘符 {driveRoot} 扫描未命中已配置实例（返回 {scanned.Count} 个：{string.Join("; ", scanned)}）");
+            return Task.FromResult($"盘符 {driveRoot} 扫描命中 {hit}");
+        });
+
         await CaseAsync("instance/probe-configured-root", () =>
         {
             if (string.IsNullOrWhiteSpace(configured))
