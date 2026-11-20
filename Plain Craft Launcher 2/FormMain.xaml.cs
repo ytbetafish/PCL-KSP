@@ -152,6 +152,51 @@ public partial class FormMain
         // 注册生命周期状态事件
         Lifecycle.When(LifecycleState.WindowCreated, FormMain_Loaded);
 
+        // 巡检入口：PCL_DEBUG_SEQ=download,setup:ckan,... 按序列切页并写 [DbgSeq] 日志
+        var dbgSeq = Environment.GetEnvironmentVariable("PCL_DEBUG_SEQ");
+        if (!string.IsNullOrEmpty(dbgSeq))
+        {
+            var seqSteps = dbgSeq.Split(',');
+            var seqIndex = 0;
+            var seqTimer = new System.Windows.Threading.DispatcherTimer { Interval = TimeSpan.FromSeconds(11) };
+            seqTimer.Tick += (_, _) =>
+            {
+                if (seqIndex >= seqSteps.Length)
+                {
+                    seqTimer.Stop();
+                    Common.Log("[DbgSeq] 完成");
+                    return;
+                }
+                var s = seqSteps[seqIndex++].Trim();
+                try
+                {
+                    if (s.StartsWith("setup:")) { settingsNav = s.Substring(6); PageChange(PageType.Setup); }
+                    else if (s == "download") PageChange(PageType.Download);
+                    else if (s == "launch") PageChange(PageType.Launch);
+                    else if (s == "tools") PageChange(PageType.Tools);
+                    else if (s == "task") PageChange(PageType.TaskManager);
+                    else if (s == "instancesel") PageChange(PageType.InstanceSelect);
+                    else if (s == "instance") PageChange(PageType.InstanceSetup);
+                    Common.Log("[DbgSeq] 显示=" + s);
+                }
+                catch (Exception ex)
+                {
+                    Common.Log("[DbgSeq] 失败 " + s + "：" + ex);
+                }
+                seqTimer.Interval = TimeSpan.FromSeconds(4);
+            };
+            seqTimer.Start();
+        }
+
+        // 自测入口：PCL_SELFTEST=<分组> 启动 9 秒后跑分组用例，结果进日志与 selftest-last.log
+        var stGroups = Environment.GetEnvironmentVariable("PCL_SELFTEST");
+        if (!string.IsNullOrEmpty(stGroups))
+        {
+            Common.Log("[SelfTest] 已排队，9 秒后开始，分组=" + stGroups);
+            _ = Task.Delay(9000).ContinueWith(_ => SelfTest.SelfTestRunner.RunAsync(stGroups),
+                TaskScheduler.Default);
+        }
+
     }
 
     private void FormMain_Loaded() // (sender As Object, e As RoutedEventArgs) Handles Me.Loaded
