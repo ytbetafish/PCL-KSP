@@ -66,9 +66,8 @@
     </EmbeddedResource>
   </ItemGroup>
 
-  <ItemGroup>
-    <Content Include="log4net.xml" CopyToOutputDirectory="PreserveNewest" />
-  </ItemGroup>
+  <!-- log4net.xml 不再复制到 exe 旁：CKAN 自身在配置文件缺失时会回退到 BasicConfigurator（WARN + 控制台），
+       不影响功能，启动器侧已有转发埋点；这样安装目录里不会再冒出 log4net.xml 和 ./CKAN.log。 -->
 
   <!-- Upstream patches the generated Resources.Designer.cs to use SingleAssemblyResourceManager
        and make it public; keep that step. -->

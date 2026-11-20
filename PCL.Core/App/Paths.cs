@@ -74,7 +74,8 @@ public static class Paths
         _data = Path.Combine(DefaultDirectory, "PCL");
         _sharedData = GetSpecialPath(Special.ApplicationData, name);
         _sharedLocalData = GetSpecialPath(Special.LocalApplicationData, name);
-        _temp = Path.Combine(Path.GetTempPath(), name);
+        // 与原版一致：缓存、下载等运行时文件统一放进 exe 旁的 PCL 文件夹，整个文件夹删除后会自动重建
+        _temp = Path.Combine(DefaultDirectory, "PCL");
         OldSharedData = GetSpecialPath(Special.ApplicationData, oldName);
 #if DEBUG
         // read environment variables
