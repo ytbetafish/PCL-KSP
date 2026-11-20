@@ -262,3 +262,191 @@ internal static class CkanOptionalInstallDialog
         return picked;
     }
 }
+
+/// <summary>
+/// CKAN Changeset 的交互窗口：勾选多个模组 → 预览变更集（安装/升级/移除）→ 一次性应用。
+/// </summary>
+internal static class CkanChangesetDialog
+{
+    public static (IReadOnlyList<string> Identifiers, ModInstallPlan Plan)? Choose(IModService service, IReadOnlyList<ModSearchResult> candidates)
+    {
+        IReadOnlyList<string>? confirmed = null;
+        ModInstallPlan? confirmedPlan = null;
+
+        var window = new Window
+        {
+            Title = "批量变更（Changeset）",
+            Width = 640,
+            SizeToContent = SizeToContent.Height,
+            WindowStartupLocation = WindowStartupLocation.CenterScreen,
+            ResizeMode = ResizeMode.NoResize,
+            ShowInTaskbar = false
+        };
+        var main = Application.Current?.MainWindow;
+        if (main is { IsVisible: true } && !ReferenceEquals(main, window))
+        {
+            window.Owner = main;
+            window.WindowStartupLocation = WindowStartupLocation.CenterOwner;
+        }
+
+        var root = new StackPanel { Margin = new Thickness(16, 14, 16, 14) };
+        root.Children.Add(new TextBlock
+        {
+            Text = $"勾选要变更的模组（共 {candidates.Count} 项）。变更集会在应用前统一解析依赖与冲突，再一次性执行。",
+            TextWrapping = TextWrapping.Wrap
+        });
+
+        var listPanel = new StackPanel();
+        root.Children.Add(new ScrollViewer
+        {
+            VerticalScrollBarVisibility = ScrollBarVisibility.Auto,
+            MaxHeight = 300,
+            Margin = new Thickness(0, 10, 0, 0),
+            Content = listPanel
+        });
+
+        var rows = new List<(ModSearchResult Mod, MyListItem Ui)>();
+        foreach (var mod in candidates)
+        {
+            var info = new List<string>();
+            if (!string.IsNullOrWhiteSpace(mod.Version)) info.Add(mod.Version!);
+            info.Add(mod.HasUpdate ? "有更新" : mod.IsInstalled ? "已安装" : "未安装");
+            var ui = new MyListItem
+            {
+                Title = mod.Name,
+                Info = string.Join(" · ", info),
+                Height = 46d,
+                Type = MyListItem.CheckType.CheckBox,
+                tag = mod
+            };
+            ui.SvgIcon = "lucide/package";
+            rows.Add((mod, ui));
+            listPanel.Children.Add(ui);
+        }
+
+        var previewText = new TextBlock
+        {
+            Text = "尚未预览。",
+            TextWrapping = TextWrapping.Wrap,
+            FontSize = 12,
+            Margin = new Thickness(0, 12, 0, 0),
+            Opacity = 0.75
+        };
+        root.Children.Add(previewText);
+
+        var bottom = new StackPanel
+        {
+            Orientation = Orientation.Horizontal,
+            HorizontalAlignment = HorizontalAlignment.Right,
+            Margin = new Thickness(0, 12, 0, 0)
+        };
+        root.Children.Add(bottom);
+
+        var btnAll = new MyButton { Text = "全选", Width = 90, Margin = new Thickness(0, 0, 10, 0) };
+        bottom.Children.Add(btnAll);
+
+        var btnPreview = new MyButton { Text = "预览计划", Width = 110, Margin = new Thickness(0, 0, 10, 0) };
+        bottom.Children.Add(btnPreview);
+
+        var btnApply = new MyButton { Text = "应用变更", Width = 110, Margin = new Thickness(0, 0, 10, 0) };
+        bottom.Children.Add(btnApply);
+
+        var btnCancel = new MyButton { Text = "取消", Width = 90 };
+        bottom.Children.Add(btnCancel);
+
+        List<string> PickIds() => rows.Where(r => r.Ui.Checked).Select(r => r.Mod.Identifier).ToList();
+
+        btnAll.Click += (_, _) =>
+        {
+            foreach (var row in rows)
+            {
+                row.Ui.Checked = true;
+            }
+        };
+
+        btnPreview.Click += async (_, _) =>
+        {
+            var ids = PickIds();
+            if (ids.Count == 0)
+            {
+                previewText.Text = "请先勾选要变更的模组。";
+                return;
+            }
+            previewText.Text = "正在解析变更集…";
+            btnPreview.IsEnabled = false;
+            try
+            {
+                var plan = await Task.Run(() => service.GetMultiInstallPlanAsync(ids).GetAwaiter().GetResult());
+                previewText.Text = DescribePlan(plan);
+            }
+            catch (Exception ex)
+            {
+                previewText.Text = "解析失败：" + ex.Message;
+            }
+            finally
+            {
+                btnPreview.IsEnabled = true;
+            }
+        };
+
+        btnApply.Click += async (_, _) =>
+        {
+            var ids = PickIds();
+            if (ids.Count == 0)
+            {
+                previewText.Text = "请先勾选要变更的模组。";
+                return;
+            }
+            previewText.Text = "正在解析变更集…";
+            btnApply.IsEnabled = false;
+            try
+            {
+                var plan = await Task.Run(() => service.GetMultiInstallPlanAsync(ids).GetAwaiter().GetResult());
+                if (plan is null || !string.IsNullOrEmpty(plan.FailureReason) || plan.ProviderChoices is { Count: > 0 })
+                {
+                    previewText.Text = DescribePlan(plan);
+                    return;
+                }
+                confirmed = ids;
+                confirmedPlan = plan;
+                window.DialogResult = true;
+            }
+            catch (Exception ex)
+            {
+                previewText.Text = "解析失败：" + ex.Message;
+            }
+            finally
+            {
+                btnApply.IsEnabled = true;
+            }
+        };
+
+        btnCancel.Click += (_, _) => window.DialogResult = false;
+
+        window.Content = root;
+        window.ShowDialog();
+        return confirmed is null || confirmedPlan is null ? null : (confirmed, confirmedPlan);
+    }
+
+    private static string DescribePlan(ModInstallPlan? plan)
+    {
+        static string Short(IReadOnlyList<string> ids)
+            => ids.Count == 0 ? "无" : string.Join("、", ids.Take(6)) + (ids.Count > 6 ? $" 等 {ids.Count} 个" : "");
+
+        if (plan is null)
+        {
+            return "无法解析所选模组（未附加 KSP 实例或标识未知）。";
+        }
+        if (!string.IsNullOrEmpty(plan.FailureReason))
+        {
+            return "变更集不可用：" + plan.FailureReason;
+        }
+        if (plan.ProviderChoices is { Count: > 0 })
+        {
+            return "变更集含多提供者依赖，请先在详情页完成该依赖的选择安装后再试。";
+        }
+        return $"将安装 {plan.ToInstall.Count} 个：{Short(plan.ToInstall)}\n" +
+               $"将升级 {plan.ToUpgrade.Count} 个：{Short(plan.ToUpgrade)}\n" +
+               $"将移除 {plan.ToRemove.Count} 个：{Short(plan.ToRemove)}";
+    }
+}

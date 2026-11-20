@@ -475,6 +475,48 @@ public partial class PageMods
         }
     }
 
+    /// <summary>Changeset：勾选多个模组，统一解析后一次性应用（安装/升级/移除）。</summary>
+    private async void BtnChangeset_Click(object sender, System.Windows.Input.MouseButtonEventArgs e)
+    {
+        var candidates = _lastResults.Where(m => !m.IsInstalled || m.HasUpdate).ToList();
+        if (candidates.Count == 0)
+        {
+            MessageBox.Show("当前列表没有可变更的模组（仅列出未安装或有更新的项）。", "批量变更",
+                MessageBoxButton.OK, MessageBoxImage.Information);
+            return;
+        }
+
+        var choice = CkanChangesetDialog.Choose(GetService(), candidates);
+        if (choice is null)
+        {
+            return;
+        }
+
+        var plan = choice.Value.Plan;
+        try
+        {
+            PanProgress.Visibility = Visibility.Visible;
+            BarProgress.IsIndeterminate = true;
+            LabProgress.Text = $"变更集：{choice.Value.Identifiers.Count} 个目标，安装 {plan.ToInstall.Count}、" +
+                               $"升级 {plan.ToUpgrade.Count}、移除 {plan.ToRemove.Count}。";
+            var progress = new Progress<string>(msg =>
+                Dispatcher.BeginInvoke(new Action(() => LabProgress.Text = msg)));
+
+            await GetService().ExecutePlanAsync(plan, progress);
+
+            PanProgress.Visibility = Visibility.Collapsed;
+            MessageBox.Show("变更集已应用。", "批量变更", MessageBoxButton.OK, MessageBoxImage.Information);
+            _filter = "installed";
+            _lastResults = await GetService().ListInstalledAsync();
+            ApplyFilter();
+        }
+        catch (Exception ex)
+        {
+            PanProgress.Visibility = Visibility.Collapsed;
+            MessageBox.Show("变更集应用失败：" + ex.Message, "批量变更", MessageBoxButton.OK, MessageBoxImage.Error);
+        }
+    }
+
     /// <summary>Audit recommendations：汇总已装模组的推荐项，勾选后批量安装。</summary>
     private async void BtnAuditRecommendations_Click(object sender, System.Windows.Input.MouseButtonEventArgs e)
     {

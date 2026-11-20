@@ -58,6 +58,12 @@ public interface IModService
     Task<ModInstallPlan?> GetInstallPlanAsync(string identifier, bool allowIncompatible = false, IReadOnlyList<string>? providerPicks = null, bool withRecommendations = false, CancellationToken cancellationToken = default);
 
     /// <summary>
+    /// 对多个模组一次性解析依赖，得到一个整体计划（CKAN Changeset 语义：
+    /// 勾选一批模组 → 统一解析与冲突检查 → 一次性执行）。
+    /// </summary>
+    Task<ModInstallPlan?> GetMultiInstallPlanAsync(IReadOnlyList<string> identifiers, bool allowIncompatible = false, IReadOnlyList<string>? providerPicks = null, bool withRecommendations = false, CancellationToken cancellationToken = default);
+
+    /// <summary>
     /// 读取模组的 recommends / suggests 关系（显示名列表）；标识未知时返回 null。
     /// </summary>
     Task<ModOptionalRelations?> GetOptionalRelationsAsync(string identifier, CancellationToken cancellationToken = default);

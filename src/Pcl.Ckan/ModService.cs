@@ -639,8 +639,7 @@ public sealed class ModService : IModService, IDisposable
     /// <inheritdoc />
     public Task<ModInstallPlan?> GetInstallPlanAsync(string identifier, bool allowIncompatible = false, IReadOnlyList<string>? providerPicks = null, bool withRecommendations = false, CancellationToken cancellationToken = default)
     {
-        var reg = Registry;
-        if (_instance == null || reg == null)
+        if (_instance == null || Registry == null)
         {
             return Task.FromResult<ModInstallPlan?>(null);
         }
@@ -653,6 +652,40 @@ public sealed class ModService : IModService, IDisposable
 
         // 用户已为多提供者依赖做出选择：把所选模块一并作为明确目标代入，
         // 并关闭 TooManyModsProvide 抛错，让解析器按已选模块的 stanza 归一化到唯一候选。
+        var picks = ResolvePicks(providerPicks);
+        return BuildPlanAsync(target.identifier, new[] { target }.Concat(picks).ToList(), allowIncompatible, picks.Count > 0, withRecommendations);
+    }
+
+    /// <inheritdoc />
+    public Task<ModInstallPlan?> GetMultiInstallPlanAsync(IReadOnlyList<string> identifiers, bool allowIncompatible = false, IReadOnlyList<string>? providerPicks = null, bool withRecommendations = false, CancellationToken cancellationToken = default)
+    {
+        if (_instance == null || Registry == null || identifiers is not { Count: > 0 })
+        {
+            return Task.FromResult<ModInstallPlan?>(null);
+        }
+
+        var targets = new List<CkanModule>();
+        foreach (var identifier in identifiers)
+        {
+            var module = LatestAvailable(identifier);
+            if (module != null)
+            {
+                targets.Add(module);
+            }
+        }
+        if (targets.Count == 0)
+        {
+            return Task.FromResult<ModInstallPlan?>(null);
+        }
+
+        var picks = ResolvePicks(providerPicks);
+        var label = string.Join(" + ", targets.Select(m => m.identifier));
+        return BuildPlanAsync(label, targets.Concat(picks).ToList(), allowIncompatible, picks.Count > 0, withRecommendations);
+    }
+
+    /// <summary>把多提供者选择解析为目录中的模块对象。</summary>
+    private List<CkanModule> ResolvePicks(IReadOnlyList<string>? providerPicks)
+    {
         var picks = new List<CkanModule>();
         if (providerPicks is { Count: > 0 })
         {
@@ -665,7 +698,15 @@ public sealed class ModService : IModService, IDisposable
                 }
             }
         }
+        return picks;
+    }
 
+    /// <summary>
+    /// 对一组目标模组一次性解析依赖，得到整体的安装计划（CKAN Changeset 的解析口径）。
+    /// </summary>
+    private Task<ModInstallPlan?> BuildPlanAsync(string label, IReadOnlyList<CkanModule> targets, bool allowIncompatible, bool hasProviderPicks, bool withRecommendations)
+    {
+        var reg = Registry!;
         try
         {
             var opts = RelationshipResolverOptions.DependsOnlyOpts(_instance.StabilityToleranceConfig);
@@ -673,14 +714,14 @@ public sealed class ModService : IModService, IDisposable
             {
                 opts.allow_incompatible = true;
             }
-            if (picks.Count > 0)
+            if (hasProviderPicks)
             {
                 opts.without_toomanyprovides_kraken = true;
             }
             // CKAN 默认把推荐的模组一并安装；仅在用户确认后开启，避免静默多装。
             opts.with_recommends = withRecommendations;
             var resolver = new RelationshipResolver(
-                modulesToInstall: new[] { target }.Concat(picks).ToArray(),
+                modulesToInstall: targets.ToArray(),
                 modulesToRemove: null,
                 options: opts,
                 registry: reg,
@@ -729,7 +770,7 @@ public sealed class ModService : IModService, IDisposable
             }
 
             return Task.FromResult<ModInstallPlan?>(new ModInstallPlan(
-                target.identifier,
+                label,
                 toInstall,
                 toUpgrade,
                 toRemove,
@@ -741,7 +782,7 @@ public sealed class ModService : IModService, IDisposable
                 .Select(m => new ModProviderOption(m.identifier, m.name ?? m.identifier, m.version?.ToString()))
                 .ToList();
             return Task.FromResult<ModInstallPlan?>(new ModInstallPlan(
-                target.identifier,
+                label,
                 Array.Empty<string>(),
                 Array.Empty<string>(),
                 Array.Empty<string>(),
@@ -760,7 +801,7 @@ public sealed class ModService : IModService, IDisposable
                 _ => $"无法生成安装计划：{ex.Message}"
             };
             return Task.FromResult<ModInstallPlan?>(new ModInstallPlan(
-                target.identifier,
+                label,
                 Array.Empty<string>(),
                 Array.Empty<string>(),
                 Array.Empty<string>(),

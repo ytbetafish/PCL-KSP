@@ -35,6 +35,8 @@
                                         Click="BtnFilterIncompatible_Click" />
                         <local:MyButton x:Name="BtnAuditRecommendations" Text="推荐审计" Width="90" Margin="10,0,0,0"
                                         Click="BtnAuditRecommendations_Click" />
+                        <local:MyButton x:Name="BtnChangeset" Text="批量变更" Width="90" Margin="10,0,0,0"
+                                        Click="BtnChangeset_Click" />
                     </StackPanel>
                 </StackPanel>
             </local:MyCard>
