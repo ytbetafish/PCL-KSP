@@ -27,6 +27,9 @@ public partial class FormMain
 {
     private static PageSettingsLeft? settingsLeft;
     private static string settingsNav = "appearance";
+
+    // 程序化同步左栏勾选时置位，避免 MyRadioButton.Check 回调把右侧页面再建一次
+    private bool syncSettingsNav;
     private static PageToolsLeft? toolsLeft;
     private static string toolsNav = "download";
     // 愚人节鼠标位置
@@ -148,6 +151,7 @@ public partial class FormMain
         Common.Log("[Start] 第二阶段加载用时：" + (TimeUtils.GetTimeTick() - Common.applicationStartTick) + " ms");
         // 注册生命周期状态事件
         Lifecycle.When(LifecycleState.WindowCreated, FormMain_Loaded);
+
     }
 
     private void FormMain_Loaded() // (sender As Object, e As RoutedEventArgs) Handles Me.Loaded
@@ -1321,6 +1325,7 @@ public partial class FormMain
     /// </summary>
     public void PageChange(PageStackData stack, PageSubType subType = PageSubType.Default, object? parameter = null)
     {
+
         if (string.IsNullOrEmpty(PageNameGet(stack)))
         {
             // 切换到主页面
@@ -1461,6 +1466,7 @@ public partial class FormMain
                             settingsLeft = new PageSettingsLeft();
                             settingsLeft.NavChanged += (key) =>
                             {
+                                if (syncSettingsNav) return;
                                 settingsNav = key;
                                 FrameworkElement right = key switch
                                 {
@@ -1489,6 +1495,9 @@ public partial class FormMain
                             "log" => new Pages.PageLog(),
                             _ => new Pages.PageAbout(),
                         };
+                        syncSettingsNav = true;
+                        try { settingsLeft.SelectNav(settingsNav); }
+                        finally { syncSettingsNav = false; }
                         PageChangeAnim(settingsLeft, right);
                     }
                     break;
@@ -1578,6 +1587,7 @@ public partial class FormMain
                 targetRight.SetValue(ContentPresenter.ContentProperty, null);
             pageLeft = (MyPageLeft)targetLeft;
             pageRight = (MyPageRight)targetRight;
+
             // 触发页面通用动画
             (PanMainLeft.Child as IPageView)?.OnNavigatedFrom();
             ((MyPageLeft)PanMainLeft.Child).TriggerHideAnimation();
