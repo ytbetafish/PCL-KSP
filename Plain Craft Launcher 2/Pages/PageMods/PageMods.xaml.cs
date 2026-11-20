@@ -662,6 +662,19 @@ public partial class PageMods
         }
     }
 
+    /// <summary>在资源管理器打开当前 KSP 实例根目录（CKAN 的 Open KSP directory）。</summary>
+    private void BtnOpenKspDir_Click(object sender, System.Windows.Input.MouseButtonEventArgs e)
+    {
+        var root = KspSettings.Current.KspRootPath;
+        if (string.IsNullOrWhiteSpace(root) || !System.IO.Directory.Exists(root))
+        {
+            MessageBox.Show("当前没有设置有效的 KSP 目录，请先在设置页选择实例。",
+                "打开 KSP 目录", MessageBoxButton.OK, MessageBoxImage.Warning);
+            return;
+        }
+        PCL.Core.App.Basics.OpenPath(root);
+    }
+
     private async void BtnCleanOrphans_Click(object sender, System.Windows.Input.MouseButtonEventArgs e)
     {
         try

@@ -184,6 +184,17 @@ public partial class PageKspInstance
             "设为默认", MessageBoxButton.OK, MessageBoxImage.Information);
     }
 
+    private void BtnOpenKspDir_Click(object sender, MouseButtonEventArgs e)
+    {
+        var root = KspSettings.Current.KspRootPath;
+        if (string.IsNullOrWhiteSpace(root) || !Directory.Exists(root))
+        {
+            MessageBox.Show("当前没有设置有效的 KSP 目录。", "打开 KSP 目录", MessageBoxButton.OK, MessageBoxImage.Warning);
+            return;
+        }
+        PCL.Core.App.Basics.OpenPath(root);
+    }
+
     private void BtnForgetInstance_Click(object sender, MouseButtonEventArgs e)
     {
         var path = GetSelectedInstancePath();

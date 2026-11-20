@@ -53,6 +53,8 @@
                     <StackPanel Orientation="Horizontal" Margin="0,8,0,0">
                         <local:MyButton x:Name="BtnConflictScan" Text="冲突诊断" Width="90"
                                         Click="BtnConflictScan_Click" />
+                        <local:MyButton x:Name="BtnOpenKspDir" Text="打开目录" Width="90" Margin="10,0,0,0"
+                                        Click="BtnOpenKspDir_Click" />
                     </StackPanel>
                 </StackPanel>
             </local:MyCard>

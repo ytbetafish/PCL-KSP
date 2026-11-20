@@ -53,6 +53,8 @@
                                         Click="BtnSetDefaultInstance_Click" />
                         <local:MyButton x:Name="BtnForgetInstance" Text="忘记此实例" Width="110" Height="32" Margin="10,0,0,0"
                                         Click="BtnForgetInstance_Click" />
+                        <local:MyButton x:Name="BtnOpenKspDir" Text="打开 KSP 目录" Width="120" Height="32" Margin="10,0,0,0"
+                                        Click="BtnOpenKspDir_Click" />
                     </StackPanel>
                 </StackPanel>
             </local:MyCard>
