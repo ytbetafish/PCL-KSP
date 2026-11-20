@@ -915,15 +915,34 @@ public partial class PageHome
         }
     }
     /// <summary>把 parse 返回的 HTML 压成可读纯文本：去表格/样式/引用，保留段落。</summary>
-    private static string CleanWikiText(string html, string title, int maxLength = 1100)
+    internal static string CleanWikiText(string html, string title, int maxLength = 1100)
     {
         html = Regex.Replace(html, @"(?is)<table.*?</table>", " ");
         html = Regex.Replace(html, @"(?is)<style.*?</style>", " ");
         html = Regex.Replace(html, @"(?is)<(sup|figure|audio|nav|script).*?</\1>", " ");
         html = Regex.Replace(html, @"(?i)<br\s*/?>", "\n");
         html = Regex.Replace(html, @"(?is)</(p|div|li|h[1-6]|tr)>", "\n");
+        // 内联标签（链接/加粗/斜体等）只去标签、保留文字，避免「有 4 个 RCS」这种被插空格
+        html = Regex.Replace(html, @"(?i)</?(a|b|i|u|em|strong|code|sub|sup|mark|small|big|span)\b[^>]*>", "");
         html = Regex.Replace(html, @"<[^>]+>", " ");
         html = WebUtility.HtmlDecode(html);
+
+        // KSP Wiki 的条目正文里偶尔残留原始 wiki 标记（模板展开失败、编辑器漏转义等）。
+        // 这里按 MediaWiki 的展示语义还原成可见文字：链接显示标签文字，而不是整段抹掉。
+        // 图片/文件引用没有可读文字，按原版那样丢弃；模板同理（不把 {{...}} 当正文）。
+        html = Regex.Replace(html, @"(?is)\[\[(?:file|image|media)\s*:[^\[\]]*\]\]", " ");
+        html = Regex.Replace(html, @"(?is)\{\{[^{}]*\}\}", " ");
+        html = Regex.Replace(html, @"\[\[\s*[^\[\]\|]*\|\s*([^\[\]]*?)\s*\]\]", "$1");
+        html = Regex.Replace(html, @"\[\[\s*([^\[\]]*?)\s*\]\]", "$1");
+        html = Regex.Replace(html, @"(?i)\[\[?([a-z]{2}(?:-[a-z]{2})?):([^\[\]\|]*?)\]\]?", "$2", RegexOptions.IgnoreCase);
+        // 外链：显示描述文字；只有裸链接时保留地址，别把整段吃掉
+        html = Regex.Replace(html, @"(?i)\[https?://[^\s\]]+\s+([^\]]*)\]", "$1");
+        html = Regex.Replace(html, @"\[#([^\[\]]*)\]", "$1");
+        // 只剩一层方括号的残留：[atmosphere|大气] / [大气]
+        html = Regex.Replace(html, @"\[([^\[\]\|\n]{1,60})\|([^\[\]\n]{1,60})\]", "$2");
+        html = Regex.Replace(html, @"\[([^\[\]\n]{1,60})\]", "$1");
+        // 粗斜体标记 ''''' / ''' / '' → 只保留文字
+        html = Regex.Replace(html, @"'{2,5}", "");
         html = Regex.Replace(html, @"[ \t\u00A0]+", " ");
         html = Regex.Replace(html, @"\n[ \t]*", "\n");
         html = Regex.Replace(html, @"\n{2,}", "\n");
