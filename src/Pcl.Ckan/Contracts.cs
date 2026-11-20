@@ -30,7 +30,9 @@ public sealed record ModSearchResult(
     /// <summary>与本模组冲突的模组显示名列表。</summary>
     IReadOnlyList<string>? Conflicts = null,
     /// <summary>CKAN 目录登记的模组发布日期；用于按最新/更新排序。</summary>
-    DateTime? ReleaseDate = null);
+    DateTime? ReleaseDate = null,
+    /// <summary>元数据声明的最高兼容 KSP 版本；null 表示未声明。</summary>
+    string? MaxKsp = null);
 
 /// <summary>
 /// The install/upgrade/remove plan computed by CKAN's dependency resolver.
@@ -41,7 +43,9 @@ public sealed record ModInstallPlan(
     IReadOnlyList<string> ToInstall,
     IReadOnlyList<string> ToUpgrade,
     IReadOnlyList<string> ToRemove,
-    string? FailureReason = null);
+    string? FailureReason = null,
+    /// <summary>本次计划是否允许安装与当前 KSP 版本不兼容的模组。</summary>
+    bool AllowIncompatible = false);
 /// <summary>
 /// A single published version of a catalogued mod.
 /// </summary>

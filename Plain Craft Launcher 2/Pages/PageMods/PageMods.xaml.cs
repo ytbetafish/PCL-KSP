@@ -111,6 +111,8 @@ public partial class PageMods
             "installed" => q.Where(m => m.IsInstalled),
             "updates" => q.Where(m => m.HasUpdate),
             "notinstalled" => q.Where(m => !m.IsInstalled),
+            "compatible" => q.Where(m => m.IsCompatible),
+            "incompatible" => q.Where(m => !m.IsCompatible),
             _ => q,
         };
         BuildList(q.ToList());
@@ -143,6 +145,8 @@ public partial class PageMods
         if (!string.IsNullOrWhiteSpace(mod.Author)) info.Add(mod.Author!);
         if (!string.IsNullOrWhiteSpace(mod.Version)) info.Add(mod.Version!);
         info.Add(mod.HasUpdate ? "有更新" : mod.IsInstalled ? "已安装" : "未安装");
+        if (!mod.IsCompatible) info.Add("不兼容");
+        if (!string.IsNullOrEmpty(mod.MaxKsp)) info.Add("最高 KSP " + mod.MaxKsp);
 
         var item = new MyListItem
         {
@@ -195,6 +199,31 @@ public partial class PageMods
     {
         _filter = "notinstalled";
         ApplyFilter();
+    }
+
+    private async void BtnFilterCompatible_Click(object sender, System.Windows.Input.MouseButtonEventArgs e) => await LoadAllThenFilter("compatible");
+
+    private async void BtnFilterIncompatible_Click(object sender, System.Windows.Input.MouseButtonEventArgs e) => await LoadAllThenFilter("incompatible");
+
+    /// <summary>加载全量目录后按兼容性过滤（CKAN 的 Compatible / Incompatible 视图）。</summary>
+    private async Task LoadAllThenFilter(string filter)
+    {
+        PanLoad.Visibility = Visibility.Visible;
+        try
+        {
+            await GetService().WarmUpAsync();
+            _lastResults = await GetService().SearchAsync(null);
+            _filter = filter;
+            ApplyFilter();
+        }
+        catch (Exception ex)
+        {
+            LabModDesc.Text = "加载失败：" + ex.Message;
+        }
+        finally
+        {
+            PanLoad.Visibility = Visibility.Collapsed;
+        }
     }
 
     private void BtnFilterAll_Click(object sender, System.Windows.Input.MouseButtonEventArgs e)
@@ -261,6 +290,10 @@ public partial class PageMods
         _originalDescription = _selected.Description;
         LabModDesc.Text = string.IsNullOrWhiteSpace(_originalDescription) ? "（无简介）" : _originalDescription;
         LabModHome.Text = string.IsNullOrWhiteSpace(_selected.Homepage) ? "" : _selected.Homepage;
+        if (!_selected.IsCompatible)
+        {
+            LabModHome.Text = (LabModHome.Text + "　｜　不兼容当前 KSP（最高 " + (_selected.MaxKsp ?? "未知") + "）").Trim();
+        }
         BtnInstall.Visibility = string.IsNullOrWhiteSpace(KspSettings.Current.KspRootPath) ? Visibility.Collapsed : Visibility.Visible;
         BtnUninstall.Visibility = _selected.IsInstalled ? Visibility.Visible : Visibility.Collapsed;
         BtnTranslate.Visibility = string.IsNullOrWhiteSpace(_originalDescription) ? Visibility.Collapsed : Visibility.Visible;
@@ -344,13 +377,22 @@ public partial class PageMods
     private async void BtnInstall_Click(object sender, System.Windows.Input.MouseButtonEventArgs e)
     {
         if (_selected is null) return;
+        var allowIncompatible = false;
+        if (!_selected.IsCompatible)
+        {
+            var answer = MessageBox.Show(
+                $"「{_selected.Name}」声明最高兼容 KSP {_selected.MaxKsp ?? "未知"}，与当前实例不兼容。\n仍然继续安装吗？（可能无法正常加载）",
+                "PCL KSP", MessageBoxButton.YesNo, MessageBoxImage.Warning);
+            if (answer != MessageBoxResult.Yes) return;
+            allowIncompatible = true;
+        }
         try
         {
             PanProgress.Visibility = Visibility.Visible;
             BarProgress.IsIndeterminate = true;
             LabProgress.Text = "正在解析依赖…";
 
-            var plan = await GetService().GetInstallPlanAsync(_selected.Identifier);
+            var plan = await GetService().GetInstallPlanAsync(_selected.Identifier, allowIncompatible);
             if (plan is null)
             {
                 PanProgress.Visibility = Visibility.Collapsed;

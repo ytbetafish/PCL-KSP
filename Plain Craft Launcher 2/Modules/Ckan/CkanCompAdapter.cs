@@ -30,11 +30,14 @@ public static class CkanCompAdapter
             ["Website"] = mod.Homepage ?? string.Empty,
             ["DownloadCount"] = mod.Downloads,
             ["Tags"] = new JsonArray(),
+            ["IsCompatible"] = mod.IsCompatible,
         };
 
         // 可空字段仅在有值时写入，避免空引用进入 JSON。
         if (!string.IsNullOrEmpty(mod.IconUrl))
             json["LogoUrl"] = mod.IconUrl;
+        if (!string.IsNullOrEmpty(mod.MaxKsp))
+            json["MaxKsp"] = mod.MaxKsp;
 
         return new Comp.CompProject(json);
     }

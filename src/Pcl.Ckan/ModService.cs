@@ -541,7 +541,7 @@ public sealed class ModService : IModService, IDisposable
     }
 
     /// <inheritdoc />
-    public Task<ModInstallPlan?> GetInstallPlanAsync(string identifier, CancellationToken cancellationToken = default)
+    public Task<ModInstallPlan?> GetInstallPlanAsync(string identifier, bool allowIncompatible = false, CancellationToken cancellationToken = default)
     {
         var reg = Registry;
         if (_instance == null || reg == null)
@@ -558,6 +558,10 @@ public sealed class ModService : IModService, IDisposable
         try
         {
             var opts = RelationshipResolverOptions.DependsOnlyOpts(_instance.StabilityToleranceConfig);
+            if (allowIncompatible)
+            {
+                opts.allow_incompatible = true;
+            }
             var resolver = new RelationshipResolver(
                 modulesToInstall: new[] { target },
                 modulesToRemove: null,
@@ -589,7 +593,8 @@ public sealed class ModService : IModService, IDisposable
                 target.identifier,
                 toInstall,
                 toUpgrade,
-                Array.Empty<string>()));
+                Array.Empty<string>(),
+                AllowIncompatible: allowIncompatible));
         }
         catch (Exception ex)
         {
@@ -605,7 +610,8 @@ public sealed class ModService : IModService, IDisposable
                 Array.Empty<string>(),
                 Array.Empty<string>(),
                 Array.Empty<string>(),
-                reason));
+                reason,
+                AllowIncompatible: allowIncompatible));
         }
     }
 
@@ -625,6 +631,7 @@ public sealed class ModService : IModService, IDisposable
         return Task.Run(() =>
         {
             var opts = RelationshipResolverOptions.DependsOnlyOpts(_instance.StabilityToleranceConfig);
+            opts.allow_incompatible = plan.AllowIncompatible;
             Directory.CreateDirectory(_instance.DownloadCacheDir);
             var cache = new NetModuleCache(_instance.DownloadCacheDir);
             var installer = new ModuleInstaller(_instance, cache, _config, _user, cancellationToken);
@@ -906,6 +913,13 @@ public sealed class ModService : IModService, IDisposable
         // CKAN 模块元数据不含图标 URL（ResourcesDescriptor 无 icon 字段），图标留待 SpaceDock 兜底。
         string? iconUrl = null;
 
+        string? maxKsp = null;
+        if (mod != null)
+        {
+            try { maxKsp = mod.LatestCompatibleGameVersion().ToString(); }
+            catch { /* 元数据缺版本范围时不展示 */ }
+        }
+
         return new ModSearchResult(
             identifier,
             mod?.name ?? identifier,
@@ -918,7 +932,8 @@ public sealed class ModService : IModService, IDisposable
             hasUpdate,
             compatible,
             iconUrl,
-            ReleaseDate: mod?.release_date);
+            ReleaseDate: mod?.release_date,
+            MaxKsp: maxKsp);
     }
 
     /// <inheritdoc />

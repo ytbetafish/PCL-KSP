@@ -1,4 +1,4 @@
-﻿using System.Windows;
+using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
 using System.Windows.Media;
@@ -474,7 +474,11 @@ public partial class MyCompItem
             ColumnVersion3.Width = new GridLength(0);
         }
 
-        Source = "CKAN";
+        Source = project.IsCompatible ? "CKAN" : "CKAN（不兼容）";
+        if (!project.IsCompatible)
+        {
+            ToolTip = $"该模组声明最高兼容 KSP {project.MaxKsp ?? "未知"}，与当前实例不兼容；安装时会再次确认。";
+        }
 
         if (project.LastUpdate is not null)
             UpdateTime = Lang.TimeSpan(project.LastUpdate.Value - DateTime.Now, 1);

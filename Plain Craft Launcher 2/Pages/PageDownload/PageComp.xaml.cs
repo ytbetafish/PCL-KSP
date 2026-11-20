@@ -1,4 +1,4 @@
-﻿using System.Diagnostics;
+using System.Diagnostics;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
@@ -17,6 +17,7 @@ public partial class PageComp : Grid
 
     private List<Comp.CompProject> _projects = new();
     private List<ModSearchResult> _results = new();
+    private List<ModSearchResult> _rawResults = new();
     private readonly HashSet<int> _enrichedPages = new();
     private CancellationTokenSource? _enrichCts;
     private int _currentPage = 0;
@@ -52,12 +53,9 @@ public partial class PageComp : Grid
             var results = await Launcher.Ckan.SearchAsync(query);
             Common.Log($"[CKAN] SearchAsync 返回 {results.Count} 条，耗时 {sw.ElapsedMilliseconds} ms");
             sw.Restart();
-            _results = ApplySort(results.ToList(), GetSortId());
-            _projects = CkanCompAdapter.ToProjects(_results);
+            _rawResults = results.ToList();
+            RebuildFromRaw();
             Common.Log($"[CKAN] ToProjects {_projects.Count} 条，耗时 {sw.ElapsedMilliseconds} ms");
-            _enrichedPages.Clear();
-            _currentPage = 0;
-            RefreshList();
             PanContent.Visibility = Visibility.Visible;
             Common.Log($"[CKAN] RefreshList 完成，卡片 {PanProjects.Children.Count} 个");
             _ = EnrichCurrentPageAsync();
@@ -103,6 +101,38 @@ public partial class PageComp : Grid
             default: // 1 默认 / 2 相关性
                 return list;
         }
+    }
+
+    /// <summary>按兼容性过滤 + 排序后重建列表（保持 _results 与卡片页对齐，便于按页回填）。</summary>
+    private void RebuildFromRaw()
+    {
+        var filtered = GetCompatId() switch
+        {
+            1 => _rawResults.Where(r => r.IsCompatible).ToList(),
+            2 => _rawResults.Where(r => !r.IsCompatible).ToList(),
+            _ => _rawResults.ToList()
+        };
+        _results = ApplySort(filtered, GetSortId());
+        _projects = CkanCompAdapter.ToProjects(_results);
+        _enrichedPages.Clear();
+        _currentPage = 0;
+        RefreshList();
+    }
+
+    private int GetCompatId()
+    {
+        if (ComboSearchCompat.SelectedItem is FrameworkElement fe && fe.Tag != null &&
+            int.TryParse(fe.Tag.ToString(), out var id))
+            return id;
+        return 0;
+    }
+
+    private void ComboSearchCompat_SelectionChanged(object sender, SelectionChangedEventArgs e)
+    {
+        if (_rawResults.Count == 0)
+            return;
+        RebuildFromRaw();
+        _ = EnrichCurrentPageAsync();
     }
 
     private void RefreshList()
@@ -222,18 +252,15 @@ public partial class PageComp : Grid
         PanSearchBox.Text = "";
         ComboSearchTag.SelectedIndex = 0;
         ComboSearchSort.SelectedIndex = 0;
+        ComboSearchCompat.SelectedIndex = 0;
         await LoadProjects(null);
     }
 
     private void ComboSearchSort_SelectionChanged(object sender, SelectionChangedEventArgs e)
     {
-        if (_results.Count == 0)
+        if (_rawResults.Count == 0)
             return;
-        _results = ApplySort(_results, GetSortId());
-        _projects = CkanCompAdapter.ToProjects(_results);
-        _enrichedPages.Clear();
-        _currentPage = 0;
-        RefreshList();
+        RebuildFromRaw();
         _ = EnrichCurrentPageAsync();
     }
 }

@@ -53,7 +53,7 @@ public interface IModService
     /// Use CKAN's dependency resolver to compute the install/upgrade/remove plan for a mod.
     /// Returns null if the instance has no registry or the identifier is unknown.
     /// </summary>
-    Task<ModInstallPlan?> GetInstallPlanAsync(string identifier, CancellationToken cancellationToken = default);
+    Task<ModInstallPlan?> GetInstallPlanAsync(string identifier, bool allowIncompatible = false, CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Execute a previously computed plan (downloads + installs/upgrades/removes).

@@ -28,6 +28,12 @@
                         <local:MyButton x:Name="BtnFilterNotInstalled" Text="未安装" Width="90" Margin="10,0,0,0"
                                         Click="BtnFilterNotInstalled_Click" />
                     </StackPanel>
+                    <StackPanel Orientation="Horizontal" Margin="0,8,0,0">
+                        <local:MyButton x:Name="BtnFilterCompatible" Text="仅兼容" Width="90"
+                                        Click="BtnFilterCompatible_Click" />
+                        <local:MyButton x:Name="BtnFilterIncompatible" Text="不兼容" Width="90" Margin="10,0,0,0"
+                                        Click="BtnFilterIncompatible_Click" />
+                    </StackPanel>
                 </StackPanel>
             </local:MyCard>
 

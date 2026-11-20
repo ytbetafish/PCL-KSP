@@ -1,4 +1,4 @@
-﻿namespace PCL;
+namespace PCL;
 
 public static partial class Comp
 {
@@ -79,6 +79,12 @@ public static partial class Comp
         /// </summary>
         public string? LogoUrl;
 
+        /// <summary>CKAN 专用：是否与当前实例的 KSP 版本兼容。</summary>
+        public readonly bool IsCompatible = true;
+
+        /// <summary>CKAN 专用：元数据声明的最高兼容 KSP 版本，未声明时为 null。</summary>
+        public readonly string? MaxKsp;
+
         private bool _loadedDatabase;
 
         /// <summary>
@@ -122,6 +128,20 @@ public static partial class Comp
             Tags = result.Tags;
             LogoUrl = result.LogoUrl;
             Drops = result.Drops;
+
+            if (data.TryGetPropertyValue("IsCompatible", out var compatNode)
+                && compatNode is JsonValue compatValue
+                && compatValue.TryGetValue(out bool compatTyped))
+            {
+                IsCompatible = compatTyped;
+            }
+
+            if (data.TryGetPropertyValue("MaxKsp", out var maxKspNode)
+                && maxKspNode is JsonValue maxKspValue
+                && maxKspValue.TryGetValue(out string? maxKspTyped))
+            {
+                MaxKsp = maxKspTyped;
+            }
 
             compProjectCache[Id] = this;
         }
