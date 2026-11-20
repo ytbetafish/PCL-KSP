@@ -38,7 +38,9 @@ public sealed record ModSearchResult(
     /// <summary>是否为 CKAN 扫描出的未托管项（AD，autodetected）：由手动安装产生，CKAN 只能识别不能管理。</summary>
     bool IsAutodetected = false,
     /// <summary>该模组的最新版本安装包是否已在本地下载缓存中（CKAN 的 Cached 状态）。</summary>
-    bool IsCached = false);
+    bool IsCached = false,
+    /// <summary>元数据里的标签（CKAN 的 Tags/Labels），用于列表显示与标签筛选。</summary>
+    IReadOnlyList<string>? Tags = null);
 
 /// <summary>模组内容（Contents 页）的一条：安装包内的文件路径，或安装描述符的目标位置。</summary>
 public sealed record ModContentEntry(string Path, string? InstallTo);

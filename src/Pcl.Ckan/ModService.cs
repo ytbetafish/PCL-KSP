@@ -1344,7 +1344,8 @@ public sealed class ModService : IModService, IDisposable
             ReleaseDate: mod?.release_date,
             MaxKsp: maxKsp,
             ReplacedById: replacedById,
-            IsCached: isCached);
+            IsCached: isCached,
+            Tags: mod?.Tags?.OrderBy(t => t, StringComparer.OrdinalIgnoreCase).ToList());
     }
 
     /// <inheritdoc />

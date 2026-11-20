@@ -326,6 +326,10 @@ public partial class PageMods
         {
             LabModHome.Text = (LabModHome.Text + "　｜　已被 " + _selected.ReplacedById + " 替换").Trim();
         }
+        if (_selected.Tags is { Count: > 0 })
+        {
+            LabModHome.Text = (LabModHome.Text + "　｜　标签：" + string.Join("、", _selected.Tags)).Trim();
+        }
         BtnInstall.Visibility = string.IsNullOrWhiteSpace(KspSettings.Current.KspRootPath) ? Visibility.Collapsed : Visibility.Visible;
         BtnUninstall.Visibility = _selected.IsInstalled ? Visibility.Visible : Visibility.Collapsed;
         BtnContents.Visibility = Visibility.Visible;

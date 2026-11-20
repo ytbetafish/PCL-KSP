@@ -29,7 +29,8 @@
                         <!--Tags-->
                         <TextBlock x:Name="LabTag" VerticalAlignment="Center" Grid.Column="0" HorizontalAlignment="Left"
                                    Text="{loc:Loc Download.Comp.Filter.Tag}" Margin="5,0,5,0" />
-                        <local:MyComboBox x:Name="ComboSearchTag" Grid.Column="1" MaxDropDownHeight="320" />
+                        <local:MyComboBox x:Name="ComboSearchTag" Grid.Column="1" MaxDropDownHeight="320"
+                                          SelectionChanged="ComboSearchTag_SelectionChanged" />
                         <!--排序方式-->
                         <TextBlock x:Name="LabSort" VerticalAlignment="Center" Grid.Column="2"
                                    HorizontalAlignment="Left" Text="{loc:Loc Download.Comp.Filter.Sort}"

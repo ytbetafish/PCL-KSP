@@ -54,6 +54,7 @@ public partial class PageComp : Grid
             Common.Log($"[CKAN] SearchAsync 返回 {results.Count} 条，耗时 {sw.ElapsedMilliseconds} ms");
             sw.Restart();
             _rawResults = results.ToList();
+            PopulateTags();
             RebuildFromRaw();
             Common.Log($"[CKAN] ToProjects {_projects.Count} 条，耗时 {sw.ElapsedMilliseconds} ms");
             PanContent.Visibility = Visibility.Visible;
@@ -185,6 +186,13 @@ public partial class PageComp : Grid
         {
             filtered = ApplyAdvancedFilter(filtered, adv);
         }
+        var tagFilter = GetTagFilter();
+        if (!string.IsNullOrEmpty(tagFilter))
+        {
+            filtered = filtered
+                .Where(r => r.Tags != null && r.Tags.Any(t => string.Equals(t, tagFilter, StringComparison.OrdinalIgnoreCase)))
+                .ToList();
+        }
         _results = ApplySort(filtered, GetSortId());
         _projects = CkanCompAdapter.ToProjects(_results);
         _enrichedPages.Clear();
@@ -198,6 +206,75 @@ public partial class PageComp : Grid
             int.TryParse(fe.Tag.ToString(), out var id))
             return id;
         return 0;
+    }
+
+    private bool _populatingTags;
+
+    /// <summary>按当前目录结果聚合标签，填充标签下拉框（保留已选标签）。</summary>
+    private void PopulateTags()
+    {
+        var counts = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
+        foreach (var item in _rawResults)
+        {
+            if (item.Tags == null) continue;
+            foreach (var tag in item.Tags)
+            {
+                if (string.IsNullOrWhiteSpace(tag)) continue;
+                counts.TryGetValue(tag, out var n);
+                counts[tag] = n + 1;
+            }
+        }
+
+        var selected = GetTagFilter();
+        _populatingTags = true;
+        try
+        {
+            ComboSearchTag.Items.Clear();
+            ComboSearchTag.Items.Add(new MyComboBoxItem { Content = "全部标签", Tag = string.Empty });
+            foreach (var pair in counts.OrderByDescending(k => k.Value)
+                         .ThenBy(k => k.Key, StringComparer.OrdinalIgnoreCase).Take(40))
+            {
+                ComboSearchTag.Items.Add(new MyComboBoxItem
+                {
+                    Content = pair.Key + " (" + pair.Value + ")",
+                    Tag = pair.Key
+                });
+            }
+
+            var index = 0;
+            if (!string.IsNullOrEmpty(selected))
+            {
+                for (var i = 1; i < ComboSearchTag.Items.Count; i++)
+                {
+                    if (ComboSearchTag.Items[i] is FrameworkElement fe &&
+                        string.Equals(fe.Tag as string, selected, StringComparison.OrdinalIgnoreCase))
+                    {
+                        index = i;
+                        break;
+                    }
+                }
+            }
+            ComboSearchTag.SelectedIndex = index;
+        }
+        finally
+        {
+            _populatingTags = false;
+        }
+    }
+
+    private string? GetTagFilter()
+    {
+        if (ComboSearchTag.SelectedItem is FrameworkElement fe && fe.Tag is string tag && tag.Length > 0)
+            return tag;
+        return null;
+    }
+
+    private void ComboSearchTag_SelectionChanged(object sender, SelectionChangedEventArgs e)
+    {
+        if (_populatingTags) return;
+        if (_rawResults.Count == 0) return;
+        RebuildFromRaw();
+        _ = EnrichCurrentPageAsync();
     }
 
     private void ComboSearchCompat_SelectionChanged(object sender, SelectionChangedEventArgs e)

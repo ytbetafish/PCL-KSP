@@ -1,4 +1,4 @@
-﻿<Grid x:Class="PCL.MyCompItem"
+<Grid x:Class="PCL.MyCompItem"
       xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
       xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
       xmlns:local="clr-namespace:PCL"
@@ -62,10 +62,7 @@
     <!-- Tag 与 详情 -->
     <StackPanel x:Name="PanTags" Grid.Row="2" Grid.Column="3" Orientation="Horizontal" VerticalAlignment="Center"
                 Margin="-1,0,1,0" Visibility="Collapsed">
-        <!--<corelocal:BlurBorder Background="{DynamicResource ColorBrush6}" Padding="3,1" CornerRadius="3" Margin="0,0,4,0" SnapsToDevicePixels="True" UseLayoutRounding="False">
-            <TextBlock Text="科技" Foreground="{DynamicResource ColorBrush2}" FontSize="11" />
-        </corelocal:BlurBorder>-->
-    </StackPanel>
+            </StackPanel>
     <TextBlock x:Name="LabInfo" Grid.Row="2" Grid.Column="4" VerticalAlignment="Center" Margin="0,0,3,0.5" MouseEnter="LabInfo_MouseEnter"
                Text="{Binding ViewModel.DescriptionText, ElementName=PanBack}"
                TextTrimming="CharacterEllipsis" FontSize="12" Foreground="{StaticResource ColorBrushGray3}"
