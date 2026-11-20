@@ -40,7 +40,15 @@ public sealed record ModSearchResult(
     /// <summary>该模组的最新版本安装包是否已在本地下载缓存中（CKAN 的 Cached 状态）。</summary>
     bool IsCached = false,
     /// <summary>元数据里的标签（CKAN 的 Tags/Labels），用于列表显示与标签筛选。</summary>
-    IReadOnlyList<string>? Tags = null);
+    IReadOnlyList<string>? Tags = null,
+    /// <summary>元数据里的源码仓库地址（CKAN resources.repository）。</summary>
+    string? RepositoryUrl = null,
+    /// <summary>元数据里的问题反馈地址（CKAN resources.bugtracker）。</summary>
+    string? BugTrackerUrl = null,
+    /// <summary>发布状态（stable / testing / development）。</summary>
+    string? ReleaseStatus = null,
+    /// <summary>模组类型（package / metapackage / dlc）。</summary>
+    string? Kind = null);
 
 /// <summary>模组内容（Contents 页）的一条：安装包内的文件路径，或安装描述符的目标位置。</summary>
 public sealed record ModContentEntry(string Path, string? InstallTo);

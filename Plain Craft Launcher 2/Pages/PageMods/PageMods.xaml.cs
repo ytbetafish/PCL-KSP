@@ -308,6 +308,7 @@ public partial class PageMods
             LabConflicts.Visibility = Visibility.Collapsed;
             LabRecommends.Visibility = Visibility.Collapsed;
             LabSuggests.Visibility = Visibility.Collapsed;
+            LabMeta.Visibility = Visibility.Collapsed;
             BtnInstall.Visibility = Visibility.Collapsed;
             BtnUninstall.Visibility = Visibility.Collapsed;
             BtnContents.Visibility = Visibility.Collapsed;
@@ -331,6 +332,39 @@ public partial class PageMods
         {
             LabModHome.Text = (LabModHome.Text + "　｜　标签：" + string.Join("、", _selected.Tags)).Trim();
         }
+
+        // CKAN 元数据：类型 / 发布状态 / 最高 KSP / 源码仓库 / 问题反馈
+        var metaParts = new List<string>();
+        if (!string.IsNullOrWhiteSpace(_selected.Kind))
+        {
+            metaParts.Add("类型：" + _selected.Kind);
+        }
+        if (!string.IsNullOrWhiteSpace(_selected.ReleaseStatus))
+        {
+            metaParts.Add("发布状态：" + _selected.ReleaseStatus);
+        }
+        if (!string.IsNullOrWhiteSpace(_selected.MaxKsp))
+        {
+            metaParts.Add("最高 KSP：" + _selected.MaxKsp);
+        }
+        if (!string.IsNullOrWhiteSpace(_selected.Version))
+        {
+            metaParts.Add("版本：" + _selected.Version);
+        }
+        if (!string.IsNullOrWhiteSpace(_selected.License))
+        {
+            metaParts.Add("许可证：" + _selected.License);
+        }
+        if (!string.IsNullOrWhiteSpace(_selected.RepositoryUrl))
+        {
+            metaParts.Add("源码：" + _selected.RepositoryUrl);
+        }
+        if (!string.IsNullOrWhiteSpace(_selected.BugTrackerUrl))
+        {
+            metaParts.Add("问题反馈：" + _selected.BugTrackerUrl);
+        }
+        LabMeta.Text = string.Join("　｜　", metaParts);
+        LabMeta.Visibility = metaParts.Count > 0 ? Visibility.Visible : Visibility.Collapsed;
         BtnInstall.Visibility = string.IsNullOrWhiteSpace(KspSettings.Current.KspRootPath) ? Visibility.Collapsed : Visibility.Visible;
         BtnUninstall.Visibility = _selected.IsInstalled ? Visibility.Visible : Visibility.Collapsed;
         BtnContents.Visibility = Visibility.Visible;
