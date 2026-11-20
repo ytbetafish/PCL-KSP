@@ -274,7 +274,11 @@ public partial class PageHome
     /// </summary>
     private static string PrepareFragment(string raw)
     {
-        raw = raw.Replace("\uFEFF", string.Empty);
+        // PCL CE 公告栏里「打开帮助」这类按钮指向 Minecraft 帮助页，KSP 里没有对应内容，整段移除（含跨行写法）。
+        raw = Regex.Replace(raw, @"<local:MyButton\b[^>]*?EventData=""Minecraft/[^""]*""[^>]*?/>", string.Empty,
+            RegexOptions.Singleline);
+        raw = Regex.Replace(raw, @"<local:MyButton\b[^>]*?EventData=""Minecraft/[^""]*""[^>]*?>(?:(?!</local:MyButton).)*</local:MyButton>",
+            string.Empty, RegexOptions.Singleline);        raw = raw.Replace("\uFEFF", string.Empty);
         raw = Regex.Replace(raw, @"\sxmlns(?::[A-Za-z0-9_]+)?=""[^""]*""", string.Empty);
         raw = Regex.Replace(raw, @"\sEventType=""打开网页""\s+EventData=""([^""]+)""", @" Tag=""$1""");
         raw = Regex.Replace(raw, @"\sEventData=""([^""]+)""\s+EventType=""打开网页""", @" Tag=""$1""");
