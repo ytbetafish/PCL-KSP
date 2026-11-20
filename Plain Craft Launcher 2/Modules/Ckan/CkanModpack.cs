@@ -29,7 +29,6 @@ internal static class CkanModpack
 
         var root = new JObject
         {
-            ["spec_version"] = Meta.SpecVersion.ToString(),
             ["identifier"] = identifier,
             ["name"] = "KSP 模组清单",
             ["abstract"] = "由 PCL KSP 导出的已装模组清单（CKAN metapackage）",
@@ -43,6 +42,11 @@ internal static class CkanModpack
         {
             root["ksp_version_min"] = kspVersion;
         }
+
+        // spec_version 必须是我们真正需要的最低版本，且必须严格小于本机 CKAN 的
+        // Meta.SpecVersion —— CKAN 的 IsSpecSupported 用 IsGreaterThan 判定，
+        // 直接写 Meta.SpecVersion 会被自己判为"需要更高版本 CKAN"（UnsupportedKraken）。
+        root["spec_version"] = SpecVersionAnalyzer.MinimumSpecVersion(root).ToString();
 
         // 用 CKAN 自己的解析器校验必需字段，确保其他 CKAN 客户端可读。
         var module = CkanModule.FromJson(root.ToString(Newtonsoft.Json.Formatting.Indented));
