@@ -42,6 +42,10 @@ public sealed class ModService : IModService, IDisposable
     private IReadOnlyList<ModSearchResult>? _cachedAll;
     private Task? _warmTask;
     private readonly SemaphoreSlim _catalogGate = new(1, 1);
+    /// <summary>仓库网络刷新进行中：此时搜索直接吃已有缓存，避免被刷新的网络耗时阻塞。</summary>
+    private volatile bool _refreshInFlight;
+    /// <summary>最近一次成功枚举的目录快照：刷新下载期间读请求直接吃它，避免被网络阻塞。</summary>
+    private List<CkanModule>? _cachedModules;
 
     /// <summary>诊断埋点汇（如启动器 log4net）；为空时仅写入内存日志。</summary>
     public Action<string>? TraceSink { get; set; }
@@ -219,22 +223,35 @@ public sealed class ModService : IModService, IDisposable
         }
 
         // 段 2：仓库元数据网络下载在锁外进行，避免长时间占用门控阻塞目录枚举与搜索
+        _refreshInFlight = true;
+        var swRefresh = Stopwatch.StartNew();
         try
         {
             var repos = DistinctRepos(_registryManager.registry.Repositories.Values);
+            // 仓库下载必须有界：镜像不通时不设超时会永久持锁，把目录读取全拖死
+            using var refreshCts = new System.Threading.CancellationTokenSource(TimeSpan.FromSeconds(120));
+            using var linkedCts = cancellationToken.CanBeCanceled
+                ? System.Threading.CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, refreshCts.Token)
+                : null;
+            var refreshToken = linkedCts?.Token ?? refreshCts.Token;
             var downloader = new NetAsyncDownloader(_user,
                 () => (System.Security.Cryptography.HashAlgorithm?)null,
                 UserAgent,
-                cancellationToken);
+                refreshToken);
             lock (_repoLock)
             {
                 var updateResult = _repoData.Update(repos, _instance.Game, false, downloader, _user, UserAgent);
-                Trace($"仓库 Update 完成: {updateResult}");
+                Trace($"仓库 Update 完成: {updateResult}（{swRefresh.ElapsedMilliseconds}ms）");
             }
         }
         catch (Exception ex)
         {
+            Trace($"仓库 Update 失败（{swRefresh.ElapsedMilliseconds}ms）: {ex.GetType().Name}: {ex.Message}");
             try { _user.RaiseError("刷新仓库注册表失败: " + ex.Message); } catch { }
+        }
+        finally
+        {
+            _refreshInFlight = false;
         }
 
         // 段 3：网络更新结束后短锁失效内存缓存
@@ -244,6 +261,7 @@ public sealed class ModService : IModService, IDisposable
             lock (_catalogLock)
             {
                 _cachedAll = null;
+                _cachedModules = null;
                 _warmTask = null;
             }
         }
@@ -274,6 +292,22 @@ public sealed class ModService : IModService, IDisposable
                 {
                     if (_cachedAll is not null)
                         return _cachedAll;
+                }
+            }
+        }
+        // 仓库刷新进行中：直接用已缓存的全量投影过滤，避免被刷新的网络耗时卡住搜索
+        if (_refreshInFlight)
+        {
+            lock (_catalogLock)
+            {
+                if (_cachedAll is not null)
+                {
+                    var cached = _cachedAll;
+                    var filtered = isEmptyQuery
+                        ? cached
+                        : cached.Where(r => MatchesQuery(r, query)).ToList();
+                    Trace($"Search 跳过门控：刷新进行中，缓存 {cached.Count} 条 → {filtered.Count} 条");
+                    return filtered;
                 }
             }
         }
@@ -1357,6 +1391,17 @@ public sealed class ModService : IModService, IDisposable
     private async Task<List<CkanModule>> EnumerateCatalogLockedAsync(CancellationToken cancellationToken)
     {
         Trace("Enum enter (waiting gate)");
+        if (_refreshInFlight)
+        {
+            lock (_catalogLock)
+            {
+                if (_cachedModules is not null)
+                {
+                    Trace($"Enum 快照返回：刷新下载进行中，跳过等待仓库锁（{_cachedModules.Count} 条）");
+                    return _cachedModules.ToList();
+                }
+            }
+        }
         await _catalogGate.WaitAsync(cancellationToken).ConfigureAwait(false);
         try
         {
@@ -1365,6 +1410,10 @@ public sealed class ModService : IModService, IDisposable
                 lock (_repoLock)
                 {
                     var list = EnumerateCatalog().ToList();
+                    if (list.Count > 0)
+                    {
+                        lock (_catalogLock) { _cachedModules = list; }
+                    }
                     Trace("Enum ToList done");
                     return list;
                 }
@@ -1443,6 +1492,18 @@ public sealed class ModService : IModService, IDisposable
             // make CKAN throw ModuleNotFoundKraken; treat them as "not in catalog".
             return null;
         }
+    }
+
+    private static bool MatchesQuery(ModSearchResult r, string? query)
+    {
+        if (string.IsNullOrWhiteSpace(query))
+        {
+            return true;
+        }
+        var q = query.Trim();
+        return r.Identifier.Contains(q, StringComparison.OrdinalIgnoreCase)
+            || r.Name.Contains(q, StringComparison.OrdinalIgnoreCase)
+            || (r.Author != null && r.Author.Contains(q, StringComparison.OrdinalIgnoreCase));
     }
 
     private static bool MatchesQuery(CkanModule mod, string? query)
