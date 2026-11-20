@@ -50,27 +50,6 @@
 
             <!-- 预设：KSP Wiki 随机条目（多卡片 + 配图，版式对标原版新闻主页） -->
             <StackPanel x:Name="PanWiki" Visibility="Collapsed">
-                <!-- 顶部横幅：说明 + 换一条 -->
-                <local:MyCard x:Name="CardWikiBanner" Title="KSP Wiki 随机条目" Margin="0,0,0,15">
-                    <Grid Margin="22,38,18,16">
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="Auto" />
-                            <ColumnDefinition Width="1*" />
-                        </Grid.ColumnDefinitions>
-                        <Border Grid.Column="0" Width="56" Height="56" CornerRadius="28" Margin="0,0,16,0"
-                                VerticalAlignment="Center" Background="{DynamicResource ColorBrushSemiTransparent}">
-                            <local:MyIconButton x:Name="BtnWikiNext" SvgIcon="lucide/refresh-cw" Height="24" Width="24"
-                                                HorizontalAlignment="Center" VerticalAlignment="Center"
-                                                ToolTip="换一条" Click="BtnWikiNext_Click" />
-                        </Border>
-                        <StackPanel Grid.Column="1" VerticalAlignment="Center">
-                            <TextBlock x:Name="LabWikiBanner" FontSize="17" FontWeight="Light" Text="每日一个 KSP Wiki 条目" />
-                            <TextBlock FontSize="12.5" Opacity="0.6" TextWrapping="Wrap" Margin="0,5,0,0"
-                                       Text="条目随机取自 wiki.kerbalspaceprogram.com，正文、配图与相关条目均来自该站点。" />
-                        </StackPanel>
-                    </Grid>
-                </local:MyCard>
-
                 <!-- 主条目：大横幅图 + 标题胶囊 + 正文 -->
                 <local:MyCard x:Name="CardWikiHero" Title="随机条目" Margin="0,0,0,15">
                     <StackPanel Margin="0,38,0,0">
@@ -90,9 +69,33 @@
                     </StackPanel>
                 </local:MyCard>
 
+                <!-- 顶部横幅：说明 + 换一条 -->
+                
+
                 <!-- 相关条目：代码动态填充的带图卡片 -->
                 <local:MyCard x:Name="CardWikiRelatedHost" Title="相关条目" Margin="0,0,0,15" Visibility="Collapsed">
                     <StackPanel x:Name="PanWikiRelated" Margin="20,38,20,4" />
+                </local:MyCard>
+
+<local:MyCard x:Name="CardWikiBanner" Title="KSP Wiki 随机条目" Margin="0,0,0,15">
+                    <Grid Margin="22,38,18,16">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto" />
+                            <ColumnDefinition Width="1*" />
+                        </Grid.ColumnDefinitions>
+                        <Border Grid.Column="0" Width="56" Height="56" CornerRadius="28" Margin="0,0,16,0"
+                                VerticalAlignment="Center" Background="{DynamicResource ColorBrushSemiTransparent}">
+                            <local:MyIconButton x:Name="BtnWikiNext" SvgIcon="lucide/refresh-cw" Height="24" Width="24"
+                                                HorizontalAlignment="Center" VerticalAlignment="Center"
+                                                ToolTip="换一条" Click="BtnWikiNext_Click" />
+                        </Border>
+                        <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                            <TextBlock x:Name="LabWikiBanner" FontSize="17" FontWeight="Light" Text="每日一个 KSP Wiki 条目" />
+                            <TextBlock FontSize="12.5" Opacity="0.6" TextWrapping="Wrap" Margin="0,5,0,0"
+                                       Text="条目随机取自 wiki.kerbalspaceprogram.com，正文、配图与相关条目均来自该站点。" />
+                            <TextBlock x:Name="LabWikiStatus" FontSize="12" Opacity="0.75" TextWrapping="Wrap" Margin="0,5,0,0" Visibility="Collapsed" />
+                        </StackPanel>
+                    </Grid>
                 </local:MyCard>
             </StackPanel>
             <!-- 本地文件主页 -->

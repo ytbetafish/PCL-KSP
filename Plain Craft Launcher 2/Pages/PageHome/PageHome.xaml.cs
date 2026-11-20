@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Concurrent;
 using System.IO;
 using System.Net.Http;
 using System.Linq;
@@ -21,6 +22,7 @@ public partial class PageHome
     private const string UpdateLogText =
         "2026-11-20\n" +
         "· 主页「KSP Wiki 随机条目」改为多卡片 + 配图版式：说明横幅卡、带大图的主条目卡、三张相关条目卡。\n" +
+        "· 随机条目改为后台预取 + 配图预热，点「换一条」不再等网络；被反爬拦截时保留当前条目并提示。\n" +
         "· 日志文件列表补齐 lucide/file-text 图标资源，条目左侧图标恢复显示。\n" +
         "· 设置页「主页」新增「自定义网址」档：从远端 XAML 地址拉取主页内容，带本地缓存与失败重试。\n" +
         "2026-11-19\n" +
@@ -385,6 +387,16 @@ public partial class PageHome
 
     private const string WikiApi = "https://wiki.kerbalspaceprogram.com/api.php";
 
+    /// <summary>一条已经抓齐的随机条目：标题、正文与大图地址，渲染时不用再等网络。</summary>
+    private sealed record WikiEntry(string BaseTitle, string? UsedTitle, string? Plain, string? ImageUrl);
+
+    // 随机条目每次都是新页面，缓存正文没有意义；改成提前抓 1–2 条放内存队列，
+    // 点「换一条」直接取队列，网络往返藏在上一条展示的时间里。
+    private readonly ConcurrentQueue<WikiEntry> _wikiQueue = new();
+    private const int WikiQueueTarget = 2;
+    private bool _wikiPrefetching;
+    private WikiEntry? _wikiLastEntry;
+
     /// <summary>拉取 KSP Wiki 的随机条目并在本地渲染（页面本身是本地 XAML，只有内容联网）。</summary>
     private async Task LoadWikiEntryAsync()
     {
@@ -396,63 +408,32 @@ public partial class PageHome
         ShowWikiLoading();
         try
         {
-            var randomUrl = WikiApi +
-                            "?action=query&list=random&rnlimit=1&rnnamespace=0&format=json&formatversion=2";
-            var title = string.Empty;
-            // 随机池里会抽到首页/导航页，这类条目没有可读内容，重抽几次跳过。
-            for (var attempt = 0; attempt < 4 && title.Length == 0; attempt++)
-            {
-                var randomJson = await Http.GetStringAsync(randomUrl, token).ConfigureAwait(true);
-                using var randomDoc = JsonDocument.Parse(randomJson);
-                var candidate = randomDoc.RootElement.GetProperty("query").GetProperty("random")[0]
-                    .GetProperty("title").GetString() ?? string.Empty;
-                var normalized = StripLanguageSuffix(candidate).Trim();
-                if (normalized is "Main Page" or "Wiki Home" or "KSP Wiki") continue;
-                title = candidate;
-            }
+            var entry = _wikiQueue.TryDequeue(out var queued)
+                ? queued
+                : await FetchWikiEntryAsync(token).ConfigureAwait(true);
 
-            if (title.Length == 0) throw new InvalidOperationException("Wiki 未返回可用的条目名。");
-
-            var baseTitle = StripLanguageSuffix(title);
-            LabWikiTitle.Text = baseTitle;
-
-            // 随机条目常是 /ru、/ko 这类语言子页：优先取中文/英文主条目正文，取不到再退回原条目。
-            // 分类页、Parts/xxx 这类条目首页常常没有正文，这时改抓整页再压成文本。
-            string? plain = null;
-            string? usedTitle = null;
-            string? usedHtml = null;
-            foreach (var candidate in new[] { baseTitle + "/zh-cn", baseTitle, title })
-            {
-                if (plain is not null && plain.Length > 0) break;
-                foreach (var section in new[] { 0, -1 })
-                {
-                    var html = await TryFetchSectionTextAsync(candidate, token, section).ConfigureAwait(true);
-                    if (html is null) continue;
-                    var text = CleanWikiText(html, StripLanguageSuffix(candidate));
-                    if (text.Length == 0) continue;
-                    plain = text;
-                    usedTitle = candidate;
-                    usedHtml = html;
-                    break;
-                }
-            }
-
-            _wikiUrl = BuildWikiPageUrl(usedTitle ?? baseTitle);
-            BtnWikiOpen.IsEnabled = true;
-            LabWikiText.Text = plain is { Length: > 0 }
-                ? plain
-                : "这个条目暂时取不到正文，点「在 Wiki 上打开」查看完整页面。";
-
-            // 主卡大图与相关条目卡都在这里补上，形成「多卡片 + 每卡带图」的版式
-            ShowWikiHeroImage(baseTitle, ExtractWikiImage(usedHtml));
-            await LoadWikiRelatedAsync(usedTitle ?? baseTitle, baseTitle, token).ConfigureAwait(true);
+            if (entry is null) throw new InvalidOperationException("Wiki 没有返回可用的条目。");
+            RenderWikiEntry(entry);
+            EnsureWikiQueue(); // 展示完立刻补队列，下一次点击就不用等网络
+            await LoadWikiRelatedAsync(entry.UsedTitle ?? entry.BaseTitle, entry.BaseTitle, token).ConfigureAwait(true);
         }
         catch (Exception ex)
         {
             if (token.IsCancellationRequested) return;
-            LabWikiTitle.Text = "KSP Wiki 条目加载失败";
-            LabWikiText.Text = ex.Message + "\n点「换一条」重试。";
-            PanWikiHeroImage.Visibility = Visibility.Collapsed;
+            Common.Log(ex, $"KSP Wiki 条目切换失败（已有内容：{_wikiLastEntry is not null}）");
+            if (_wikiLastEntry is not null)
+            {
+                // 反爬拦截或网络抖动时不清空已有内容，只提示这一条没换成功
+                RenderWikiEntry(_wikiLastEntry);
+                LabWikiStatus.Text = "这条没换成（" + DescribeWikiFailure(ex) + "），已保留当前条目。";
+                LabWikiStatus.Visibility = Visibility.Visible;
+            }
+            else
+            {
+                LabWikiTitle.Text = "KSP Wiki 条目加载失败";
+                LabWikiText.Text = ex.Message + "\n点「换一条」重试。";
+                PanWikiHeroImage.Visibility = Visibility.Collapsed;
+            }
         }
         finally
         {
@@ -460,7 +441,114 @@ public partial class PageHome
         }
     }
 
-    /// <summary>把页面恢复成「加载中」的状态。</summary>
+    /// <summary>抓一条随机条目：标题、正文、配图地址。纯网络与解析，不碰 UI，可在后台线程跑。</summary>
+    private async Task<WikiEntry?> FetchWikiEntryAsync(CancellationToken token)
+    {
+        var randomUrl = WikiApi +
+                        "?action=query&list=random&rnlimit=1&rnnamespace=0&format=json&formatversion=2";
+        var title = string.Empty;
+        // 随机池里会抽到首页/导航页，这类条目没有可读内容，重抽几次跳过。
+        for (var attempt = 0; attempt < 4 && title.Length == 0; attempt++)
+        {
+            var randomJson = await Http.GetStringAsync(randomUrl, token).ConfigureAwait(false);
+            using var randomDoc = ParseWikiJson(randomJson);
+            var candidate = randomDoc.RootElement.GetProperty("query").GetProperty("random")[0]
+                .GetProperty("title").GetString() ?? string.Empty;
+            var normalized = StripLanguageSuffix(candidate).Trim();
+            if (normalized is "Main Page" or "Wiki Home" or "KSP Wiki") continue;
+            title = candidate;
+        }
+
+        if (title.Length == 0) return null;
+
+        var baseTitle = StripLanguageSuffix(title);
+
+        // 随机条目常是 /ru、/ko 这类语言子页：优先取中文/英文主条目正文，取不到再退回原条目。
+        // 分类页、Parts/xxx 这类条目首页常常没有正文，这时改抓整页再压成文本。
+        string? plain = null;
+        string? usedTitle = null;
+        string? usedHtml = null;
+        foreach (var candidate in new[] { baseTitle + "/zh-cn", baseTitle, title })
+        {
+            if (plain is { Length: > 0 }) break;
+            foreach (var section in new[] { 0, -1 })
+            {
+                var html = await TryFetchSectionTextAsync(candidate, token, section).ConfigureAwait(false);
+                if (html is null) continue;
+                var text = CleanWikiText(html, StripLanguageSuffix(candidate));
+                if (text.Length == 0) continue;
+                plain = text;
+                usedTitle = candidate;
+                usedHtml = html;
+                break;
+            }
+        }
+
+        return new WikiEntry(baseTitle, usedTitle, plain, ExtractWikiImage(usedHtml));
+    }
+
+    /// <summary>把一条已经抓好的条目画到主卡上（这一步不联网）。</summary>
+    private void RenderWikiEntry(WikiEntry entry)
+    {
+        _wikiLastEntry = entry;
+        LabWikiStatus.Visibility = Visibility.Collapsed;
+        LabWikiTitle.Text = entry.BaseTitle;
+        LabWikiText.Text = entry.Plain is { Length: > 0 }
+            ? entry.Plain
+            : "这个条目暂时取不到正文，点「在 Wiki 上打开」查看完整页面。";
+        _wikiUrl = BuildWikiPageUrl(entry.UsedTitle ?? entry.BaseTitle);
+        BtnWikiOpen.IsEnabled = true;
+        ShowWikiHeroImage(entry.BaseTitle, entry.ImageUrl);
+    }
+
+    /// <summary>后台预取：队列不足时补抓新条目，配图也一并下进图片缓存。</summary>
+    private void EnsureWikiQueue()
+    {
+        if (_wikiPrefetching || _wikiQueue.Count >= WikiQueueTarget) return;
+        _wikiPrefetching = true;
+        _ = Task.Run(async () =>
+        {
+            try
+            {
+                while (_wikiQueue.Count < WikiQueueTarget)
+                {
+                    var entry = await FetchWikiEntryAsync(CancellationToken.None).ConfigureAwait(false);
+                    if (entry is null) break;
+                    if (_wikiQueue.Any(item => item.BaseTitle == entry.BaseTitle)) break;
+                    // 先把配图落到 MyImage 的缓存文件里，切过去时直接命中本地文件
+                    if (entry.ImageUrl is not null) _ = MyImage.DownloadImageAsync(entry.ImageUrl);
+                    _wikiQueue.Enqueue(entry);
+                    Common.Log($"KSP Wiki 已预取「{entry.BaseTitle}」（队列 {_wikiQueue.Count}）");
+                }
+            }
+            catch (Exception ex)
+            {
+                Common.Log(ex, "KSP Wiki 随机条目预取失败", Common.LogLevel.Developer);
+            }
+            finally
+            {
+                _wikiPrefetching = false;
+            }
+        });
+    }
+
+    /// <summary>解析 Wiki 的 JSON；若拿到的是 Anubis 反爬挑战页，给可读错误而不是 JsonException。</summary>
+    /// <summary>把切换失败的异常翻成一句人话，不把线程/解析原文贴到界面上。</summary>
+    private static string DescribeWikiFailure(Exception ex)
+    {
+        if (ex is JsonException) return "Wiki 返回内容解析不了";
+        if (ex.Message.Contains("反爬", StringComparison.Ordinal)) return "Wiki 正在反爬验证";
+        if (ex.Message.Contains("取消", StringComparison.Ordinal)) return "请求被中断";
+        return "网络没打通";
+    }
+    private static JsonDocument ParseWikiJson(string json)
+    {
+        if (json.TrimStart().StartsWith('<'))
+            throw new InvalidOperationException("Wiki 返回了反爬验证页，请稍后重试");
+        return JsonDocument.Parse(json);
+    }
+
+    /// <summary>把页面恢复成「加载中」的状态。</summary>「加载中」的状态。</summary>
     private void ShowWikiLoading()
     {
         LabWikiTitle.Text = "正在拉取随机条目…";
@@ -470,6 +558,7 @@ public partial class PageHome
         PanWikiHeroImage.Visibility = Visibility.Collapsed;
         ImgWikiHero.Visibility = Visibility.Collapsed;
         ImgWikiHero.Source = "";
+        LabWikiStatus.Visibility = Visibility.Collapsed;
         PanWikiRelated.Children.Clear();
         CardWikiRelatedHost.Visibility = Visibility.Collapsed;
         BtnWikiOpen.IsEnabled = false;
@@ -506,7 +595,7 @@ public partial class PageHome
         try
         {
             var json = await Http.GetStringAsync(linksUrl, token).ConfigureAwait(true);
-            using var doc = JsonDocument.Parse(json);
+            using var doc = ParseWikiJson(json);
             var pages = doc.RootElement.GetProperty("query").GetProperty("pages");
             if (pages.GetArrayLength() == 0) return;
             if (!pages[0].TryGetProperty("links", out var linksElement)) return;
@@ -661,7 +750,7 @@ public partial class PageHome
                            Uri.EscapeDataString(title) +
                            (section >= 0 ? "&section=" + section : "");
             var parseJson = await Http.GetStringAsync(parseUrl, token).ConfigureAwait(true);
-            using var parseDoc = JsonDocument.Parse(parseJson);
+            using var parseDoc = ParseWikiJson(parseJson);
             if (!parseDoc.RootElement.TryGetProperty("parse", out var parse)) return null;
             return parse.GetProperty("text").GetString();
         }
