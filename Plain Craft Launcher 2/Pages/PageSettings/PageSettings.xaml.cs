@@ -1,4 +1,4 @@
-﻿using Microsoft.Win32;
+using Microsoft.Win32;
 using System;
 using System.IO;
 using System.Linq;
@@ -201,7 +201,7 @@ public partial class PageSettings
             foreach (var row in rows)
             {
                 LabCkanStatus.Text = $"正在安装 {row.name}…";
-                var plan = await svc.GetInstallPlanAsync(row.name);
+                var plan = await Task.Run(() => CkanPlanHelper.ResolvePlan(svc, row.name));
                 if (plan is not null) await svc.ExecutePlanAsync(plan, progress);
             }
             LabCkanStatus.Text = $"清单导入完成（{rows.Count} 项）。";

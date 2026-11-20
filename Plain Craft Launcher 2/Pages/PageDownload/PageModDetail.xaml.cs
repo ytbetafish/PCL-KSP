@@ -131,7 +131,16 @@ public partial class PageModDetail : IPageView
             try
             {
                 Common.Log($"[CKAN] 安装模组：{_project.TranslatedName} {file?.Version}");
-                var plan = Launcher.Ckan.GetInstallPlanAsync(_project.Id).GetAwaiter().GetResult();
+                if (!_project.IsCompatible)
+                {
+                    var answer = Application.Current?.Dispatcher.Invoke(() => System.Windows.MessageBox.Show(
+                        $"「{_project.TranslatedName}」声明最高兼容 KSP {_project.MaxKsp ?? "未知"}，与当前实例不兼容。\n仍然继续安装吗？（可能无法正常加载）",
+                        "PCL KSP",
+                        System.Windows.MessageBoxButton.YesNo,
+                        System.Windows.MessageBoxImage.Warning)) ?? System.Windows.MessageBoxResult.No;
+                    if (answer != System.Windows.MessageBoxResult.Yes) return;
+                }
+                var plan = CkanPlanHelper.ResolvePlan(Launcher.Ckan, _project.Id, !_project.IsCompatible);
                 if (plan is null)
                 {
                     Common.Log($"[CKAN] 未找到模组 {_project.Id} 的安装计划", Common.LogLevel.Feedback,

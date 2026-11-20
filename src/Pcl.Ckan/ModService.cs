@@ -541,7 +541,7 @@ public sealed class ModService : IModService, IDisposable
     }
 
     /// <inheritdoc />
-    public Task<ModInstallPlan?> GetInstallPlanAsync(string identifier, bool allowIncompatible = false, CancellationToken cancellationToken = default)
+    public Task<ModInstallPlan?> GetInstallPlanAsync(string identifier, bool allowIncompatible = false, IReadOnlyList<string>? providerPicks = null, CancellationToken cancellationToken = default)
     {
         var reg = Registry;
         if (_instance == null || reg == null)
@@ -555,6 +555,21 @@ public sealed class ModService : IModService, IDisposable
             return Task.FromResult<ModInstallPlan?>(null);
         }
 
+        // 用户已为多提供者依赖做出选择：把所选模块一并作为明确目标代入，
+        // 并关闭 TooManyModsProvide 抛错，让解析器按已选模块的 stanza 归一化到唯一候选。
+        var picks = new List<CkanModule>();
+        if (providerPicks is { Count: > 0 })
+        {
+            foreach (var pickIdentifier in providerPicks)
+            {
+                var pick = LatestAvailable(pickIdentifier);
+                if (pick != null)
+                {
+                    picks.Add(pick);
+                }
+            }
+        }
+
         try
         {
             var opts = RelationshipResolverOptions.DependsOnlyOpts(_instance.StabilityToleranceConfig);
@@ -562,8 +577,12 @@ public sealed class ModService : IModService, IDisposable
             {
                 opts.allow_incompatible = true;
             }
+            if (picks.Count > 0)
+            {
+                opts.without_toomanyprovides_kraken = true;
+            }
             var resolver = new RelationshipResolver(
-                modulesToInstall: new[] { target },
+                modulesToInstall: new[] { target }.Concat(picks).ToArray(),
                 modulesToRemove: null,
                 options: opts,
                 registry: reg,
@@ -596,11 +615,26 @@ public sealed class ModService : IModService, IDisposable
                 Array.Empty<string>(),
                 AllowIncompatible: allowIncompatible));
         }
+        catch (TooManyModsProvideKraken tooMany)
+        {
+            var options = tooMany.modules
+                .Select(m => new ModProviderOption(m.identifier, m.name ?? m.identifier, m.version?.ToString()))
+                .ToList();
+            return Task.FromResult<ModInstallPlan?>(new ModInstallPlan(
+                target.identifier,
+                Array.Empty<string>(),
+                Array.Empty<string>(),
+                Array.Empty<string>(),
+                AllowIncompatible: allowIncompatible,
+                ProviderChoices: new[]
+                {
+                    new ModProviderChoice(tooMany.requested, tooMany.requester?.name, tooMany.choice_help_text, options)
+                }));
+        }
         catch (Exception ex)
         {
             var reason = ex switch
             {
-                TooManyModsProvideKraken => "该模组的某个依赖存在多个提供者，需在 CKAN 客户端中选择提供者",
                 InconsistentKraken => $"与已安装模组冲突：{ex.Message}",
                 DependenciesNotSatisfiedKraken => $"依赖在当前 KSP 版本无可安装版本：{ex.Message}",
                 _ => $"无法生成安装计划：{ex.Message}"

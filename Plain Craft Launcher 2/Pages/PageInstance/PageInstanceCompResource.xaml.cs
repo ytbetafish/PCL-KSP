@@ -734,7 +734,7 @@ public partial class PageInstanceCompResource : IPageView
                 {
                     // CKAN 的依赖解析与下载安装都是同步阻塞调用，必须放到后台线程，否则界面会卡死
                     var mod = current;
-                    var plan = await Task.Run(() => service.GetInstallPlanAsync(mod.Identifier)).ConfigureAwait(true);
+                    var plan = await Task.Run(() => CkanPlanHelper.ResolvePlan(service, mod.Identifier)).ConfigureAwait(true);
                     if (plan is null || !string.IsNullOrEmpty(plan.FailureReason))
                     {
                         failed.Add(mod.Name);

@@ -253,7 +253,7 @@ public partial class PageMods
             {
                 i++;
                 LabProgress.Text = $"正在更新 {m.Name}（{i}/{updates.Count}）…";
-                var plan = await GetService().GetInstallPlanAsync(m.Identifier);
+                var plan = await Task.Run(() => CkanPlanHelper.ResolvePlan(GetService(), m.Identifier));
                 if (plan is not null) await GetService().ExecutePlanAsync(plan, progress);
             }
             PanProgress.Visibility = Visibility.Collapsed;
@@ -392,7 +392,7 @@ public partial class PageMods
             BarProgress.IsIndeterminate = true;
             LabProgress.Text = "正在解析依赖…";
 
-            var plan = await GetService().GetInstallPlanAsync(_selected.Identifier, allowIncompatible);
+            var plan = await Task.Run(() => CkanPlanHelper.ResolvePlan(GetService(), _selected.Identifier, allowIncompatible));
             if (plan is null)
             {
                 PanProgress.Visibility = Visibility.Collapsed;

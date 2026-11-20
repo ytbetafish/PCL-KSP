@@ -53,7 +53,8 @@ public interface IModService
     /// Use CKAN's dependency resolver to compute the install/upgrade/remove plan for a mod.
     /// Returns null if the instance has no registry or the identifier is unknown.
     /// </summary>
-    Task<ModInstallPlan?> GetInstallPlanAsync(string identifier, bool allowIncompatible = false, CancellationToken cancellationToken = default);
+    /// <param name="providerPicks">用户为多提供者依赖选择的候选模组标识；解析结果 <see cref="ModInstallPlan.ProviderChoices"/> 非空时带上选择重试。</param>
+    Task<ModInstallPlan?> GetInstallPlanAsync(string identifier, bool allowIncompatible = false, IReadOnlyList<string>? providerPicks = null, CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Execute a previously computed plan (downloads + installs/upgrades/removes).
