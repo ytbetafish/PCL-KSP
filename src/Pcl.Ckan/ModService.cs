@@ -592,9 +592,11 @@ public sealed class ModService : IModService, IDisposable
             var installed = reg.Installed();
             var toInstall = new List<string>();
             var toUpgrade = new List<string>();
+            var resolvedIds = new List<string>();
 
             foreach (var mod in resolver.ModList())
             {
+                resolvedIds.Add(mod.identifier);
                 if (installed.TryGetValue(mod.identifier, out var current))
                 {
                     if (mod.version.CompareTo(current) > 0)
@@ -608,11 +610,31 @@ public sealed class ModService : IModService, IDisposable
                 }
             }
 
+            // CKAN 的 replaced_by 语义：已装模组声明被本次计划中的某个模组替换时，安装前先卸掉旧模组。
+            var toRemove = new List<string>();
+            foreach (var installedId in installed.Keys)
+            {
+                if (resolvedIds.Contains(installedId, StringComparer.OrdinalIgnoreCase))
+                {
+                    continue;
+                }
+                try
+                {
+                    var replacement = reg.GetReplacement(installedId, _instance.StabilityToleranceConfig, _instance.VersionCriteria());
+                    if (replacement?.ReplaceWith != null &&
+                        resolvedIds.Contains(replacement.ReplaceWith.identifier, StringComparer.OrdinalIgnoreCase))
+                    {
+                        toRemove.Add(installedId);
+                    }
+                }
+                catch { /* 缺元数据的已装项跳过 */ }
+            }
+
             return Task.FromResult<ModInstallPlan?>(new ModInstallPlan(
                 target.identifier,
                 toInstall,
                 toUpgrade,
-                Array.Empty<string>(),
+                toRemove,
                 AllowIncompatible: allowIncompatible));
         }
         catch (TooManyModsProvideKraken tooMany)
@@ -708,8 +730,10 @@ public sealed class ModService : IModService, IDisposable
 
             if (plan.ToRemove.Count > 0)
             {
+                // replaced_by 替换场景：必须先卸载旧模组，再装新模组，避免同一批文件被覆盖后残留。
                 HashSet<string>? possibleConfigOnlyDirs = null;
                 installer.UninstallList(plan.ToRemove, ref possibleConfigOnlyDirs, _registryManager, ConfirmPrompt: false);
+                progress?.Report($"已卸载被替换的 {plan.ToRemove.Count} 个模组。");
             }
 
             _registryManager.Save();
@@ -954,6 +978,18 @@ public sealed class ModService : IModService, IDisposable
             catch { /* 元数据缺版本范围时不展示 */ }
         }
 
+        // CKAN 的 Replaceable 状态：已装模组声明 replaced_by 且替换者与当前 KSP 兼容时，提示可替换。
+        string? replacedById = null;
+        if (isInstalled && _instance != null && Registry != null)
+        {
+            try
+            {
+                replacedById = Registry.GetReplacement(identifier, _instance.StabilityToleranceConfig, _instance.VersionCriteria())
+                    ?.ReplaceWith?.identifier;
+            }
+            catch { /* 缺元数据时不展示 */ }
+        }
+
         return new ModSearchResult(
             identifier,
             mod?.name ?? identifier,
@@ -967,7 +1003,8 @@ public sealed class ModService : IModService, IDisposable
             compatible,
             iconUrl,
             ReleaseDate: mod?.release_date,
-            MaxKsp: maxKsp);
+            MaxKsp: maxKsp,
+            ReplacedById: replacedById);
     }
 
     /// <inheritdoc />

@@ -38,6 +38,8 @@ public static class CkanCompAdapter
             json["LogoUrl"] = mod.IconUrl;
         if (!string.IsNullOrEmpty(mod.MaxKsp))
             json["MaxKsp"] = mod.MaxKsp;
+        if (!string.IsNullOrEmpty(mod.ReplacedById))
+            json["ReplacedById"] = mod.ReplacedById;
 
         return new Comp.CompProject(json);
     }

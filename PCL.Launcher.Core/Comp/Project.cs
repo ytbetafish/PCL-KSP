@@ -85,6 +85,9 @@ public static partial class Comp
         /// <summary>CKAN 专用：元数据声明的最高兼容 KSP 版本，未声明时为 null。</summary>
         public readonly string? MaxKsp;
 
+        /// <summary>CKAN 专用：已装模组被哪个模组替换（replaced_by），无替换关系时为 null。</summary>
+        public readonly string? ReplacedById;
+
         private bool _loadedDatabase;
 
         /// <summary>
@@ -141,6 +144,13 @@ public static partial class Comp
                 && maxKspValue.TryGetValue(out string? maxKspTyped))
             {
                 MaxKsp = maxKspTyped;
+            }
+
+            if (data.TryGetPropertyValue("ReplacedById", out var replacedByNode)
+                && replacedByNode is JsonValue replacedByValue
+                && replacedByValue.TryGetValue(out string? replacedByTyped))
+            {
+                ReplacedById = replacedByTyped;
             }
 
             compProjectCache[Id] = this;

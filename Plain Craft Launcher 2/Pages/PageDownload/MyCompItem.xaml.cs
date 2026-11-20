@@ -479,6 +479,11 @@ public partial class MyCompItem
         {
             ToolTip = $"该模组声明最高兼容 KSP {project.MaxKsp ?? "未知"}，与当前实例不兼容；安装时会再次确认。";
         }
+        if (!string.IsNullOrEmpty(project.ReplacedById))
+        {
+            Source = "CKAN（可替换）";
+            ToolTip = $"已装版本已被「{project.ReplacedById}」替换；安装后将自动卸载旧模组。";
+        }
 
         if (project.LastUpdate is not null)
             UpdateTime = Lang.TimeSpan(project.LastUpdate.Value - DateTime.Now, 1);

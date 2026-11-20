@@ -32,7 +32,9 @@ public sealed record ModSearchResult(
     /// <summary>CKAN 目录登记的模组发布日期；用于按最新/更新排序。</summary>
     DateTime? ReleaseDate = null,
     /// <summary>元数据声明的最高兼容 KSP 版本；null 表示未声明。</summary>
-    string? MaxKsp = null);
+    string? MaxKsp = null,
+    /// <summary>已装模组声明被哪个模组替换（CKAN 的 replaced_by）；null 表示无替换关系。</summary>
+    string? ReplacedById = null);
 
 /// <summary>多提供者依赖中的一个候选模组（CKAN 的「provides」语义）。</summary>
 public sealed record ModProviderOption(string Identifier, string Name, string? Version);

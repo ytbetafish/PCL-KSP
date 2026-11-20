@@ -147,6 +147,7 @@ public partial class PageMods
         info.Add(mod.HasUpdate ? "有更新" : mod.IsInstalled ? "已安装" : "未安装");
         if (!mod.IsCompatible) info.Add("不兼容");
         if (!string.IsNullOrEmpty(mod.MaxKsp)) info.Add("最高 KSP " + mod.MaxKsp);
+        if (!string.IsNullOrEmpty(mod.ReplacedById)) info.Add("可替换为 " + mod.ReplacedById);
 
         var item = new MyListItem
         {
@@ -294,6 +295,10 @@ public partial class PageMods
         {
             LabModHome.Text = (LabModHome.Text + "　｜　不兼容当前 KSP（最高 " + (_selected.MaxKsp ?? "未知") + "）").Trim();
         }
+        if (!string.IsNullOrEmpty(_selected.ReplacedById))
+        {
+            LabModHome.Text = (LabModHome.Text + "　｜　已被 " + _selected.ReplacedById + " 替换").Trim();
+        }
         BtnInstall.Visibility = string.IsNullOrWhiteSpace(KspSettings.Current.KspRootPath) ? Visibility.Collapsed : Visibility.Visible;
         BtnUninstall.Visibility = _selected.IsInstalled ? Visibility.Visible : Visibility.Collapsed;
         BtnTranslate.Visibility = string.IsNullOrWhiteSpace(_originalDescription) ? Visibility.Collapsed : Visibility.Visible;
@@ -400,7 +405,8 @@ public partial class PageMods
                 return;
             }
 
-            LabProgress.Text = $"计划：安装 {plan.ToInstall.Count} 个，升级 {plan.ToUpgrade.Count} 个。";
+            LabProgress.Text = $"计划：安装 {plan.ToInstall.Count} 个，升级 {plan.ToUpgrade.Count} 个" +
+                               (plan.ToRemove.Count > 0 ? $"，移除被替换的 {plan.ToRemove.Count} 个。" : "。");
             var progress = new Progress<string>(msg =>
             {
                 Dispatcher.BeginInvoke(new Action(() => LabProgress.Text = msg));
