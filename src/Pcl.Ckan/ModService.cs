@@ -689,8 +689,31 @@ public sealed class ModService : IModService, IDisposable
             }
 
             using var cache = new NetModuleCache(cacheDir);
-            var ok = ModuleImporter.ImportFiles(files, _user, _ => { }, reg, _instance, cache, allowDelete: false);
-            return new ModCacheImportResult(ok ? files.Count : 0, failed);
+            // 逐个文件导入：一个损坏或伪装成 .zip 的文件只让自己记入失败清单，
+            // 不拖累同批其余文件（CKAN 导入器遇到坏压缩包会直接抛 ZipException）。
+            var imported = 0;
+            foreach (var file in files)
+            {
+                try
+                {
+                    var ok = ModuleImporter.ImportFiles(
+                        new HashSet<FileInfo> { file }, _user, _ => { }, reg, _instance, cache, allowDelete: false);
+                    if (ok)
+                    {
+                        imported++;
+                    }
+                    else
+                    {
+                        failed.Add(file.FullName);
+                    }
+                }
+                catch (Exception ex)
+                {
+                    Trace($"导入失败 {file.Name}：{ex.GetType().Name}: {ex.Message}");
+                    failed.Add(file.FullName);
+                }
+            }
+            return new ModCacheImportResult(imported, failed);
         }, cancellationToken);
     }
 
