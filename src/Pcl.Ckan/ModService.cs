@@ -79,8 +79,10 @@ public sealed class ModService : IModService, IDisposable
     }
 
     /// <summary>
-    /// Apply process-wide network settings: HTTP proxy, default connection limit, idle timeout.
-    /// (NetAsyncDownloader does not expose these in its ctor.)
+    /// Apply process-wide network settings: HTTP proxy.
+    /// CKAN 的下载器是 WebClient 实现，而 .NET 10 里 ServicePointManager 的连接数/空闲超时
+    /// 对 WebClient(HttpWebRequest) 已不再生效（调用它只会换来 SYSLIB0014 警告），因此这里只设置代理，
+    /// 不再假装设置并发与超时。
     /// </summary>
     public static void ApplyNetworkSettings(string? proxy, int concurrency, int timeoutSeconds)
     {
@@ -88,8 +90,8 @@ public sealed class ModService : IModService, IDisposable
         {
             try { WebRequest.DefaultWebProxy = new WebProxy(proxy, true); } catch { }
         }
-        try { ServicePointManager.DefaultConnectionLimit = Math.Max(2, concurrency); } catch { }
-        try { ServicePointManager.MaxServicePointIdleTime = Math.Max(5, timeoutSeconds) * 1000; } catch { }
+        _ = concurrency;
+        _ = timeoutSeconds;
     }
 
     /// <inheritdoc />
@@ -579,7 +581,8 @@ public sealed class ModService : IModService, IDisposable
         }
 
         var criteria = _instance.VersionCriteria();
-        foreach (var m in modules.OrderByDescending(m => m.version))
+        // 同版本号（recompile / 多仓库）时按发布日期兜底排序，避免顺序抖动。
+        foreach (var m in modules.OrderByDescending(m => m.version).ThenByDescending(m => m.release_date ?? System.DateTime.MinValue))
         {
             bool compatible;
             try { compatible = m.IsCompatible(criteria); } catch { compatible = true; }
@@ -1231,7 +1234,6 @@ public sealed class ModService : IModService, IDisposable
             // 若顺序反过来，新旧模组共用同一批文件时，卸载旧模组会顺手删掉刚装好的新文件。
             if (plan.ToRemove.Count > 0)
             {
-                // replaced_by 替换场景：必须先卸载旧模组，再装新模组，避免同一批文件被覆盖后残留。
                 HashSet<string>? possibleConfigOnlyDirs = null;
                 installer.UninstallList(plan.ToRemove, ref possibleConfigOnlyDirs, _registryManager, ConfirmPrompt: false);
                 progress?.Report($"已卸载被替换的 {plan.ToRemove.Count} 个模组。");
@@ -1303,8 +1305,17 @@ public sealed class ModService : IModService, IDisposable
                 if (string.Equals(u.Scheme, "https", System.StringComparison.OrdinalIgnoreCase) &&
                     string.Equals(u.Host, "github.com", System.StringComparison.OrdinalIgnoreCase))
                 {
-                    copy.Add(new Uri(prefix + u.AbsoluteUri));
-                    changed = true;
+                    // 前缀自带 query（如 ?url=）时拼出来的地址是坏的；这种配置直接跳过改写，走原始地址。
+                    if (prefix.IndexOf('?') < 0 && prefix.IndexOf('#') < 0 &&
+                        Uri.TryCreate(prefix + u.AbsoluteUri, System.UriKind.Absolute, out var accelUri))
+                    {
+                        copy.Add(accelUri);
+                        changed = true;
+                    }
+                    else
+                    {
+                        copy.Add(u);
+                    }
                 }
                 else
                 {
@@ -1331,7 +1342,6 @@ public sealed class ModService : IModService, IDisposable
         _accelOriginals.Clear();
     }
 
-    /// <inheritdoc />
     /// <inheritdoc />
     public Task UninstallManyAsync(IReadOnlyList<string> identifiers, IProgress<string>? progress = null, CancellationToken cancellationToken = default)
     {
