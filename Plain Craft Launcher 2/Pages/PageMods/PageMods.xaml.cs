@@ -311,6 +311,7 @@ public partial class PageMods
             BtnInstall.Visibility = Visibility.Collapsed;
             BtnUninstall.Visibility = Visibility.Collapsed;
             BtnContents.Visibility = Visibility.Collapsed;
+            BtnResolveConflicts.Visibility = Visibility.Collapsed;
             BtnTranslate.Visibility = Visibility.Collapsed;
             return;
         }
@@ -333,6 +334,7 @@ public partial class PageMods
         BtnInstall.Visibility = string.IsNullOrWhiteSpace(KspSettings.Current.KspRootPath) ? Visibility.Collapsed : Visibility.Visible;
         BtnUninstall.Visibility = _selected.IsInstalled ? Visibility.Visible : Visibility.Collapsed;
         BtnContents.Visibility = Visibility.Visible;
+        BtnResolveConflicts.Visibility = Visibility.Visible;
         BtnTranslate.Visibility = string.IsNullOrWhiteSpace(_originalDescription) ? Visibility.Collapsed : Visibility.Visible;
 
         // 拉一下依赖列表
@@ -524,6 +526,108 @@ public partial class PageMods
     }
 
     /// <summary>scan：扫描 GameData 中未托管的 DLL（CKAN 的 AD），并在列表中标注。</summary>
+    /// <summary>扫描全部已装模组之间的 conflicts 关系，勾选卸载以解除冲突。</summary>
+    private async void BtnConflictScan_Click(object sender, System.Windows.Input.MouseButtonEventArgs e)
+    {
+        try
+        {
+            PanLoad.Visibility = Visibility.Visible;
+            var pairs = await GetService().GetConflictPairsAsync();
+            PanLoad.Visibility = Visibility.Collapsed;
+            if (pairs.Count == 0)
+            {
+                MessageBox.Show("未发现已装模组之间的冲突关系。",
+                    "冲突诊断", MessageBoxButton.OK, MessageBoxImage.Information);
+                return;
+            }
+            var picked = await PickConflictUninstallsAsync(pairs);
+            if (picked.Count == 0)
+            {
+                return;
+            }
+            await UninstallConflictsAsync(picked);
+        }
+        catch (InstanceReadOnlyException)
+        {
+            PanLoad.Visibility = Visibility.Collapsed;
+            MessageBox.Show("当前实例为只读（CKAN 注册表不可写），无法卸载冲突模组。请关闭占用该实例的 CKAN 客户端后重试。",
+                "冲突诊断", MessageBoxButton.OK, MessageBoxImage.Warning);
+        }
+        catch (Exception ex)
+        {
+            PanLoad.Visibility = Visibility.Collapsed;
+            MessageBox.Show("冲突诊断失败：" + ex.Message, "冲突诊断", MessageBoxButton.OK, MessageBoxImage.Error);
+        }
+    }
+
+    /// <summary>处理当前选中模组的冲突：只列出与它冲突的已装项。</summary>
+    private async void BtnResolveConflicts_Click(object sender, System.Windows.Input.MouseButtonEventArgs e)
+    {
+        if (_selected is null)
+        {
+            return;
+        }
+        try
+        {
+            PanLoad.Visibility = Visibility.Visible;
+            var pairs = await GetService().GetConflictPairsAsync(_selected.Identifier);
+            PanLoad.Visibility = Visibility.Collapsed;
+            if (pairs.Count == 0)
+            {
+                MessageBox.Show("未发现与该模组冲突的已装模组。",
+                    "处理冲突", MessageBoxButton.OK, MessageBoxImage.Information);
+                return;
+            }
+            var picked = await PickConflictUninstallsAsync(pairs);
+            if (picked.Count == 0)
+            {
+                return;
+            }
+            await UninstallConflictsAsync(picked);
+        }
+        catch (InstanceReadOnlyException)
+        {
+            PanLoad.Visibility = Visibility.Collapsed;
+            MessageBox.Show("当前实例为只读（CKAN 注册表不可写），无法卸载冲突模组。请关闭占用该实例的 CKAN 客户端后重试。",
+                "处理冲突", MessageBoxButton.OK, MessageBoxImage.Warning);
+        }
+        catch (Exception ex)
+        {
+            PanLoad.Visibility = Visibility.Collapsed;
+            MessageBox.Show("处理冲突失败：" + ex.Message, "处理冲突", MessageBoxButton.OK, MessageBoxImage.Error);
+        }
+    }
+
+    private async Task<IReadOnlyList<string>> PickConflictUninstallsAsync(IReadOnlyList<ModConflictPair> pairs)
+    {
+        var installed = (await GetService().ListInstalledAsync())
+            .Where(r => r.IsInstalled)
+            .Select(r => r.Identifier)
+            .ToHashSet(StringComparer.OrdinalIgnoreCase);
+        var picked = CkanConflictDialog.Choose(pairs, installed);
+        if (picked.Count == 0 && pairs.Count > 0)
+        {
+            MessageBox.Show("冲突对的双方都没有可卸载的已装模组，或已取消选择。",
+                "冲突诊断", MessageBoxButton.OK, MessageBoxImage.Information);
+        }
+        return picked;
+    }
+
+    private async Task UninstallConflictsAsync(IReadOnlyList<string> identifiers)
+    {
+        PanLoad.Visibility = Visibility.Visible;
+        await GetService().UninstallManyAsync(identifiers);
+        PanLoad.Visibility = Visibility.Collapsed;
+        MessageBox.Show($"已卸载 {identifiers.Count} 个冲突模组。",
+            "冲突诊断", MessageBoxButton.OK, MessageBoxImage.Information);
+        _lastResults = await GetService().ListInstalledAsync();
+        ApplyFilter();
+        if (_selected is { } current)
+        {
+            SelectMod(current);
+        }
+    }
+
     private async void BtnCleanOrphans_Click(object sender, System.Windows.Input.MouseButtonEventArgs e)
     {
         try

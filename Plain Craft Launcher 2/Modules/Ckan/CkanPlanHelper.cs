@@ -857,3 +857,119 @@ internal static class CkanOrphanDialog
         return picked;
     }
 }
+
+/// <summary>
+/// 冲突处理窗口：列出冲突对中「已装、可卸载」的一端，勾选后一次卸载以解除冲突。
+/// </summary>
+internal static class CkanConflictDialog
+{
+    public static IReadOnlyList<string> Choose(IReadOnlyList<ModConflictPair> pairs, HashSet<string> installed)
+    {
+        var candidates = new List<(string Id, string Name, string Because)>();
+        foreach (var pair in pairs)
+        {
+            var aInstalled = installed.Contains(pair.Identifier);
+            var bInstalled = installed.Contains(pair.ConflictsWithIdentifier);
+            if (aInstalled)
+            {
+                candidates.Add((pair.Identifier, pair.Name,
+                    "与 " + pair.ConflictsWithName + "（" + pair.ConflictsWithIdentifier + "）冲突"));
+            }
+            else if (bInstalled)
+            {
+                candidates.Add((pair.ConflictsWithIdentifier, pair.ConflictsWithName,
+                    "与 " + pair.Name + "（" + pair.Identifier + "）冲突"));
+            }
+        }
+
+        var rowsData = new List<(string Id, string Name, string Because)>();
+        foreach (var candidate in candidates)
+        {
+            if (!rowsData.Any(r => string.Equals(r.Id, candidate.Id, StringComparison.OrdinalIgnoreCase)))
+            {
+                rowsData.Add(candidate);
+            }
+        }
+        if (rowsData.Count == 0)
+        {
+            return Array.Empty<string>();
+        }
+
+        var picked = new List<string>();
+        var window = new Window
+        {
+            Title = "冲突诊断",
+            Width = 620,
+            SizeToContent = SizeToContent.Height,
+            WindowStartupLocation = WindowStartupLocation.CenterScreen,
+            ResizeMode = ResizeMode.NoResize,
+            ShowInTaskbar = false
+        };
+        var main = Application.Current?.MainWindow;
+        if (main is { IsVisible: true } && !ReferenceEquals(main, window))
+        {
+            window.Owner = main;
+            window.WindowStartupLocation = WindowStartupLocation.CenterOwner;
+        }
+
+        var root = new DockPanel { Margin = new Thickness(16, 14, 16, 14) };
+
+        var header = new TextBlock
+        {
+            Text = $"共发现 {pairs.Count} 对冲突。勾选要卸载的模组以解除冲突（同一次只卸一侧即可）：",
+            TextWrapping = TextWrapping.Wrap,
+            Margin = new Thickness(0, 0, 0, 10)
+        };
+        DockPanel.SetDock(header, Dock.Top);
+        root.Children.Add(header);
+
+        var bottom = new StackPanel
+        {
+            Orientation = Orientation.Horizontal,
+            HorizontalAlignment = HorizontalAlignment.Right,
+            Margin = new Thickness(0, 12, 0, 0)
+        };
+        DockPanel.SetDock(bottom, Dock.Bottom);
+        root.Children.Add(bottom);
+
+        var listPanel = new StackPanel();
+        root.Children.Add(new ScrollViewer
+        {
+            VerticalScrollBarVisibility = ScrollBarVisibility.Auto,
+            MaxHeight = 380,
+            Content = listPanel
+        });
+
+        var rows = new List<(string Id, MyListItem Ui)>();
+        foreach (var item in rowsData)
+        {
+            var ui = new MyListItem
+            {
+                Title = item.Name,
+                Info = item.Id + " · " + item.Because,
+                Height = 46d,
+                Type = MyListItem.CheckType.CheckBox,
+                tag = item.Id
+            };
+            ui.SvgIcon = "lucide/triangle-alert";
+            rows.Add((item.Id, ui));
+            listPanel.Children.Add(ui);
+        }
+
+        var btnOk = new MyButton { Text = "卸载选中", Width = 120, Margin = new Thickness(0, 0, 10, 0) };
+        btnOk.Click += (_, _) =>
+        {
+            picked = rows.Where(r => r.Ui.Checked).Select(r => r.Id).ToList();
+            window.DialogResult = true;
+        };
+        bottom.Children.Add(btnOk);
+
+        var btnCancel = new MyButton { Text = "取消", Width = 120 };
+        btnCancel.Click += (_, _) => window.DialogResult = false;
+        bottom.Children.Add(btnCancel);
+
+        window.Content = root;
+        window.ShowDialog();
+        return picked;
+    }
+}

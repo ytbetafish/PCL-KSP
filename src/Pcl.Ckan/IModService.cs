@@ -66,6 +66,11 @@ public interface IModService
     /// <summary>列出不再被任何已装模组需要的自动安装依赖（CKAN 的 removable auto-installed）。</summary>
     Task<IReadOnlyList<ModOrphanItem>> GetOrphanDependenciesAsync(CancellationToken cancellationToken = default);
 
+    /// <summary>
+    /// 列出冲突对。identifier 为空时扫描全部已装模组之间的冲突；非空时只找与指定模组冲突的已装项。
+    /// </summary>
+    Task<IReadOnlyList<ModConflictPair>> GetConflictPairsAsync(string? identifier = null, CancellationToken cancellationToken = default);
+
     /// <summary>列出已扫描登记的未托管 DLL（AD，autodetected）。</summary>
     Task<IReadOnlyList<ModUnmanagedItem>> GetUnmanagedAsync(CancellationToken cancellationToken = default);
 

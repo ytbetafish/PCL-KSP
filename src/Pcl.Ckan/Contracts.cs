@@ -77,6 +77,9 @@ public sealed record ModUnmanagedItem(string Identifier, string? Path, bool IsDl
 /// <summary>可清理的孤儿依赖：由 CKAN 自动安装、但现在已没有任何已装模组需要它。</summary>
 public sealed record ModOrphanItem(string Identifier, string Name, string? Version, bool IsAutoInstalled);
 
+/// <summary>一对不能同时安装的模组（CKAN 的 conflicts 关系）。</summary>
+public sealed record ModConflictPair(string Identifier, string Name, string ConflictsWithIdentifier, string ConflictsWithName);
+
 /// <summary>Audit recommendations 的一条：某个已装模组推荐/建议、但尚未安装的模组。</summary>
 public sealed record ModAuditItem(
     string Identifier,

@@ -726,6 +726,101 @@ public sealed class ModService : IModService, IDisposable
     }
 
     /// <inheritdoc />
+    public Task<IReadOnlyList<ModConflictPair>> GetConflictPairsAsync(string? identifier = null, CancellationToken cancellationToken = default)
+    {
+        var reg = Registry;
+        var list = new List<ModConflictPair>();
+        if (_instance == null || reg == null)
+        {
+            return Task.FromResult<IReadOnlyList<ModConflictPair>>(list);
+        }
+
+        return Task.Run(() =>
+        {
+            var installedEntries = reg.InstalledModules.ToList();
+            var installedMods = installedEntries
+                .Select(e => e.Module)
+                .Where(m => m != null)
+                .Select(m => m!)
+                .ToList();
+            var dlls = reg.InstalledDlls?.ToList();
+            var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
+            void Add(CkanModule from, CkanModule with)
+            {
+                if (string.Equals(from.identifier, with.identifier, StringComparison.OrdinalIgnoreCase))
+                {
+                    return;
+                }
+                var key = from.identifier + ">" + with.identifier;
+                if (seen.Add(key))
+                {
+                    list.Add(new ModConflictPair(from.identifier, from.name, with.identifier, with.name));
+                }
+            }
+
+            // 正向：某模组的 conflicts 命中已装集合。
+            void ScanForward(CkanModule? mod)
+            {
+                if (mod?.conflicts == null)
+                {
+                    return;
+                }
+                foreach (var rel in mod.conflicts)
+                {
+                    if (rel.MatchesAny(installedMods, dlls, null, out var matched) && matched != null)
+                    {
+                        Add(mod, matched);
+                    }
+                }
+            }
+
+            if (string.IsNullOrWhiteSpace(identifier))
+            {
+                foreach (var mod in installedMods)
+                {
+                    ScanForward(mod);
+                }
+                return (IReadOnlyList<ModConflictPair>)list;
+            }
+
+            var targetId = identifier!.Trim();
+            var target = LatestAvailable(targetId)
+                         ?? installedEntries.FirstOrDefault(e => string.Equals(e.identifier, targetId, StringComparison.OrdinalIgnoreCase))?.Module;
+            if (target == null)
+            {
+                return (IReadOnlyList<ModConflictPair>)list;
+            }
+
+            ScanForward(target);
+
+            // 反向：已装模组的 conflicts 命中目标模组（KSP 里冲突未必两边都写全）。
+            var targetSet = new[] { target };
+            foreach (var mod in installedMods)
+            {
+                if (mod.conflicts == null)
+                {
+                    continue;
+                }
+                foreach (var rel in mod.conflicts)
+                {
+                    if (rel.MatchesAny(targetSet, null, null, out var matched) && matched != null)
+                    {
+                        Add(mod, target);
+                    }
+                }
+            }
+
+            // 目标已装时，目标自身与已装集合的冲突也算一对。
+            if (installedEntries.Any(e => string.Equals(e.identifier, targetId, StringComparison.OrdinalIgnoreCase)))
+            {
+                ScanForward(target);
+            }
+            return (IReadOnlyList<ModConflictPair>)list;
+        }, cancellationToken);
+    }
+
+    /// <inheritdoc />
     public Task<bool> ScanUnmanagedAsync(CancellationToken cancellationToken = default)
     {
         if (_instance == null)

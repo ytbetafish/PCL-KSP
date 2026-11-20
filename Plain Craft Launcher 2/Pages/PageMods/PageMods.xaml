@@ -50,6 +50,10 @@
                         <local:MyButton x:Name="BtnCleanOrphans" Text="清理孤儿" Width="90" Margin="10,0,0,0"
                                         Click="BtnCleanOrphans_Click" />
                     </StackPanel>
+                    <StackPanel Orientation="Horizontal" Margin="0,8,0,0">
+                        <local:MyButton x:Name="BtnConflictScan" Text="冲突诊断" Width="90"
+                                        Click="BtnConflictScan_Click" />
+                    </StackPanel>
                 </StackPanel>
             </local:MyCard>
 
@@ -88,6 +92,8 @@
                                         Click="BtnUninstall_Click" Visibility="Collapsed" />
                         <local:MyButton x:Name="BtnContents" Text="内容" Width="80" Height="30" Margin="10,0,0,0"
                                         Click="BtnContents_Click" Visibility="Collapsed" />
+                        <local:MyButton x:Name="BtnResolveConflicts" Text="处理冲突" Width="80" Height="30" Margin="10,0,0,0"
+                                        Click="BtnResolveConflicts_Click" Visibility="Collapsed" />
                     </StackPanel>
                 </StackPanel>
             </local:MyCard>
