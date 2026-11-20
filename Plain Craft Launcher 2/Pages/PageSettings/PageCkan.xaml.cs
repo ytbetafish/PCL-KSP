@@ -152,12 +152,18 @@ public partial class PageCkan
             var ksp = new KspInstanceService();
             svc.AttachInstance(ksp.Load(KspSettings.Current.KspRootPath));
             var installed = await svc.ListInstalledAsync();
-            var rows = installed.Select(m => new { name = m.Identifier, version = m.Version ?? "" }).ToList();
-            var dlg = new SaveFileDialog { Filter = "CKAN 清单|*.ckan|JSON|*.json", FileName = "ksp-modlist.ckan" };
+            var dlg = new SaveFileDialog { Filter = "CKAN metapackage|*.ckan|JSON|*.json", FileName = CkanModpack.DefaultIdentifier + ".ckan" };
             if (dlg.ShowDialog() == true)
             {
-                System.IO.File.WriteAllText(dlg.FileName, System.Text.Json.JsonSerializer.Serialize(rows, new System.Text.Json.JsonSerializerOptions { WriteIndented = true }));
-                LabCkanStatus.Text = $"已导出 {rows.Count} 个已安装模组到 {dlg.FileName}";
+                var identifier = System.IO.Path.GetFileNameWithoutExtension(dlg.FileName);
+                if (string.IsNullOrWhiteSpace(identifier))
+                {
+                    identifier = CkanModpack.DefaultIdentifier;
+                }
+                var json = CkanModpack.Build(installed, null, identifier);
+                System.IO.File.WriteAllText(dlg.FileName, json);
+                var count = installed.Count(m => m.IsInstalled && !m.IsAutodetected);
+                LabCkanStatus.Text = $"已导出标准 CKAN metapackage（{count} 个已装模组）到 {dlg.FileName}";
             }
         }
         catch (System.Exception ex)
@@ -173,31 +179,44 @@ public partial class PageCkan
             var dlg = new OpenFileDialog { Filter = "CKAN 清单|*.ckan;*.json" };
             if (dlg.ShowDialog() != true) return;
             var json = System.IO.File.ReadAllText(dlg.FileName);
-            var rows = System.Text.Json.JsonSerializer.Deserialize<System.Collections.Generic.List<ImportRow>>(json);
-            if (rows is not { Count: > 0 }) { LabCkanStatus.Text = "清单为空。"; return; }
+            var identifiers = CkanModpack.Parse(json);
+            if (identifiers.Count == 0)
+            {
+                LabCkanStatus.Text = "清单为空或无法识别（支持 CKAN metapackage / 标识数组）。";
+                return;
+            }
 
             var svc = new ModService(dataDir: KspSettings.Current.CkanDataDir);
             var ksp = new KspInstanceService();
             svc.AttachInstance(ksp.Load(KspSettings.Current.KspRootPath));
 
-            var progress = new Progress<string>(msg => LabCkanStatus.Text = msg);
-            foreach (var row in rows)
+            LabCkanStatus.Text = $"正在解析 {identifiers.Count} 项的依赖…";
+            var plan = await Task.Run(() => svc.GetMultiInstallPlanAsync(identifiers));
+            if (!string.IsNullOrEmpty(plan.FailureReason))
             {
-                LabCkanStatus.Text = $"正在安装 {row.name}…";
-                var plan = await Task.Run(() => CkanPlanHelper.ResolvePlan(svc, row.name));
-                if (plan is not null) await svc.ExecutePlanAsync(plan, progress);
+                LabCkanStatus.Text = "无法生成安装计划。";
+                MessageBox.Show("无法生成安装计划：\n" + plan.FailureReason, "导入 CKAN 清单", MessageBoxButton.OK, MessageBoxImage.Warning);
+                return;
             }
-            LabCkanStatus.Text = $"清单导入完成（{rows.Count} 项）。";
+
+            var preview = plan.ToInstall.Take(12).ToList();
+            var text = $"将安装 {plan.ToInstall.Count} 个、升级 {plan.ToUpgrade.Count} 个模组：\n\n" +
+                       string.Join("\n", preview) +
+                       (plan.ToInstall.Count > preview.Count ? "\n……" : "") +
+                       "\n\n是否继续？";
+            if (MessageBox.Show(text, "导入 CKAN 清单", MessageBoxButton.OKCancel, MessageBoxImage.Question) != MessageBoxResult.OK)
+            {
+                LabCkanStatus.Text = "已取消导入。";
+                return;
+            }
+
+            var progress = new Progress<string>(msg => LabCkanStatus.Text = msg);
+            await svc.ExecutePlanAsync(plan, progress);
+            LabCkanStatus.Text = $"清单导入完成：安装 {plan.ToInstall.Count} 个、升级 {plan.ToUpgrade.Count} 个。";
         }
         catch (System.Exception ex)
         {
             LabCkanStatus.Text = "导入失败：" + ex.Message;
         }
-    }
-
-    private sealed class ImportRow
-    {
-        public string name { get; set; } = "";
-        public string version { get; set; } = "";
     }
 }
