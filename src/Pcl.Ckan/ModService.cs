@@ -695,6 +695,37 @@ public sealed class ModService : IModService, IDisposable
     }
 
     /// <inheritdoc />
+    public Task<IReadOnlyList<ModOrphanItem>> GetOrphanDependenciesAsync(CancellationToken cancellationToken = default)
+    {
+        var reg = Registry;
+        var list = new List<ModOrphanItem>();
+        if (_instance == null || reg == null)
+        {
+            return Task.FromResult<IReadOnlyList<ModOrphanItem>>(list);
+        }
+
+        return Task.Run(() =>
+        {
+            // installing 传空集合：等价于「按当前已装集合重算，哪些自动安装的模组已无人需要」。
+            var removable = reg.FindRemovableAutoInstalled(
+                reg.InstalledModules.ToList(),
+                Array.Empty<CkanModule>(),
+                _instance.Game,
+                _instance.StabilityToleranceConfig,
+                _instance.VersionCriteria());
+            foreach (var im in removable)
+            {
+                list.Add(new ModOrphanItem(
+                    im.identifier,
+                    im.Module?.name ?? im.identifier,
+                    im.Module?.version?.ToString(),
+                    im.AutoInstalled));
+            }
+            return (IReadOnlyList<ModOrphanItem>)list;
+        }, cancellationToken);
+    }
+
+    /// <inheritdoc />
     public Task<bool> ScanUnmanagedAsync(CancellationToken cancellationToken = default)
     {
         if (_instance == null)
@@ -1126,6 +1157,37 @@ public sealed class ModService : IModService, IDisposable
             pair.Key.download = pair.Value;
         }
         _accelOriginals.Clear();
+    }
+
+    /// <inheritdoc />
+    /// <inheritdoc />
+    public Task UninstallManyAsync(IReadOnlyList<string> identifiers, IProgress<string>? progress = null, CancellationToken cancellationToken = default)
+    {
+        if (identifiers is not { Count: > 0 })
+        {
+            return Task.CompletedTask;
+        }
+        if (_instance == null)
+        {
+            throw new InvalidOperationException("尚未附加 KSP 实例。");
+        }
+        if (_registryManager == null)
+        {
+            throw new InstanceReadOnlyException();
+        }
+
+        return Task.Run(() =>
+        {
+            Directory.CreateDirectory(_instance.DownloadCacheDir);
+            var cache = new NetModuleCache(_instance.DownloadCacheDir);
+            var installer = new ModuleInstaller(_instance, cache, _config, _user, cancellationToken);
+
+            HashSet<string>? possibleConfigOnlyDirs = null;
+            installer.UninstallList(identifiers, ref possibleConfigOnlyDirs, _registryManager, ConfirmPrompt: false);
+
+            _registryManager.Save();
+            progress?.Report($"已卸载 {identifiers.Count} 个模组。");
+        }, cancellationToken);
     }
 
     /// <inheritdoc />

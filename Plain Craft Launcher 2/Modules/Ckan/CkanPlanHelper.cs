@@ -761,3 +761,99 @@ internal static class CkanAdvancedSearchDialog
         return result;
     }
 }
+
+/// <summary>
+/// 孤儿依赖清理窗口：列出不再被任何已装模组需要的自动安装依赖，勾选后一次卸载。
+/// </summary>
+internal static class CkanOrphanDialog
+{
+    public static IReadOnlyList<ModOrphanItem> Choose(IReadOnlyList<ModOrphanItem> items)
+    {
+        var picked = new List<ModOrphanItem>();
+        var window = new Window
+        {
+            Title = "清理孤儿依赖",
+            Width = 560,
+            SizeToContent = SizeToContent.Height,
+            WindowStartupLocation = WindowStartupLocation.CenterScreen,
+            ResizeMode = ResizeMode.NoResize,
+            ShowInTaskbar = false
+        };
+        var main = Application.Current?.MainWindow;
+        if (main is { IsVisible: true } && !ReferenceEquals(main, window))
+        {
+            window.Owner = main;
+            window.WindowStartupLocation = WindowStartupLocation.CenterOwner;
+        }
+
+        var root = new DockPanel { Margin = new Thickness(16, 14, 16, 14) };
+
+        var header = new TextBlock
+        {
+            Text = $"以下 {items.Count} 个依赖由 CKAN 自动安装，现在已没有任何已装模组需要它们。勾选后一并卸载：",
+            TextWrapping = TextWrapping.Wrap,
+            Margin = new Thickness(0, 0, 0, 10)
+        };
+        DockPanel.SetDock(header, Dock.Top);
+        root.Children.Add(header);
+
+        var bottom = new StackPanel
+        {
+            Orientation = Orientation.Horizontal,
+            HorizontalAlignment = HorizontalAlignment.Right,
+            Margin = new Thickness(0, 12, 0, 0)
+        };
+        DockPanel.SetDock(bottom, Dock.Bottom);
+        root.Children.Add(bottom);
+
+        var listPanel = new StackPanel();
+        root.Children.Add(new ScrollViewer
+        {
+            VerticalScrollBarVisibility = ScrollBarVisibility.Auto,
+            MaxHeight = 360,
+            Content = listPanel
+        });
+
+        var rows = new List<(ModOrphanItem Item, MyListItem Ui)>();
+        foreach (var item in items)
+        {
+            var ui = new MyListItem
+            {
+                Title = item.Name,
+                Info = item.Identifier + (string.IsNullOrEmpty(item.Version) ? "" : " · " + item.Version),
+                Height = 46d,
+                Type = MyListItem.CheckType.CheckBox,
+                tag = item
+            };
+            ui.SvgIcon = "lucide/package";
+            rows.Add((item, ui));
+            listPanel.Children.Add(ui);
+        }
+
+        var btnAll = new MyButton { Text = "全选", Width = 100, Margin = new Thickness(0, 0, 10, 0) };
+        btnAll.Click += (_, _) =>
+        {
+            foreach (var row in rows)
+            {
+                row.Ui.Checked = true;
+            }
+        };
+        bottom.Children.Add(btnAll);
+
+        var btnOk = new MyButton { Text = "卸载选中", Width = 120, Margin = new Thickness(0, 0, 10, 0) };
+        btnOk.Click += (_, _) =>
+        {
+            picked = rows.Where(r => r.Ui.Checked).Select(r => r.Item).ToList();
+            window.DialogResult = true;
+        };
+        bottom.Children.Add(btnOk);
+
+        var btnCancel = new MyButton { Text = "取消", Width = 120 };
+        btnCancel.Click += (_, _) => window.DialogResult = false;
+        bottom.Children.Add(btnCancel);
+
+        window.Content = root;
+        window.ShowDialog();
+        return picked;
+    }
+}

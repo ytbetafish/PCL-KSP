@@ -63,6 +63,9 @@ public interface IModService
     /// </summary>
     Task<bool> ScanUnmanagedAsync(CancellationToken cancellationToken = default);
 
+    /// <summary>列出不再被任何已装模组需要的自动安装依赖（CKAN 的 removable auto-installed）。</summary>
+    Task<IReadOnlyList<ModOrphanItem>> GetOrphanDependenciesAsync(CancellationToken cancellationToken = default);
+
     /// <summary>列出已扫描登记的未托管 DLL（AD，autodetected）。</summary>
     Task<IReadOnlyList<ModUnmanagedItem>> GetUnmanagedAsync(CancellationToken cancellationToken = default);
 
@@ -109,6 +112,9 @@ public interface IModService
     /// Uninstall an installed mod (plus any orphaned dependencies).
     /// </summary>
     Task UninstallAsync(string identifier, IProgress<string>? progress = null, CancellationToken cancellationToken = default);
+
+    /// <summary>批量卸载（用于一次清理多个孤儿依赖）。</summary>
+    Task UninstallManyAsync(IReadOnlyList<string> identifiers, IProgress<string>? progress = null, CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Find mods that depend on (or conflict with) the given identifier.

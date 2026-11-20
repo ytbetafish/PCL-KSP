@@ -524,6 +524,48 @@ public partial class PageMods
     }
 
     /// <summary>scan：扫描 GameData 中未托管的 DLL（CKAN 的 AD），并在列表中标注。</summary>
+    private async void BtnCleanOrphans_Click(object sender, System.Windows.Input.MouseButtonEventArgs e)
+    {
+        try
+        {
+            PanLoad.Visibility = Visibility.Visible;
+            var items = await GetService().GetOrphanDependenciesAsync();
+            PanLoad.Visibility = Visibility.Collapsed;
+            if (items.Count == 0)
+            {
+                MessageBox.Show("没有可清理的孤儿依赖：所有自动安装的依赖都仍被已装模组需要。",
+                    "清理孤儿依赖", MessageBoxButton.OK, MessageBoxImage.Information);
+                return;
+            }
+
+            var picked = CkanOrphanDialog.Choose(items);
+            if (picked.Count == 0)
+            {
+                return;
+            }
+
+            PanLoad.Visibility = Visibility.Visible;
+            await GetService().UninstallManyAsync(picked.Select(p => p.Identifier).ToList());
+            PanLoad.Visibility = Visibility.Collapsed;
+            MessageBox.Show($"已卸载 {picked.Count} 个孤儿依赖。",
+                "清理孤儿依赖", MessageBoxButton.OK, MessageBoxImage.Information);
+
+            _lastResults = await GetService().ListInstalledAsync();
+            ApplyFilter();
+        }
+        catch (InstanceReadOnlyException)
+        {
+            PanLoad.Visibility = Visibility.Collapsed;
+            MessageBox.Show("当前实例为只读（CKAN 注册表不可写），无法卸载依赖。请关闭占用该实例的 CKAN 客户端后重试。",
+                "清理孤儿依赖", MessageBoxButton.OK, MessageBoxImage.Warning);
+        }
+        catch (Exception ex)
+        {
+            PanLoad.Visibility = Visibility.Collapsed;
+            MessageBox.Show("清理孤儿依赖失败：" + ex.Message, "清理孤儿依赖", MessageBoxButton.OK, MessageBoxImage.Error);
+        }
+    }
+
     private async void BtnScanUnmanaged_Click(object sender, System.Windows.Input.MouseButtonEventArgs e)
     {
         try

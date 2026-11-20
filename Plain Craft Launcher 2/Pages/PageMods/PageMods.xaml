@@ -47,6 +47,8 @@
                                         Click="BtnFilterUncached_Click" />
                         <local:MyButton x:Name="BtnCacheManager" Text="缓存管理" Width="90" Margin="10,0,0,0"
                                         Click="BtnCacheManager_Click" />
+                        <local:MyButton x:Name="BtnCleanOrphans" Text="清理孤儿" Width="90" Margin="10,0,0,0"
+                                        Click="BtnCleanOrphans_Click" />
                     </StackPanel>
                 </StackPanel>
             </local:MyCard>
