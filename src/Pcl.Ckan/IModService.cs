@@ -66,6 +66,18 @@ public interface IModService
     /// <summary>列出已扫描登记的未托管 DLL（AD，autodetected）。</summary>
     Task<IReadOnlyList<ModUnmanagedItem>> GetUnmanagedAsync(CancellationToken cancellationToken = default);
 
+    /// <summary>该模组的最新版本安装包是否已在下载缓存中（CKAN 的 Cached 状态）。</summary>
+    bool IsCached(string identifier);
+
+    /// <summary>下载缓存统计（文件数、总字节数、缓存目录）。</summary>
+    Task<ModCacheStats?> GetCacheStatsAsync(CancellationToken cancellationToken = default);
+
+    /// <summary>清空下载缓存（CKAN 的 Clear cache）。</summary>
+    Task ClearCacheAsync(CancellationToken cancellationToken = default);
+
+    /// <summary>把用户选择的 .zip / .ckan 文件导入下载缓存（CKAN 的 Import downloaded mods）。</summary>
+    Task<ModCacheImportResult> ImportCacheFilesAsync(IReadOnlyList<string> filePaths, CancellationToken cancellationToken = default);
+
     /// <summary>
     /// 对多个模组一次性解析依赖，得到一个整体计划（CKAN Changeset 语义：
     /// 勾选一批模组 → 统一解析与冲突检查 → 一次性执行）。

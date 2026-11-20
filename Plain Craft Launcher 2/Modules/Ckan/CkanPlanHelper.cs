@@ -450,3 +450,141 @@ internal static class CkanChangesetDialog
                $"将移除 {plan.ToRemove.Count} 个：{Short(plan.ToRemove)}";
     }
 }
+
+/// <summary>
+/// 下载缓存管理窗口（CKAN 的 cache 面板）：显示占用、清空缓存、导入已下载的模组包。
+/// </summary>
+internal static class CkanCacheDialog
+{
+    public static void Show(IModService service, Window? owner)
+    {
+        var window = new Window
+        {
+            Title = "下载缓存",
+            Width = 540,
+            SizeToContent = SizeToContent.Height,
+            WindowStartupLocation = WindowStartupLocation.CenterScreen,
+            ResizeMode = ResizeMode.NoResize,
+            ShowInTaskbar = false
+        };
+        if (owner is { IsVisible: true })
+        {
+            window.Owner = owner;
+            window.WindowStartupLocation = WindowStartupLocation.CenterOwner;
+        }
+
+        var root = new StackPanel { Margin = new Thickness(16, 14, 16, 14) };
+        var info = new TextBlock
+        {
+            Text = "正在统计缓存…",
+            TextWrapping = TextWrapping.Wrap,
+            FontSize = 12.5
+        };
+        root.Children.Add(info);
+
+        var bottom = new StackPanel
+        {
+            Orientation = Orientation.Horizontal,
+            HorizontalAlignment = HorizontalAlignment.Right,
+            Margin = new Thickness(0, 14, 0, 0)
+        };
+        root.Children.Add(bottom);
+
+        var btnImport = new MyButton { Text = "导入已下载", Width = 110, Margin = new Thickness(0, 0, 10, 0) };
+        var btnClear = new MyButton { Text = "清空缓存", Width = 110, Margin = new Thickness(0, 0, 10, 0) };
+        var btnClose = new MyButton { Text = "关闭", Width = 90 };
+        bottom.Children.Add(btnImport);
+        bottom.Children.Add(btnClear);
+        bottom.Children.Add(btnClose);
+
+        async void RefreshAsync()
+        {
+            info.Text = "正在统计缓存…";
+            try
+            {
+                var stats = await Task.Run(() => service.GetCacheStatsAsync().GetAwaiter().GetResult());
+                info.Text = stats is null
+                    ? "未附加 KSP 实例，无法读取缓存。"
+                    : $"缓存目录：{stats.CachePath}\n文件 {stats.FileCount} 个，占用 {FormatSize(stats.TotalBytes)}。";
+            }
+            catch (Exception ex)
+            {
+                info.Text = "读取缓存失败：" + ex.Message;
+            }
+        }
+
+        btnImport.Click += async (_, _) =>
+        {
+            var dialog = new Microsoft.Win32.OpenFileDialog
+            {
+                Title = "选择已下载的模组包",
+                Filter = "CKAN 模组包 (*.zip;*.ckan)|*.zip;*.ckan|所有文件 (*.*)|*.*",
+                Multiselect = true
+            };
+            if (dialog.ShowDialog(window) != true)
+            {
+                return;
+            }
+            btnImport.IsEnabled = false;
+            info.Text = "正在导入…";
+            try
+            {
+                var result = await Task.Run(() => service.ImportCacheFilesAsync(dialog.FileNames).GetAwaiter().GetResult());
+                var text = $"已导入 {result.Imported} 个文件到下载缓存。";
+                if (result.Failed.Count > 0)
+                {
+                    text += $"\n{result.Failed.Count} 个文件无法读取。";
+                }
+                MessageBox.Show(window, text, "导入已下载模组", MessageBoxButton.OK, MessageBoxImage.Information);
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show(window, "导入失败：" + ex.Message, "导入已下载模组", MessageBoxButton.OK, MessageBoxImage.Error);
+            }
+            finally
+            {
+                btnImport.IsEnabled = true;
+                RefreshAsync();
+            }
+        };
+
+        btnClear.Click += async (_, _) =>
+        {
+            var answer = MessageBox.Show(window, "确定清空下载缓存？已下载的安装包会被删除，但不会影响已安装的模组。",
+                "清空缓存", MessageBoxButton.YesNo, MessageBoxImage.Warning);
+            if (answer != MessageBoxResult.Yes)
+            {
+                return;
+            }
+            btnClear.IsEnabled = false;
+            info.Text = "正在清空…";
+            try
+            {
+                await Task.Run(() => service.ClearCacheAsync().GetAwaiter().GetResult());
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show(window, "清空失败：" + ex.Message, "清空缓存", MessageBoxButton.OK, MessageBoxImage.Error);
+            }
+            finally
+            {
+                btnClear.IsEnabled = true;
+                RefreshAsync();
+            }
+        };
+
+        btnClose.Click += (_, _) => window.Close();
+
+        window.Content = root;
+        window.Show();
+        RefreshAsync();
+    }
+
+    private static string FormatSize(long bytes)
+    {
+        if (bytes < 1024) return bytes + " B";
+        if (bytes < 1024 * 1024) return (bytes / 1024d).ToString("0.0") + " KB";
+        if (bytes < 1024L * 1024 * 1024) return (bytes / 1024d / 1024d).ToString("0.0") + " MB";
+        return (bytes / 1024d / 1024d / 1024d).ToString("0.00") + " GB";
+    }
+}

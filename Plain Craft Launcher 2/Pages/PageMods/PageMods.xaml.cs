@@ -113,6 +113,8 @@ public partial class PageMods
             "notinstalled" => q.Where(m => !m.IsInstalled),
             "compatible" => q.Where(m => m.IsCompatible),
             "incompatible" => q.Where(m => !m.IsCompatible),
+            "cached" => q.Where(m => m.IsCached),
+            "uncached" => q.Where(m => !m.IsCached),
             _ => q,
         };
         BuildList(q.ToList());
@@ -149,6 +151,7 @@ public partial class PageMods
         if (!string.IsNullOrEmpty(mod.MaxKsp)) info.Add("最高 KSP " + mod.MaxKsp);
         if (!string.IsNullOrEmpty(mod.ReplacedById)) info.Add("可替换为 " + mod.ReplacedById);
         if (mod.IsAutodetected) info.Add("AD（手动安装）");
+        if (mod.IsCached) info.Add("已缓存");
 
         var item = new MyListItem
         {
@@ -201,6 +204,26 @@ public partial class PageMods
     {
         _filter = "notinstalled";
         ApplyFilter();
+    }
+
+    private async void BtnFilterCached_Click(object sender, System.Windows.Input.MouseButtonEventArgs e) => await LoadAllThenFilter("cached");
+
+    private async void BtnFilterUncached_Click(object sender, System.Windows.Input.MouseButtonEventArgs e) => await LoadAllThenFilter("uncached");
+
+    private async void BtnCacheManager_Click(object sender, System.Windows.Input.MouseButtonEventArgs e)
+    {
+        CkanCacheDialog.Show(GetService(), null);
+        // 缓存可能被清空或导入，重新计算列表里的「已缓存」标记。
+        try
+        {
+            await GetService().WarmUpAsync();
+            _lastResults = await GetService().SearchAsync(null);
+            ApplyFilter();
+        }
+        catch (Exception ex)
+        {
+            LabModDesc.Text = "刷新缓存状态失败：" + ex.Message;
+        }
     }
 
     private async void BtnFilterCompatible_Click(object sender, System.Windows.Input.MouseButtonEventArgs e) => await LoadAllThenFilter("compatible");

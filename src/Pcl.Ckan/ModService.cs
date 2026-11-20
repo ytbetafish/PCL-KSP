@@ -557,6 +557,95 @@ public sealed class ModService : IModService, IDisposable
     }
 
     /// <inheritdoc />
+    public bool IsCached(string identifier)
+    {
+        var mod = LatestAvailable(identifier);
+        if (mod == null || _instance == null)
+        {
+            return false;
+        }
+        try
+        {
+            using var cache = new NetModuleCache(_instance.DownloadCacheDir);
+            return cache.IsCached(mod);
+        }
+        catch
+        {
+            return false;
+        }
+    }
+
+    /// <inheritdoc />
+    public Task<ModCacheStats?> GetCacheStatsAsync(CancellationToken cancellationToken = default)
+    {
+        if (_instance == null)
+        {
+            return Task.FromResult<ModCacheStats?>(null);
+        }
+        var cacheDir = _instance.DownloadCacheDir;
+        return Task.Run(() =>
+        {
+            using var cache = new NetModuleCache(cacheDir);
+            cache.GetSizeInfo(out var files, out var bytes, out _);
+            return (ModCacheStats?)new ModCacheStats(files, bytes, cacheDir);
+        }, cancellationToken);
+    }
+
+    /// <inheritdoc />
+    public Task ClearCacheAsync(CancellationToken cancellationToken = default)
+    {
+        if (_instance == null)
+        {
+            throw new InvalidOperationException("尚未附加 KSP 实例。");
+        }
+        var cacheDir = _instance.DownloadCacheDir;
+        return Task.Run(() =>
+        {
+            using var cache = new NetModuleCache(cacheDir);
+            cache.RemoveAll();
+        }, cancellationToken);
+    }
+
+    /// <inheritdoc />
+    public Task<ModCacheImportResult> ImportCacheFilesAsync(IReadOnlyList<string> filePaths, CancellationToken cancellationToken = default)
+    {
+        if (_instance == null)
+        {
+            throw new InvalidOperationException("尚未附加 KSP 实例。");
+        }
+        var reg = Registry;
+        if (reg == null)
+        {
+            throw new InvalidOperationException("CKAN 注册表尚未就绪。");
+        }
+        var cacheDir = _instance.DownloadCacheDir;
+        return Task.Run(() =>
+        {
+            var files = new HashSet<FileInfo>();
+            var failed = new List<string>();
+            foreach (var path in filePaths)
+            {
+                if (File.Exists(path))
+                {
+                    files.Add(new FileInfo(path));
+                }
+                else
+                {
+                    failed.Add(path);
+                }
+            }
+            if (files.Count == 0)
+            {
+                return new ModCacheImportResult(0, failed);
+            }
+
+            using var cache = new NetModuleCache(cacheDir);
+            var ok = ModuleImporter.ImportFiles(files, _user, _ => { }, reg, _instance, cache, allowDelete: false);
+            return new ModCacheImportResult(ok ? files.Count : 0, failed);
+        }, cancellationToken);
+    }
+
+    /// <inheritdoc />
     public Task<bool> ScanUnmanagedAsync(CancellationToken cancellationToken = default)
     {
         if (_instance == null)
@@ -1180,6 +1269,17 @@ public sealed class ModService : IModService, IDisposable
             catch { /* 缺元数据时不展示 */ }
         }
 
+        bool isCached = false;
+        if (mod != null && _instance != null)
+        {
+            try
+            {
+                using var cache = new NetModuleCache(_instance.DownloadCacheDir);
+                isCached = cache.IsCached(mod);
+            }
+            catch { /* 缓存目录不可用时视为未缓存 */ }
+        }
+
         return new ModSearchResult(
             identifier,
             mod?.name ?? identifier,
@@ -1194,7 +1294,8 @@ public sealed class ModService : IModService, IDisposable
             iconUrl,
             ReleaseDate: mod?.release_date,
             MaxKsp: maxKsp,
-            ReplacedById: replacedById);
+            ReplacedById: replacedById,
+            IsCached: isCached);
     }
 
     /// <inheritdoc />

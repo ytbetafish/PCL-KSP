@@ -41,6 +41,12 @@
                     <StackPanel Orientation="Horizontal" Margin="0,8,0,0">
                         <local:MyButton x:Name="BtnScanUnmanaged" Text="扫描 AD" Width="90"
                                         Click="BtnScanUnmanaged_Click" />
+                        <local:MyButton x:Name="BtnFilterCached" Text="已缓存" Width="90" Margin="10,0,0,0"
+                                        Click="BtnFilterCached_Click" />
+                        <local:MyButton x:Name="BtnFilterUncached" Text="未缓存" Width="90" Margin="10,0,0,0"
+                                        Click="BtnFilterUncached_Click" />
+                        <local:MyButton x:Name="BtnCacheManager" Text="缓存管理" Width="90" Margin="10,0,0,0"
+                                        Click="BtnCacheManager_Click" />
                     </StackPanel>
                 </StackPanel>
             </local:MyCard>
