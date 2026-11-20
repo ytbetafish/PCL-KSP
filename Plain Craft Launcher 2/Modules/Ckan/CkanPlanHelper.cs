@@ -20,12 +20,12 @@ internal static class CkanPlanHelper
     /// 解析安装计划。遇到多提供者依赖时同步弹出选择框（自动切回 UI 线程），用户取消返回 null。
     /// 可在后台线程直接调用。
     /// </summary>
-    public static ModInstallPlan? ResolvePlan(IModService service, string identifier, bool allowIncompatible = false)
+    public static ModInstallPlan? ResolvePlan(IModService service, string identifier, bool allowIncompatible = false, bool withRecommendations = false)
     {
         var picks = new List<string>();
         for (var round = 0; round < MaxChoiceRounds; round++)
         {
-            var plan = service.GetInstallPlanAsync(identifier, allowIncompatible, picks).GetAwaiter().GetResult();
+            var plan = service.GetInstallPlanAsync(identifier, allowIncompatible, picks, withRecommendations).GetAwaiter().GetResult();
             if (plan?.ProviderChoices is not { Count: > 0 })
             {
                 return plan;
@@ -44,7 +44,7 @@ internal static class CkanPlanHelper
             }
             picks.Add(picked.Identifier);
         }
-        return service.GetInstallPlanAsync(identifier, allowIncompatible, picks).GetAwaiter().GetResult();
+        return service.GetInstallPlanAsync(identifier, allowIncompatible, picks, withRecommendations).GetAwaiter().GetResult();
     }
 
     private static T RunOnUiThread<T>(Func<T> func)
@@ -164,5 +164,101 @@ internal static class CkanProviderChoiceDialog
         window.Content = root;
         window.ShowDialog();
         return result;
+    }
+}
+
+/// <summary>
+/// 推荐审计的多选窗口：列出已装模组推荐、但尚未安装的模组，勾选后批量安装。
+/// </summary>
+internal static class CkanOptionalInstallDialog
+{
+    public static IReadOnlyList<ModAuditItem> Choose(IReadOnlyList<ModAuditItem> items, string title)
+    {
+        var picked = new List<ModAuditItem>();
+        var window = new Window
+        {
+            Title = title,
+            Width = 560,
+            SizeToContent = SizeToContent.Height,
+            WindowStartupLocation = WindowStartupLocation.CenterScreen,
+            ResizeMode = ResizeMode.NoResize,
+            ShowInTaskbar = false
+        };
+        var main = Application.Current?.MainWindow;
+        if (main is { IsVisible: true } && !ReferenceEquals(main, window))
+        {
+            window.Owner = main;
+            window.WindowStartupLocation = WindowStartupLocation.CenterOwner;
+        }
+
+        var root = new DockPanel { Margin = new Thickness(16, 14, 16, 14) };
+
+        var header = new TextBlock
+        {
+            Text = $"已装模组推荐了以下 {items.Count} 个尚未安装的模组，勾选后一并安装：",
+            TextWrapping = TextWrapping.Wrap,
+            Margin = new Thickness(0, 0, 0, 10)
+        };
+        DockPanel.SetDock(header, Dock.Top);
+        root.Children.Add(header);
+
+        var bottom = new StackPanel
+        {
+            Orientation = Orientation.Horizontal,
+            HorizontalAlignment = HorizontalAlignment.Right,
+            Margin = new Thickness(0, 12, 0, 0)
+        };
+        DockPanel.SetDock(bottom, Dock.Bottom);
+        root.Children.Add(bottom);
+
+        var listPanel = new StackPanel();
+        root.Children.Add(new ScrollViewer
+        {
+            VerticalScrollBarVisibility = ScrollBarVisibility.Auto,
+            MaxHeight = 360,
+            Content = listPanel
+        });
+
+        var rows = new List<(ModAuditItem Item, MyListItem Ui)>();
+        foreach (var item in items)
+        {
+            var ui = new MyListItem
+            {
+                Title = item.Name,
+                Info = item.Identifier + " · 来自 " + item.SourceName,
+                Height = 46d,
+                Type = MyListItem.CheckType.CheckBox,
+                tag = item
+            };
+            ui.SvgIcon = "lucide/package";
+            rows.Add((item, ui));
+            listPanel.Children.Add(ui);
+        }
+
+        var btnAll = new MyButton { Text = "全选", Width = 100, Margin = new Thickness(0, 0, 10, 0) };
+        btnAll.Click += (_, _) =>
+        {
+            foreach (var row in rows)
+            {
+                row.Ui.Checked = true;
+            }
+        };
+        bottom.Children.Add(btnAll);
+
+        var btnOk = new MyButton { Text = "安装选中", Width = 120, Margin = new Thickness(0, 0, 10, 0) };
+        btnOk.Click += (_, _) =>
+        {
+            picked = rows.Where(r => r.Ui.Checked).Select(r => r.Item).ToList();
+            window.DialogResult = true;
+        };
+        bottom.Children.Add(btnOk);
+
+        var btnCancel = new MyButton { Text = "取消", Width = 120 };
+        btnCancel.Click += (_, _) => window.DialogResult = false;
+        bottom.Children.Add(btnCancel);
+
+        window.Content = root;
+        window.ShowDialog();
+        return picked;
     }
 }

@@ -54,7 +54,18 @@ public interface IModService
     /// Returns null if the instance has no registry or the identifier is unknown.
     /// </summary>
     /// <param name="providerPicks">用户为多提供者依赖选择的候选模组标识；解析结果 <see cref="ModInstallPlan.ProviderChoices"/> 非空时带上选择重试。</param>
-    Task<ModInstallPlan?> GetInstallPlanAsync(string identifier, bool allowIncompatible = false, IReadOnlyList<string>? providerPicks = null, CancellationToken cancellationToken = default);
+    /// <param name="withRecommendations">是否把模组声明的 recommends 一并纳入计划（CKAN 默认行为）。</param>
+    Task<ModInstallPlan?> GetInstallPlanAsync(string identifier, bool allowIncompatible = false, IReadOnlyList<string>? providerPicks = null, bool withRecommendations = false, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// 读取模组的 recommends / suggests 关系（显示名列表）；标识未知时返回 null。
+    /// </summary>
+    Task<ModOptionalRelations?> GetOptionalRelationsAsync(string identifier, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Audit recommendations：汇总已装模组推荐但尚未安装的模组（仅列与当前 KSP 兼容者）。
+    /// </summary>
+    Task<IReadOnlyList<ModAuditItem>> GetAuditRecommendationsAsync(CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Execute a previously computed plan (downloads + installs/upgrades/removes).

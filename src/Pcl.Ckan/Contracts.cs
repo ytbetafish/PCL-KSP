@@ -51,6 +51,18 @@ public sealed record ModProviderChoice(
     string? ChoiceHelpText,
     IReadOnlyList<ModProviderOption> Options);
 
+/// <summary>模组的可选关系：CKAN 的 recommends / suggests（非强制依赖）。</summary>
+public sealed record ModOptionalRelations(
+    IReadOnlyList<string> Recommends,
+    IReadOnlyList<string> Suggests);
+
+/// <summary>Audit recommendations 的一条：某个已装模组推荐/建议、但尚未安装的模组。</summary>
+public sealed record ModAuditItem(
+    string Identifier,
+    string Name,
+    string SourceName,
+    bool IsSuggestion);
+
 /// <summary>
 /// The install/upgrade/remove plan computed by CKAN's dependency resolver.
 /// When <see cref="FailureReason"/> is non-null the plan could not be produced; the lists are empty.

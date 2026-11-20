@@ -282,6 +282,8 @@ public partial class PageMods
             LabDeps.Visibility = Visibility.Collapsed;
             LabReverse.Visibility = Visibility.Collapsed;
             LabConflicts.Visibility = Visibility.Collapsed;
+            LabRecommends.Visibility = Visibility.Collapsed;
+            LabSuggests.Visibility = Visibility.Collapsed;
             BtnInstall.Visibility = Visibility.Collapsed;
             BtnUninstall.Visibility = Visibility.Collapsed;
             BtnTranslate.Visibility = Visibility.Collapsed;
@@ -312,12 +314,18 @@ public partial class PageMods
             var (rev, conflicts) = GetService().GetReverseAndConflicts(_selected.Identifier);
             FillRelLab(LabReverse, "被依赖：", rev);
             FillRelLab(LabConflicts, "冲突：", conflicts);
+
+            var optional = await GetService().GetOptionalRelationsAsync(_selected.Identifier);
+            FillRelLab(LabRecommends, "推荐：", optional?.Recommends);
+            FillRelLab(LabSuggests, "建议：", optional?.Suggests);
         }
         catch
         {
             LabDeps.Visibility = Visibility.Collapsed;
             LabReverse.Visibility = Visibility.Collapsed;
             LabConflicts.Visibility = Visibility.Collapsed;
+            LabRecommends.Visibility = Visibility.Collapsed;
+            LabSuggests.Visibility = Visibility.Collapsed;
         }
     }
 
@@ -391,13 +399,30 @@ public partial class PageMods
             if (answer != MessageBoxResult.Yes) return;
             allowIncompatible = true;
         }
+
+        var withRecommendations = false;
+        try
+        {
+            var optional = await GetService().GetOptionalRelationsAsync(_selected.Identifier);
+            if (optional is { Recommends.Count: > 0 })
+            {
+                var shown = string.Join("、", optional.Recommends.Take(5));
+                var more = optional.Recommends.Count > 5 ? $" 等 {optional.Recommends.Count} 个" : "";
+                var answer = MessageBox.Show(
+                    $"「{_selected.Name}」推荐一并安装：{shown}{more}。\n是否随本次安装一起装上这些推荐模组？",
+                    "PCL KSP", MessageBoxButton.YesNo, MessageBoxImage.Question);
+                withRecommendations = answer == MessageBoxResult.Yes;
+            }
+        }
+        catch { /* 推荐关系读取失败不阻断安装 */ }
+
         try
         {
             PanProgress.Visibility = Visibility.Visible;
             BarProgress.IsIndeterminate = true;
             LabProgress.Text = "正在解析依赖…";
 
-            var plan = await Task.Run(() => CkanPlanHelper.ResolvePlan(GetService(), _selected.Identifier, allowIncompatible));
+            var plan = await Task.Run(() => CkanPlanHelper.ResolvePlan(GetService(), _selected.Identifier, allowIncompatible, withRecommendations));
             if (plan is null)
             {
                 PanProgress.Visibility = Visibility.Collapsed;
@@ -447,6 +472,58 @@ public partial class PageMods
         {
             PanProgress.Visibility = Visibility.Collapsed;
             MessageBox.Show("卸载失败：" + ex.Message, "PCL KSP", MessageBoxButton.OK, MessageBoxImage.Error);
+        }
+    }
+
+    /// <summary>Audit recommendations：汇总已装模组的推荐项，勾选后批量安装。</summary>
+    private async void BtnAuditRecommendations_Click(object sender, System.Windows.Input.MouseButtonEventArgs e)
+    {
+        try
+        {
+            PanLoad.Visibility = Visibility.Visible;
+            await GetService().WarmUpAsync();
+            var items = await GetService().GetAuditRecommendationsAsync();
+            PanLoad.Visibility = Visibility.Collapsed;
+            if (items.Count == 0)
+            {
+                MessageBox.Show("没有发现已装模组推荐、但尚未安装的模组。", "推荐审计", MessageBoxButton.OK, MessageBoxImage.Information);
+                return;
+            }
+
+            var selected = CkanOptionalInstallDialog.Choose(items, "推荐审计");
+            if (selected.Count == 0)
+            {
+                return;
+            }
+
+            PanProgress.Visibility = Visibility.Visible;
+            BarProgress.IsIndeterminate = true;
+            var progress = new Progress<string>(msg =>
+                Dispatcher.BeginInvoke(new Action(() => LabProgress.Text = msg)));
+
+            var ok = 0;
+            foreach (var item in selected)
+            {
+                LabProgress.Text = $"正在安装推荐模组 {item.Name}…";
+                var plan = await Task.Run(() => CkanPlanHelper.ResolvePlan(GetService(), item.Identifier));
+                if (plan is not null && string.IsNullOrEmpty(plan.FailureReason))
+                {
+                    await GetService().ExecutePlanAsync(plan, progress);
+                    ok++;
+                }
+            }
+
+            PanProgress.Visibility = Visibility.Collapsed;
+            MessageBox.Show($"推荐审计完成：已安装 {ok}/{selected.Count} 个模组。", "推荐审计", MessageBoxButton.OK, MessageBoxImage.Information);
+            _filter = "installed";
+            _lastResults = await GetService().ListInstalledAsync();
+            ApplyFilter();
+        }
+        catch (Exception ex)
+        {
+            PanLoad.Visibility = Visibility.Collapsed;
+            PanProgress.Visibility = Visibility.Collapsed;
+            MessageBox.Show("推荐审计失败：" + ex.Message, "推荐审计", MessageBoxButton.OK, MessageBoxImage.Error);
         }
     }
 

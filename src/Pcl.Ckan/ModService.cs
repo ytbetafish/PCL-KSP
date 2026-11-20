@@ -541,7 +541,103 @@ public sealed class ModService : IModService, IDisposable
     }
 
     /// <inheritdoc />
-    public Task<ModInstallPlan?> GetInstallPlanAsync(string identifier, bool allowIncompatible = false, IReadOnlyList<string>? providerPicks = null, CancellationToken cancellationToken = default)
+    public Task<ModOptionalRelations?> GetOptionalRelationsAsync(string identifier, CancellationToken cancellationToken = default)
+    {
+        var mod = LatestAvailable(identifier);
+        if (mod == null)
+        {
+            return Task.FromResult<ModOptionalRelations?>(null);
+        }
+
+        IReadOnlyList<string> Names(IEnumerable<RelationshipDescriptor>? rels)
+        {
+            if (rels == null)
+            {
+                return Array.Empty<string>();
+            }
+            var list = new List<string>();
+            foreach (var rel in rels)
+            {
+                var depId = (rel as ModuleRelationshipDescriptor)?.name;
+                if (string.IsNullOrEmpty(depId))
+                {
+                    continue;
+                }
+                var display = depId!;
+                try
+                {
+                    var candidate = Registry?.AvailableByIdentifier(display).FirstOrDefault();
+                    if (!string.IsNullOrEmpty(candidate?.name))
+                    {
+                        display = candidate!.name;
+                    }
+                }
+                catch { /* 元数据缺失时保留标识 */ }
+                if (!list.Contains(display, StringComparer.OrdinalIgnoreCase))
+                {
+                    list.Add(display);
+                }
+            }
+            return list;
+        }
+
+        return Task.FromResult<ModOptionalRelations?>(new ModOptionalRelations(
+            Names(mod.recommends),
+            Names(mod.suggests)));
+    }
+
+    /// <inheritdoc />
+    public Task<IReadOnlyList<ModAuditItem>> GetAuditRecommendationsAsync(CancellationToken cancellationToken = default)
+    {
+        var reg = Registry;
+        var list = new List<ModAuditItem>();
+        if (_instance == null || reg == null)
+        {
+            return Task.FromResult<IReadOnlyList<ModAuditItem>>(list);
+        }
+
+        return Task.Run(() =>
+        {
+            var installed = reg.Installed();
+            var crit = _instance.VersionCriteria();
+            var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            foreach (var installedId in installed.Keys)
+            {
+                var mod = LatestAvailable(installedId);
+                if (mod?.recommends == null)
+                {
+                    continue;
+                }
+                foreach (var rel in mod.recommends)
+                {
+                    var depId = (rel as ModuleRelationshipDescriptor)?.name;
+                    if (string.IsNullOrEmpty(depId)
+                        || installed.Keys.Any(k => string.Equals(k, depId, StringComparison.OrdinalIgnoreCase))
+                        || !seen.Add(depId!))
+                    {
+                        continue;
+                    }
+                    var candidate = LatestAvailable(depId!);
+                    if (candidate == null)
+                    {
+                        continue;
+                    }
+                    bool compatible;
+                    try { compatible = candidate.IsCompatible(crit); }
+                    catch { compatible = true; }
+                    if (!compatible)
+                    {
+                        continue;
+                    }
+                    list.Add(new ModAuditItem(depId!, candidate.name ?? depId!, mod.name ?? installedId, false));
+                }
+            }
+            return (IReadOnlyList<ModAuditItem>)list;
+        }, cancellationToken);
+    }
+
+    /// <inheritdoc />
+    public Task<ModInstallPlan?> GetInstallPlanAsync(string identifier, bool allowIncompatible = false, IReadOnlyList<string>? providerPicks = null, bool withRecommendations = false, CancellationToken cancellationToken = default)
     {
         var reg = Registry;
         if (_instance == null || reg == null)
@@ -581,6 +677,8 @@ public sealed class ModService : IModService, IDisposable
             {
                 opts.without_toomanyprovides_kraken = true;
             }
+            // CKAN 默认把推荐的模组一并安装；仅在用户确认后开启，避免静默多装。
+            opts.with_recommends = withRecommendations;
             var resolver = new RelationshipResolver(
                 modulesToInstall: new[] { target }.Concat(picks).ToArray(),
                 modulesToRemove: null,
