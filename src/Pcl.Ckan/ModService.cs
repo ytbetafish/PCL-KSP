@@ -1227,6 +1227,16 @@ public sealed class ModService : IModService, IDisposable
                 .Select(m => m!)
                 .ToList();
 
+            // replaced_by 替换场景：必须先卸载旧模组，再装新模组。
+            // 若顺序反过来，新旧模组共用同一批文件时，卸载旧模组会顺手删掉刚装好的新文件。
+            if (plan.ToRemove.Count > 0)
+            {
+                // replaced_by 替换场景：必须先卸载旧模组，再装新模组，避免同一批文件被覆盖后残留。
+                HashSet<string>? possibleConfigOnlyDirs = null;
+                installer.UninstallList(plan.ToRemove, ref possibleConfigOnlyDirs, _registryManager, ConfirmPrompt: false);
+                progress?.Report($"已卸载被替换的 {plan.ToRemove.Count} 个模组。");
+            }
+
             if (desired.Count > 0)
             {
                 HashSet<string>? possibleConfigOnlyDirs = null;
@@ -1255,14 +1265,6 @@ public sealed class ModService : IModService, IDisposable
                     RestoreGitHubAcceleration();
                     Log.ExpectedBytes = 0;
                 }
-            }
-
-            if (plan.ToRemove.Count > 0)
-            {
-                // replaced_by 替换场景：必须先卸载旧模组，再装新模组，避免同一批文件被覆盖后残留。
-                HashSet<string>? possibleConfigOnlyDirs = null;
-                installer.UninstallList(plan.ToRemove, ref possibleConfigOnlyDirs, _registryManager, ConfirmPrompt: false);
-                progress?.Report($"已卸载被替换的 {plan.ToRemove.Count} 个模组。");
             }
 
             _registryManager.Save();
