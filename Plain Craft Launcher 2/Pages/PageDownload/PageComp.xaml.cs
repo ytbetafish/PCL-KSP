@@ -104,6 +104,75 @@ public partial class PageComp : Grid
     }
 
     /// <summary>按兼容性过滤 + 排序后重建列表（保持 _results 与卡片页对齐，便于按页回填）。</summary>
+    /// <summary>CKAN 高级检索条件（作者/描述/许可/依赖），null 表示未启用。</summary>
+    private ModSearchFilter? _advFilter;
+
+    private void BtnAdvancedSearch_Click(object sender, System.Windows.Input.MouseButtonEventArgs e)
+    {
+        var choice = CkanAdvancedSearchDialog.Choose(_advFilter);
+        if (choice is null)
+        {
+            return;
+        }
+
+        _advFilter = choice.Value.Filter;
+        UpdateAdvFilterLabel();
+        if (_rawResults.Count > 0)
+        {
+            RebuildFromRaw();
+            _ = EnrichCurrentPageAsync();
+        }
+    }
+
+    private void UpdateAdvFilterLabel()
+    {
+        var parts = new List<string>();
+        if (_advFilter is { } adv)
+        {
+            if (!string.IsNullOrWhiteSpace(adv.Author)) parts.Add("作者:" + adv.Author);
+            if (!string.IsNullOrWhiteSpace(adv.Description)) parts.Add("描述:" + adv.Description);
+            if (!string.IsNullOrWhiteSpace(adv.License)) parts.Add("许可:" + adv.License);
+            if (!string.IsNullOrWhiteSpace(adv.DependsOn)) parts.Add("依赖:" + adv.DependsOn);
+        }
+        LabAdvFilter.Text = string.Join("；", parts);
+        LabAdvFilter.Visibility = parts.Count > 0 ? Visibility.Visible : Visibility.Collapsed;
+    }
+
+    /// <summary>应用高级检索条件。依赖过滤走注册表的反向依赖表（与 CKAN 的筛选口径一致）。</summary>
+    private List<ModSearchResult> ApplyAdvancedFilter(List<ModSearchResult> source, ModSearchFilter adv)
+    {
+        var query = source.AsEnumerable();
+        if (!string.IsNullOrWhiteSpace(adv.Author))
+        {
+            query = query.Where(m => m.Author?.Contains(adv.Author, StringComparison.OrdinalIgnoreCase) == true);
+        }
+        if (!string.IsNullOrWhiteSpace(adv.Description))
+        {
+            query = query.Where(m => m.Description?.Contains(adv.Description, StringComparison.OrdinalIgnoreCase) == true);
+        }
+        if (!string.IsNullOrWhiteSpace(adv.License))
+        {
+            query = query.Where(m => m.License?.Contains(adv.License, StringComparison.OrdinalIgnoreCase) == true);
+        }
+        if (!string.IsNullOrWhiteSpace(adv.DependsOn))
+        {
+            var target = adv.DependsOn.Trim();
+            IReadOnlyList<string> dependents;
+            try
+            {
+                var result = Launcher.Ckan.GetReverseAndConflicts(target);
+                dependents = result.Item1;
+            }
+            catch
+            {
+                dependents = Array.Empty<string>();
+            }
+            var names = dependents.ToHashSet(StringComparer.OrdinalIgnoreCase);
+            query = query.Where(m => names.Contains(m.Name) || names.Contains(m.Identifier));
+        }
+        return query.ToList();
+    }
+
     private void RebuildFromRaw()
     {
         var filtered = GetCompatId() switch
@@ -112,6 +181,10 @@ public partial class PageComp : Grid
             2 => _rawResults.Where(r => !r.IsCompatible).ToList(),
             _ => _rawResults.ToList()
         };
+        if (_advFilter is { } adv && !adv.IsEmpty)
+        {
+            filtered = ApplyAdvancedFilter(filtered, adv);
+        }
         _results = ApplySort(filtered, GetSortId());
         _projects = CkanCompAdapter.ToProjects(_results);
         _enrichedPages.Clear();

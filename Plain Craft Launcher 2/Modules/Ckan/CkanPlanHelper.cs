@@ -650,3 +650,114 @@ internal static class CkanContentsDialog
         window.Show();
     }
 }
+
+/// <summary>CKAN 高级检索条件：按元数据字段过滤。</summary>
+internal sealed record ModSearchFilter(string? Author, string? Description, string? License, string? DependsOn)
+{
+    public bool IsEmpty => string.IsNullOrWhiteSpace(Author)
+        && string.IsNullOrWhiteSpace(Description)
+        && string.IsNullOrWhiteSpace(License)
+        && string.IsNullOrWhiteSpace(DependsOn);
+}
+
+/// <summary>高级检索窗口：作者 / 描述关键词 / 许可证 / 依赖模组。</summary>
+internal static class CkanAdvancedSearchDialog
+{
+    public static (bool Apply, ModSearchFilter? Filter)? Choose(ModSearchFilter? current)
+    {
+        var window = new Window
+        {
+            Title = "高级检索",
+            Width = 560,
+            SizeToContent = SizeToContent.Height,
+            WindowStartupLocation = WindowStartupLocation.CenterScreen,
+            ResizeMode = ResizeMode.NoResize,
+            ShowInTaskbar = false
+        };
+        var main = Application.Current?.MainWindow;
+        if (main is { IsVisible: true })
+        {
+            window.Owner = main;
+            window.WindowStartupLocation = WindowStartupLocation.CenterOwner;
+        }
+
+        var root = new StackPanel { Margin = new Thickness(16, 14, 16, 14) };
+        root.Children.Add(new TextBlock
+        {
+            Text = "按 CKAN 元数据字段过滤当前模组列表；留空表示不限制。依赖模组请填标识（如 ModuleManager）。",
+            TextWrapping = TextWrapping.Wrap,
+            FontSize = 12.5,
+            Opacity = 0.75
+        });
+
+        var grid = new Grid { Margin = new Thickness(0, 10, 0, 0) };
+        for (var i = 0; i < 4; i++)
+        {
+            grid.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
+        }
+        grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(100) });
+        grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+
+        var txtAuthor = new TextBox { Text = current?.Author ?? "" };
+        var txtDesc = new TextBox { Text = current?.Description ?? "" };
+        var txtLicense = new TextBox { Text = current?.License ?? "" };
+        var txtDepends = new TextBox { Text = current?.DependsOn ?? "" };
+
+        void AddRow(int row, string label, TextBox box)
+        {
+            var lb = new TextBlock { Text = label, VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(0, 0, 0, 8) };
+            Grid.SetRow(lb, row);
+            Grid.SetColumn(lb, 0);
+            grid.Children.Add(lb);
+            box.Margin = new Thickness(0, 0, 0, 8);
+            box.Padding = new Thickness(6, 4, 6, 4);
+            Grid.SetRow(box, row);
+            Grid.SetColumn(box, 1);
+            grid.Children.Add(box);
+        }
+
+        AddRow(0, "作者", txtAuthor);
+        AddRow(1, "描述关键词", txtDesc);
+        AddRow(2, "许可证", txtLicense);
+        AddRow(3, "依赖模组", txtDepends);
+        root.Children.Add(grid);
+
+        var bottom = new StackPanel
+        {
+            Orientation = Orientation.Horizontal,
+            HorizontalAlignment = HorizontalAlignment.Right,
+            Margin = new Thickness(0, 12, 0, 0)
+        };
+        root.Children.Add(bottom);
+
+        (bool Apply, ModSearchFilter? Filter)? result = null;
+
+        var btnClear = new MyButton { Text = "清除条件", Width = 110, Margin = new Thickness(0, 0, 10, 0) };
+        btnClear.Click += (_, _) =>
+        {
+            result = (true, null);
+            window.DialogResult = true;
+        };
+        bottom.Children.Add(btnClear);
+
+        var btnOk = new MyButton { Text = "确定", Width = 100, Margin = new Thickness(0, 0, 10, 0) };
+        btnOk.Click += (_, _) =>
+        {
+            result = (true, new ModSearchFilter(
+                string.IsNullOrWhiteSpace(txtAuthor.Text) ? null : txtAuthor.Text.Trim(),
+                string.IsNullOrWhiteSpace(txtDesc.Text) ? null : txtDesc.Text.Trim(),
+                string.IsNullOrWhiteSpace(txtLicense.Text) ? null : txtLicense.Text.Trim(),
+                string.IsNullOrWhiteSpace(txtDepends.Text) ? null : txtDepends.Text.Trim()));
+            window.DialogResult = true;
+        };
+        bottom.Children.Add(btnOk);
+
+        var btnCancel = new MyButton { Text = "取消", Width = 90 };
+        btnCancel.Click += (_, _) => window.DialogResult = false;
+        bottom.Children.Add(btnCancel);
+
+        window.Content = root;
+        window.ShowDialog();
+        return result;
+    }
+}
