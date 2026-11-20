@@ -232,6 +232,20 @@ public sealed class KspInstanceService
 
     private static void TryAdd(List<string> list, string path)
     {
+        if (string.IsNullOrWhiteSpace(path))
+        {
+            return;
+        }
+        try
+        {
+            // CKAN 自己的检测会给出 "D:Kerbal Space Program" 这种盘符相对路径，归一化成绝对路径，
+            // 否则同一个实例会以两种写法重复出现在候选列表里（显示与去重都会乱）。
+            path = Path.GetFullPath(path);
+        }
+        catch
+        {
+            return;
+        }
         if (IsKspRoot(path))
         {
             list.Add(path);
