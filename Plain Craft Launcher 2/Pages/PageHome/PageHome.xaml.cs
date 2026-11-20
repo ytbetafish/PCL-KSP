@@ -23,6 +23,7 @@ public partial class PageHome
         "2026-11-20\n" +
         "· 主页「KSP Wiki 随机条目」改为多卡片 + 配图版式：说明横幅卡、带大图的主条目卡、三张相关条目卡。\n" +
         "· 随机条目改为后台预取 + 配图预热，点「换一条」不再等网络；被反爬拦截时保留当前条目并提示。\n" +
+        "· 随机条目改为从中文条目池抽取：抽走的不再放回，抽完一轮自动重新洗牌。\n" +
         "· 日志文件列表补齐 lucide/file-text 图标资源，条目左侧图标恢复显示。\n" +
         "· 设置页「主页」新增「自定义网址」档：从远端 XAML 地址拉取主页内容，带本地缓存与失败重试。\n" +
         "2026-11-19\n" +
@@ -71,18 +72,9 @@ public partial class PageHome
             _presetCts?.Cancel();
             _wikiCts?.Cancel();
         };
-        ImgWikiHero.ImageLoaded += () =>
-        {
-            PanWikiHeroImage.Visibility = Visibility.Visible;
-            ImgWikiHero.Visibility = Visibility.Visible;
-        };
-        ImgWikiHero.ImageLoadFailed += () =>
-        {
-            // 配图拿不到就整块收起，不显示占位图或占位文字
-            PanWikiHeroImage.Visibility = Visibility.Collapsed;
-            ImgWikiHero.Visibility = Visibility.Collapsed;
-        };
+
         ApplyHomeMode();
+
     }
 
     private static HttpClient CreateHttp()
@@ -388,7 +380,10 @@ public partial class PageHome
     private const string WikiApi = "https://wiki.kerbalspaceprogram.com/api.php";
 
     /// <summary>一条已经抓齐的随机条目：标题、正文与大图地址，渲染时不用再等网络。</summary>
-    private sealed record WikiEntry(string BaseTitle, string? UsedTitle, string? Plain, string? ImageUrl);
+    private sealed record WikiEntry(string SourceTitle, string BaseTitle, string? UsedTitle, string? Plain, string? ImageUrl);
+
+    /// <summary>中文条目池的本地缓存：全站带 /zh-cn 的页面标题。中文页只有两百来个，扫一次存下来复用一周。</summary>
+    private sealed record WikiPoolCache(DateTime FetchedAt, string[] Titles);
 
     // 随机条目每次都是新页面，缓存正文没有意义；改成提前抓 1–2 条放内存队列，
     // 点「换一条」直接取队列，网络往返藏在上一条展示的时间里。
@@ -396,7 +391,178 @@ public partial class PageHome
     private const int WikiQueueTarget = 2;
     private bool _wikiPrefetching;
     private WikiEntry? _wikiLastEntry;
+    private int _wikiHeroLoadToken;
 
+    // 中文条目池：洗牌后逐个抽走，抽完一轮再重新洗牌（抽奖模式，不重复抽同一条）
+    private static readonly string WikiPoolPath = Path.Combine(
+        Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "PCL-KSP", "wiki-zh-pool.json");
+    private readonly object _wikiPoolLock = new();
+    private string[] _wikiPool = Array.Empty<string>();
+    private readonly Queue<string> _wikiDrawQueue = new();
+    private Task? _wikiPoolTask;
+
+    /// <summary>确保中文池就绪：优先读 7 天内的本地缓存，没有就扫一遍全站页面标题。</summary>
+    private Task EnsureWikiPoolAsync()
+    {
+        lock (_wikiPoolLock)
+        {
+            if (_wikiPool.Length > 0) return Task.CompletedTask;
+            return _wikiPoolTask ??= LoadOrScanWikiPoolAsync();
+        }
+    }
+
+    private async Task LoadOrScanWikiPoolAsync()
+    {
+        try
+        {
+            if (TryLoadWikiPoolCache()) return;
+            Common.Log("KSP Wiki 中文条目池缓存缺失或过期，开始扫描全站页面标题");
+            var titles = await ScanWikiPoolAsync().ConfigureAwait(false);
+            if (titles.Length == 0) throw new InvalidOperationException("没能从 Wiki 取到中文条目清单");
+            lock (_wikiPoolLock)
+            {
+                _wikiPool = titles;
+                _wikiDrawQueue.Clear();
+            }
+            SaveWikiPoolCache(titles);
+            Common.Log($"KSP Wiki 中文条目池已更新：{titles.Length} 条");
+        }
+        catch (Exception ex)
+        {
+            lock (_wikiPoolLock) { _wikiPoolTask = null; } // 下次点击重新尝试
+            Common.Log(ex, "KSP Wiki 中文条目池扫描失败，暂时退回全站随机", Common.LogLevel.Developer);
+        }
+    }
+
+    private bool TryLoadWikiPoolCache()
+    {
+        try
+        {
+            if (!File.Exists(WikiPoolPath)) return false;
+            var cache = JsonSerializer.Deserialize<WikiPoolCache>(File.ReadAllText(WikiPoolPath, Encoding.UTF8));
+            if (cache?.Titles is not { Length: > 0 }) return false;
+            if (DateTime.Now - cache.FetchedAt > TimeSpan.FromDays(7)) return false;
+            lock (_wikiPoolLock)
+            {
+                _wikiPool = cache.Titles;
+                _wikiDrawQueue.Clear();
+            }
+            return true;
+        }
+        catch (Exception ex)
+        {
+            Common.Log(ex, "读取 KSP Wiki 中文条目池缓存失败", Common.LogLevel.Developer);
+            return false;
+        }
+    }
+
+    private static void SaveWikiPoolCache(string[] titles)
+    {
+        try
+        {
+            var dir = Path.GetDirectoryName(WikiPoolPath);
+            if (!string.IsNullOrEmpty(dir)) Directory.CreateDirectory(dir);
+            File.WriteAllText(WikiPoolPath,
+                JsonSerializer.Serialize(new WikiPoolCache(DateTime.Now, titles)), Encoding.UTF8);
+        }
+        catch (Exception ex)
+        {
+            Common.Log(ex, "写入 KSP Wiki 中文条目池缓存失败", Common.LogLevel.Developer);
+        }
+    }
+
+    /// <summary>扫描主命名空间的所有页面标题，留下带 /zh-cn 的中文页。</summary>
+    private static async Task<string[]> ScanWikiPoolAsync()
+    {
+        var titles = new List<string>();
+        string? continueToken = null;
+        for (var round = 0; round < 40; round++)
+        {
+            var url = WikiApi + "?action=query&list=allpages&apnamespace=0&aplimit=500&format=json&formatversion=2" +
+                      (continueToken is null ? "" : "&apcontinue=" + Uri.EscapeDataString(continueToken));
+            var json = await Http.GetStringAsync(url, CancellationToken.None).ConfigureAwait(false);
+            using var doc = ParseWikiJson(json);
+            foreach (var page in doc.RootElement.GetProperty("query").GetProperty("allpages").EnumerateArray())
+            {
+                var title = page.GetProperty("title").GetString();
+                if (title is null || !title.EndsWith("/zh-cn", StringComparison.OrdinalIgnoreCase)) continue;
+                if (IsUsablePoolTitle(title[..^"/zh-cn".Length])) titles.Add(title);
+            }
+            if (!doc.RootElement.TryGetProperty("continue", out var cont) ||
+                !cont.TryGetProperty("apcontinue", out var next)) break;
+            continueToken = next.GetString();
+        }
+        return titles.Distinct(StringComparer.Ordinal).ToArray();
+    }
+
+    /// <summary>粗略判断正文是不是中文：汉字占全部字母的比例够高才算，挡掉俄文/英文原文。</summary>
+    private static bool IsMostlyChinese(string? text)
+    {
+        if (string.IsNullOrWhiteSpace(text)) return false;
+        var cjk = 0;
+        var letters = 0;
+        foreach (var c in text)
+        {
+            if (c is >= '\u4e00' and <= '\u9fff')
+            {
+                cjk++;
+                letters++;
+            }
+            else if (char.IsLetter(c))
+            {
+                letters++;
+            }
+        }
+        return letters > 0 && cjk * 10 >= letters * 3;
+    }
+    /// <summary>中文池过滤：跳过版本号页、嵌套子页、命名空间页和首页。</summary>
+    private static bool IsUsablePoolTitle(string baseTitle)
+    {
+        if (baseTitle.Length is 0 or > 60) return false;
+        if (baseTitle is "Main Page" or "KSP Wiki") return false;
+        if (baseTitle.Contains('/') || baseTitle.Contains(':')) return false;
+        if (Regex.IsMatch(baseTitle, @"^[0-9]+([.][0-9]+)*$")) return false;
+        return true;
+    }
+    /// <summary>从池里抽一条并移出本轮；这一轮抽完就重新洗牌。</summary>
+    private string? TakeFromWikiPool()
+    {
+        lock (_wikiPoolLock)
+        {
+            if (_wikiPool.Length == 0) return null;
+            if (_wikiDrawQueue.Count == 0) RefillWikiDrawQueueUnlocked();
+            return _wikiDrawQueue.Count == 0 ? null : _wikiDrawQueue.Dequeue();
+        }
+    }
+
+    private void RefillWikiDrawQueueUnlocked()
+    {
+        var shuffled = _wikiPool.OrderBy(_ => Random.Shared.Next()).ToArray();
+        // 新一轮的第一条别和刚展示的重复
+        if (shuffled.Length > 1 && _wikiLastEntry is not null && shuffled[0] == _wikiLastEntry.SourceTitle)
+            (shuffled[0], shuffled[^1]) = (shuffled[^1], shuffled[0]);
+        foreach (var title in shuffled) _wikiDrawQueue.Enqueue(title);
+    }
+
+    /// <summary>中文池不可用时的退路：照旧走全站随机。</summary>
+    private static async Task<string?> PickRandomWikiTitleAsync(CancellationToken token)
+    {
+        var randomUrl = WikiApi +
+                        "?action=query&list=random&rnlimit=1&rnnamespace=0&format=json&formatversion=2";
+        for (var attempt = 0; attempt < 8; attempt++)
+        {
+            var randomJson = await Http.GetStringAsync(randomUrl, token).ConfigureAwait(false);
+            using var randomDoc = ParseWikiJson(randomJson);
+            var candidate = randomDoc.RootElement.GetProperty("query").GetProperty("random")[0]
+                .GetProperty("title").GetString() ?? string.Empty;
+            // 语言子页（/ru、/ko 等）、命名空间页、版本号页都不要，否则会把外文正文顶到主页上
+            if (candidate.Contains('/') || candidate.Contains(':')) continue;
+            if (Regex.IsMatch(candidate, @"^[0-9]+([.][0-9]+)*$")) continue;
+            if (candidate is "Main Page" or "Wiki Home" or "KSP Wiki") continue;
+            return candidate;
+        }
+        return null;
+    }
     /// <summary>拉取 KSP Wiki 的随机条目并在本地渲染（页面本身是本地 XAML，只有内容联网）。</summary>
     private async Task LoadWikiEntryAsync()
     {
@@ -412,10 +578,11 @@ public partial class PageHome
                 ? queued
                 : await FetchWikiEntryAsync(token).ConfigureAwait(true);
 
+            if (token.IsCancellationRequested) return; // 连点换条时，旧请求不许覆盖新结果
             if (entry is null) throw new InvalidOperationException("Wiki 没有返回可用的条目。");
             RenderWikiEntry(entry);
+
             EnsureWikiQueue(); // 展示完立刻补队列，下一次点击就不用等网络
-            await LoadWikiRelatedAsync(entry.UsedTitle ?? entry.BaseTitle, entry.BaseTitle, token).ConfigureAwait(true);
         }
         catch (Exception ex)
         {
@@ -432,6 +599,8 @@ public partial class PageHome
             {
                 LabWikiTitle.Text = "KSP Wiki 条目加载失败";
                 LabWikiText.Text = ex.Message + "\n点「换一条」重试。";
+                ClearWikiHeroImage();
+                PanWikiHeroImage.MinHeight = 0;
                 PanWikiHeroImage.Visibility = Visibility.Collapsed;
             }
         }
@@ -444,31 +613,39 @@ public partial class PageHome
     /// <summary>抓一条随机条目：标题、正文、配图地址。纯网络与解析，不碰 UI，可在后台线程跑。</summary>
     private async Task<WikiEntry?> FetchWikiEntryAsync(CancellationToken token)
     {
-        var randomUrl = WikiApi +
-                        "?action=query&list=random&rnlimit=1&rnnamespace=0&format=json&formatversion=2";
-        var title = string.Empty;
-        // 随机池里会抽到首页/导航页，这类条目没有可读内容，重抽几次跳过。
-        for (var attempt = 0; attempt < 4 && title.Length == 0; attempt++)
+        // 池子还没建好就在后台去扫，这一条先用全站随机顶上，不卡住页面
+        _ = EnsureWikiPoolAsync();
+
+        for (var attempt = 0; attempt < 5; attempt++)
         {
-            var randomJson = await Http.GetStringAsync(randomUrl, token).ConfigureAwait(false);
-            using var randomDoc = ParseWikiJson(randomJson);
-            var candidate = randomDoc.RootElement.GetProperty("query").GetProperty("random")[0]
-                .GetProperty("title").GetString() ?? string.Empty;
-            var normalized = StripLanguageSuffix(candidate).Trim();
-            if (normalized is "Main Page" or "Wiki Home" or "KSP Wiki") continue;
-            title = candidate;
+            var poolTitle = TakeFromWikiPool();
+            if (poolTitle is null) break;
+            var poolEntry = await BuildWikiEntryAsync(poolTitle, token).ConfigureAwait(false);
+            // 个别 /zh-cn 页面其实还是外文（机翻/复制原文），正文不像中文就换下一条
+            if (poolEntry is not null && IsMostlyChinese(poolEntry.Plain)) return poolEntry;
         }
 
-        if (title.Length == 0) return null;
+        // 池还没建好或抽不到中文正文时的临时退路：只允许主命名空间的英文/中文条目，绝不碰 /ru、/ko 这类语言子页
+        for (var attempt = 0; attempt < 2; attempt++)
+        {
+            var randomTitle = await PickRandomWikiTitleAsync(token).ConfigureAwait(false);
+            if (randomTitle is null) break;
+            var randomEntry = await BuildWikiEntryAsync(randomTitle, token).ConfigureAwait(false);
+            if (randomEntry is not null) return randomEntry;
+        }
+        return null;
+    }
 
+    /// <summary>按标题抓正文与配图；中文子页优先用它自己的正文，取不到再退回英文主条目。</summary>
+    private async Task<WikiEntry?> BuildWikiEntryAsync(string title, CancellationToken token)
+    {
         var baseTitle = StripLanguageSuffix(title);
 
-        // 随机条目常是 /ru、/ko 这类语言子页：优先取中文/英文主条目正文，取不到再退回原条目。
         // 分类页、Parts/xxx 这类条目首页常常没有正文，这时改抓整页再压成文本。
         string? plain = null;
         string? usedTitle = null;
         string? usedHtml = null;
-        foreach (var candidate in new[] { baseTitle + "/zh-cn", baseTitle, title })
+        foreach (var candidate in new[] { title, baseTitle })
         {
             if (plain is { Length: > 0 }) break;
             foreach (var section in new[] { 0, -1 })
@@ -484,7 +661,7 @@ public partial class PageHome
             }
         }
 
-        return new WikiEntry(baseTitle, usedTitle, plain, ExtractWikiImage(usedHtml));
+        return new WikiEntry(title, baseTitle, usedTitle, plain, ExtractWikiImage(usedHtml));
     }
 
     /// <summary>把一条已经抓好的条目画到主卡上（这一步不联网）。</summary>
@@ -518,7 +695,7 @@ public partial class PageHome
                     // 先把配图落到 MyImage 的缓存文件里，切过去时直接命中本地文件
                     if (entry.ImageUrl is not null) _ = MyImage.DownloadImageAsync(entry.ImageUrl);
                     _wikiQueue.Enqueue(entry);
-                    Common.Log($"KSP Wiki 已预取「{entry.BaseTitle}」（队列 {_wikiQueue.Count}）");
+                    Common.Log($"KSP Wiki 已预取「{entry.BaseTitle}」（{entry.SourceTitle}，队列 {_wikiQueue.Count}）");
                 }
             }
             catch (Exception ex)
@@ -532,7 +709,6 @@ public partial class PageHome
         });
     }
 
-    /// <summary>解析 Wiki 的 JSON；若拿到的是 Anubis 反爬挑战页，给可读错误而不是 JsonException。</summary>
     /// <summary>把切换失败的异常翻成一句人话，不把线程/解析原文贴到界面上。</summary>
     private static string DescribeWikiFailure(Exception ex)
     {
@@ -541,6 +717,7 @@ public partial class PageHome
         if (ex.Message.Contains("取消", StringComparison.Ordinal)) return "请求被中断";
         return "网络没打通";
     }
+    /// <summary>解析 Wiki 的 JSON；若拿到的是 Anubis 反爬挑战页，给可读错误而不是 JsonException。</summary>
     private static JsonDocument ParseWikiJson(string json)
     {
         if (json.TrimStart().StartsWith('<'))
@@ -548,150 +725,108 @@ public partial class PageHome
         return JsonDocument.Parse(json);
     }
 
-    /// <summary>把页面恢复成「加载中」的状态。</summary>「加载中」的状态。</summary>
+    /// <summary>把页面恢复成「加载中」的状态。</summary>
     private void ShowWikiLoading()
     {
         LabWikiTitle.Text = "正在拉取随机条目…";
         LabWikiText.Text = "";
         LabWikiHeroTag.Text = "";
         BorWikiHeroTag.Visibility = Visibility.Collapsed;
+        ClearWikiHeroImage();
+        PanWikiHeroImage.MinHeight = 0;
         PanWikiHeroImage.Visibility = Visibility.Collapsed;
-        ImgWikiHero.Visibility = Visibility.Collapsed;
-        ImgWikiHero.Source = "";
+
         LabWikiStatus.Visibility = Visibility.Collapsed;
-        PanWikiRelated.Children.Clear();
-        CardWikiRelatedHost.Visibility = Visibility.Collapsed;
         BtnWikiOpen.IsEnabled = false;
         BtnWikiNext.IsEnabled = false;
     }
+
+    private MyImage? _wikiHeroImage;
 
     /// <summary>设置主卡的大横幅图；没有配图时整块收起，不显示任何占位。</summary>
     private void ShowWikiHeroImage(string title, string? imageUrl)
     {
         LabWikiHeroTag.Text = title;
+        _wikiHeroLoadToken++;
+        ClearWikiHeroImage();
+        PanWikiHeroImage.MinHeight = 0;
+        PanWikiHeroImage.Visibility = Visibility.Collapsed;
         if (imageUrl is null)
         {
-            PanWikiHeroImage.Visibility = Visibility.Collapsed;
             BorWikiHeroTag.Visibility = Visibility.Collapsed;
-            ImgWikiHero.Visibility = Visibility.Collapsed;
-            ImgWikiHero.Source = "";
             return;
         }
 
-        // 图片下载完成后再整块显示，避免出现空白灰块
-        PanWikiHeroImage.Visibility = Visibility.Collapsed;
         BorWikiHeroTag.Visibility = Visibility.Visible;
-        ImgWikiHero.Visibility = Visibility.Collapsed;
-        ImgWikiHero.Source = imageUrl;
+        // 先把灰底占位块撑起来，真图下载完再换成图片
+        PanWikiHeroImage.MinHeight = 230;
+        PanWikiHeroImage.Visibility = Visibility.Visible;
+        _ = ShowWikiHeroImageAsync(imageUrl, _wikiHeroLoadToken);
     }
 
-    /// <summary>拉取主条目左下角的「相关条目」链接，逐张补上带图小卡。</summary>
-    private async Task LoadWikiRelatedAsync(string title, string baseTitle, CancellationToken token)
+    /// <summary>先把配图落到本地缓存，再挂一个全新的 MyImage；换条太快时旧图解码完成也只会落在已被移除的控件上。</summary>
+    private async Task ShowWikiHeroImageAsync(string imageUrl, int loadToken)
     {
-        var linksUrl = WikiApi +
-                       "?action=query&prop=links&redirects=1&pllimit=40&plnamespace=0&format=json&formatversion=2&titles=" +
-                       Uri.EscapeDataString(title);
-        string[] candidates;
         try
         {
-            var json = await Http.GetStringAsync(linksUrl, token).ConfigureAwait(true);
-            using var doc = ParseWikiJson(json);
-            var pages = doc.RootElement.GetProperty("query").GetProperty("pages");
-            if (pages.GetArrayLength() == 0) return;
-            if (!pages[0].TryGetProperty("links", out var linksElement)) return;
-            candidates = linksElement.EnumerateArray()
-                .Select(link => link.TryGetProperty("title", out var t) ? t.GetString() : null)
-                .Where(link => IsUsableRelatedTitle(link, baseTitle))
-                .Select(link => link!)
-                .Take(8)
-                .ToArray();
-        }
-        catch (Exception)
-        {
-            return;
-        }
-
-        var added = 0;
-        foreach (var candidate in candidates)
-        {
-            if (added >= 3 || token.IsCancellationRequested) break;
-            string? html = null;
-            foreach (var section in new[] { 0, -1 })
+            var path = MyImage.GetTempPath(imageUrl);
+            if (!File.Exists(path) || new FileInfo(path).Length == 0)
+                path = await MyImage.DownloadImageAsync(imageUrl).ConfigureAwait(true);
+            if (loadToken != _wikiHeroLoadToken) return;
+            if (string.IsNullOrWhiteSpace(path) || !File.Exists(path))
             {
-                html = await TryFetchSectionTextAsync(candidate, token, section).ConfigureAwait(true);
-                if (!string.IsNullOrWhiteSpace(html)) break;
+                PanWikiHeroImage.MinHeight = 0;
+                PanWikiHeroImage.Visibility = Visibility.Collapsed;
+                return;
             }
-            if (token.IsCancellationRequested) return;
-            if (string.IsNullOrWhiteSpace(html)) continue;
 
-            var snippet = CleanWikiText(html, StripLanguageSuffix(candidate), 200);
-            if (snippet.Length < 40) continue;
-
-            AddWikiRelatedCard(candidate, BuildWikiPageUrl(candidate), ExtractWikiImage(html), snippet);
-            CardWikiRelatedHost.Visibility = Visibility.Visible;
-            added++;
+            AttachWikiHeroImage(path, loadToken);
+        }
+        catch (Exception ex)
+        {
+            Common.Log(ex, "KSP Wiki 配图下载失败", Common.LogLevel.Developer);
         }
     }
 
-    /// <summary>相关条目候选：跳过版本号页、命名空间页、语言子页与自身。</summary>
-    private static bool IsUsableRelatedTitle(string? title, string baseTitle)
+    /// <summary>每次换条都用新的 MyImage 实例，彻底断开上一条图片的异步回调。</summary>
+    private void AttachWikiHeroImage(string path, int loadToken)
     {
-        if (string.IsNullOrWhiteSpace(title)) return false;
-        if (title.Contains('/') || title.Contains(':')) return false;
-        if (title.Length > 46) return false;
-        if (string.Equals(title, baseTitle, StringComparison.OrdinalIgnoreCase)) return false;
-        if (Regex.IsMatch(title, @"^[0-9]+(\.[0-9]+)*$")) return false;
-        return true;
+        if (loadToken != _wikiHeroLoadToken) return;
+        ClearWikiHeroImage();
+        var image = new MyImage
+        {
+            Source = path,
+            Stretch = Stretch.Uniform,
+            MaxHeight = 230,
+            HorizontalAlignment = HorizontalAlignment.Center,
+            VerticalAlignment = VerticalAlignment.Center,
+            CornerRadius = new CornerRadius(4),
+            Visibility = Visibility.Collapsed
+        };
+        image.ImageLoaded += () =>
+        {
+            if (loadToken != _wikiHeroLoadToken || !ReferenceEquals(_wikiHeroImage, image)) return;
+            PanWikiHeroImage.MinHeight = 0; // 真图到位后按图片自身高度收放
+            PanWikiHeroImage.Visibility = Visibility.Visible;
+            image.Visibility = Visibility.Visible;
+        };
+        image.ImageLoadFailed += () =>
+        {
+            if (loadToken != _wikiHeroLoadToken || !ReferenceEquals(_wikiHeroImage, image)) return;
+            // 配图拿不到就整块收起，不显示占位图或占位文字
+            PanWikiHeroImage.MinHeight = 0;
+            PanWikiHeroImage.Visibility = Visibility.Collapsed;
+        };
+        _wikiHeroImage = image;
+        PanWikiHeroImage.Children.Insert(1, image);
     }
 
-    /// <summary>代码构建一张「横幅图 + 摘要 + 打开按钮」的相关条目卡片。</summary>
-    private void AddWikiRelatedCard(string title, string url, string? imageUrl, string snippet)
+    private void ClearWikiHeroImage()
     {
-        var card = new MyCard { Title = title, Margin = new Thickness(0, 0, 0, 12) };
-        var stack = new StackPanel { Margin = new Thickness(0, 38, 0, 0) };
-
-        if (imageUrl is not null)
-        {
-            var imageHost = new Grid { Height = 132, Margin = new Thickness(16, 0, 16, 0), ClipToBounds = true };
-            var back = new Border { CornerRadius = new CornerRadius(4) };
-            back.SetResourceReference(Border.BackgroundProperty, "ColorBrushSemiTransparent");
-            imageHost.Children.Add(back);
-            imageHost.Children.Add(new MyImage
-            {
-                Source = imageUrl,
-                Stretch = Stretch.UniformToFill,
-                CornerRadius = new CornerRadius(4)
-            });
-            stack.Children.Add(imageHost);
-        }
-
-        var text = new TextBlock
-        {
-            Text = snippet,
-            Margin = new Thickness(20, 9, 20, 0),
-            FontSize = 12.5,
-            Opacity = 0.75,
-            TextTrimming = TextTrimming.CharacterEllipsis,
-            TextWrapping = TextWrapping.NoWrap
-        };
-        stack.Children.Add(text);
-
-        var button = new MyButton
-        {
-            Text = "在 Wiki 上打开",
-            MinWidth = 120,
-            Height = 28,
-            Padding = new Thickness(13, 0, 13, 0),
-            Margin = new Thickness(20, 10, 0, 16),
-            HorizontalAlignment = HorizontalAlignment.Left
-        };
-        button.Click += (_, _) => PCL.Core.App.Basics.OpenPath(url);
-        stack.Children.Add(button);
-
-        card.Children.Add(stack);
-        PanWikiRelated.Children.Add(card);
+        if (_wikiHeroImage is null) return;
+        PanWikiHeroImage.Children.Remove(_wikiHeroImage);
+        _wikiHeroImage = null;
     }
-
     /// <summary>从条目 HTML 里挑一张尽量大的配图：取页内宽度最大的非图标图，缩略图过小时换回原图。</summary>
     private static string? ExtractWikiImage(string? html)
     {
@@ -812,6 +947,14 @@ public partial class PageHome
     }
 
     private void BtnWikiNext_Click(object sender, EventArgs e) => _ = LoadWikiEntryAsync();
+
+    /// <summary>整张说明卡都是「换一条」的点击区域，不必非要点到刷新图标。</summary>
+    private void CardWikiBanner_Click(object sender, MouseButtonEventArgs e)
+    {
+        if (!BtnWikiNext.IsEnabled) return;
+        e.Handled = true;
+        BtnWikiNext_Click(sender, EventArgs.Empty);
+    }
 
     private void BtnWikiOpen_Click(object sender, MouseButtonEventArgs e)
     {

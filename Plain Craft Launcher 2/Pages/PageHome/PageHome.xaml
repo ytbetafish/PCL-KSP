@@ -53,9 +53,8 @@
                 <!-- 主条目：大横幅图 + 标题胶囊 + 正文 -->
                 <local:MyCard x:Name="CardWikiHero" Title="随机条目" Margin="0,0,0,15">
                     <StackPanel Margin="0,38,0,0">
-                        <Grid x:Name="PanWikiHeroImage" Height="230" Margin="20,0,20,0" ClipToBounds="True">
+                        <Grid x:Name="PanWikiHeroImage" MaxHeight="230" Margin="20,0,20,0">
                             <Border CornerRadius="4" Background="{DynamicResource ColorBrushSemiTransparent}" />
-                            <local:MyImage x:Name="ImgWikiHero" Stretch="UniformToFill" CornerRadius="4" Visibility="Collapsed" />
                             <Border x:Name="BorWikiHeroTag" HorizontalAlignment="Left" VerticalAlignment="Bottom"
                                     Margin="14" Padding="12,4" CornerRadius="13" Background="#B3000000">
                                 <TextBlock x:Name="LabWikiHeroTag" FontSize="12.5" Foreground="White" TextWrapping="Wrap" />
@@ -69,15 +68,7 @@
                     </StackPanel>
                 </local:MyCard>
 
-                <!-- 顶部横幅：说明 + 换一条 -->
-                
-
-                <!-- 相关条目：代码动态填充的带图卡片 -->
-                <local:MyCard x:Name="CardWikiRelatedHost" Title="相关条目" Margin="0,0,0,15" Visibility="Collapsed">
-                    <StackPanel x:Name="PanWikiRelated" Margin="20,38,20,4" />
-                </local:MyCard>
-
-<local:MyCard x:Name="CardWikiBanner" Title="KSP Wiki 随机条目" Margin="0,0,0,15">
+                <local:MyCard x:Name="CardWikiBanner" Title="KSP Wiki 随机条目" Margin="0,0,0,15" Cursor="Hand" MouseLeftButtonUp="CardWikiBanner_Click">
                     <Grid Margin="22,38,18,16">
                         <Grid.ColumnDefinitions>
                             <ColumnDefinition Width="Auto" />
@@ -92,7 +83,7 @@
                         <StackPanel Grid.Column="1" VerticalAlignment="Center">
                             <TextBlock x:Name="LabWikiBanner" FontSize="17" FontWeight="Light" Text="每日一个 KSP Wiki 条目" />
                             <TextBlock FontSize="12.5" Opacity="0.6" TextWrapping="Wrap" Margin="0,5,0,0"
-                                       Text="条目随机取自 wiki.kerbalspaceprogram.com，正文、配图与相关条目均来自该站点。" />
+                                       Text="从 Wiki 的中文条目里随机抽取，抽过的不再重复，抽完一轮会自动重新洗牌。" />
                             <TextBlock x:Name="LabWikiStatus" FontSize="12" Opacity="0.75" TextWrapping="Wrap" Margin="0,5,0,0" Visibility="Collapsed" />
                         </StackPanel>
                     </Grid>
