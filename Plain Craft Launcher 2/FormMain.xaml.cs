@@ -1464,6 +1464,7 @@ public partial class FormMain
                                 settingsNav = key;
                                 FrameworkElement right = key switch
                                 {
+                                    "instance" => new Pages.PageKspInstance(),
                                     "ckan" => new Pages.PageCkan(),
                                     "translate" => new Pages.PageTranslate(),
                                     "language" => new Pages.PageLanguage(),
@@ -1479,6 +1480,7 @@ public partial class FormMain
                         }
                         FrameworkElement right = settingsNav switch
                         {
+                            "instance" => new Pages.PageKspInstance(),
                             "ckan" => new Pages.PageCkan(),
                             "translate" => new Pages.PageTranslate(),
                             "language" => new Pages.PageLanguage(),

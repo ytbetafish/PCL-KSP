@@ -7,6 +7,11 @@
     <local:MyScrollViewer HorizontalScrollBarVisibility="Disabled" VerticalScrollBarVisibility="Auto"
                           Style="{StaticResource ScrollViewerFullMargin}">
         <StackPanel Margin="0,12,0,0" x:Name="PanItem">
+            <TextBlock Text="游戏" Margin="13,6,5,4" Opacity="0.6" FontSize="12" />
+            <local:MyListItem x:Name="NavInstance" IsScaleAnimationEnabled="False" Type="RadioBox"
+                              MinPaddingRight="35" Height="36" VerticalAlignment="Top"
+                              Title="KSP 实例" SvgIcon="lucide/folder-open" />
+
             <TextBlock Text="模组" Margin="13,6,5,4" Opacity="0.6" FontSize="12" />
             <local:MyListItem x:Name="NavCkan" IsScaleAnimationEnabled="False" Type="RadioBox"
                               MinPaddingRight="35" Height="36" VerticalAlignment="Top"
