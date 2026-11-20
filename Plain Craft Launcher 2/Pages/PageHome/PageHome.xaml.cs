@@ -620,12 +620,12 @@ public partial class PageHome
         PanWikiRelated.Children.Add(card);
     }
 
-    /// <summary>从条目 HTML 里取一张足够大的配图，转成绝对地址并换成更大的缩略图。</summary>
+    /// <summary>从条目 HTML 里挑一张尽量大的配图：取页内宽度最大的非图标图，缩略图过小时换回原图。</summary>
     private static string? ExtractWikiImage(string? html)
     {
         if (string.IsNullOrWhiteSpace(html)) return null;
         const string host = "https://wiki.kerbalspaceprogram.com";
-        string? fallback = null;
+        var candidates = new List<(int Width, string Url)>();
         foreach (Match match in Regex.Matches(html, @"<img\b[^>]*>", RegexOptions.IgnoreCase))
         {
             var tag = match.Value;
@@ -648,17 +648,26 @@ public partial class PageHome
                 if (attrMatch.Success) width = int.Parse(attrMatch.Groups[1].Value);
             }
 
-            // 缩略图直接沿用 Wiki 给出的尺寸：更大的尺寸会被 301 到原图，跨域重定向容易失败。
+            if (width is > 0 and < 120) continue; // 小图标直接跳过
+            // 缩略图地址直接沿用 Wiki 给出的尺寸：请求更大尺寸会被 301 到原图，链路容易出问题。
             var absolute = src.StartsWith("http", StringComparison.OrdinalIgnoreCase)
                 ? src
                 : host + (src.StartsWith('/') ? src : "/" + src);
-
-            if (width >= 240) return absolute;
-            if (width > 0 && width < 120) continue;
-            fallback ??= absolute;
+            candidates.Add((width, absolute));
         }
 
-        return fallback;
+        if (candidates.Count == 0) return null;
+        var best = candidates.OrderByDescending(candidate => candidate.Width).First();
+        if (best.Width is > 0 and < 300)
+        {
+            // 信息框常只给 128/168px 的小缩略图，放到 230 高的大卡上会糊，改取原图。
+            var original = Regex.Replace(best.Url,
+                @"^(https://[^/]+)/images/thumb/([^/]+)/([^/]+)/([^/]+)/\d+px-[^/]+$", "$1/images/$2/$3/$4",
+                RegexOptions.IgnoreCase);
+            if (original != best.Url) return original;
+        }
+
+        return best.Url;
     }
 
     private async Task<string?> TryFetchSectionTextAsync(string title, CancellationToken token, int section)
