@@ -55,6 +55,8 @@
                     <StackPanel Margin="0,38,0,0">
                         <Grid x:Name="PanWikiHeroImage" MaxHeight="230" Margin="20,0,20,0">
                             <Border CornerRadius="4" Background="{DynamicResource ColorBrushSemiTransparent}" />
+                            <Image x:Name="ImgWikiHeroPlaceholder" Stretch="Uniform" MaxHeight="230" Visibility="Collapsed" ImageFailed="WikiPlaceholder_ImageFailed"
+                                   Source="pack://application:,,,/images/Icons/NoIcon.png" />
                             <Border x:Name="BorWikiHeroTag" HorizontalAlignment="Left" VerticalAlignment="Bottom"
                                     Margin="14" Padding="12,4" CornerRadius="13" Background="#B3000000">
                                 <TextBlock x:Name="LabWikiHeroTag" FontSize="12.5" Foreground="White" TextWrapping="Wrap" />

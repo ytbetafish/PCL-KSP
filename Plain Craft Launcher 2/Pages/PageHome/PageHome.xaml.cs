@@ -758,9 +758,10 @@ public partial class PageHome
         }
 
         BorWikiHeroTag.Visibility = Visibility.Visible;
-        // 先把灰底占位块撑起来，真图下载完再换成图片
+        // 原版占位图先顶上，真图下载完成后换成图片
         PanWikiHeroImage.MinHeight = 230;
         PanWikiHeroImage.Visibility = Visibility.Visible;
+        ImgWikiHeroPlaceholder.Visibility = Visibility.Visible;
         _ = ShowWikiHeroImageAsync(imageUrl, _wikiHeroLoadToken);
     }
 
@@ -771,12 +772,15 @@ public partial class PageHome
         {
             var path = MyImage.GetTempPath(imageUrl);
             if (!File.Exists(path) || new FileInfo(path).Length == 0)
-                path = await MyImage.DownloadImageAsync(imageUrl).ConfigureAwait(true);
-            if (loadToken != _wikiHeroLoadToken) return;
-            if (string.IsNullOrWhiteSpace(path) || !File.Exists(path))
             {
-                PanWikiHeroImage.MinHeight = 0;
-                PanWikiHeroImage.Visibility = Visibility.Collapsed;
+                if (File.Exists(path)) File.Delete(path); // 上次留下的 0 字节文件不算缓存
+                path = await MyImage.DownloadImageAsync(imageUrl).ConfigureAwait(true);
+            }
+            if (loadToken != _wikiHeroLoadToken) return;
+            if (string.IsNullOrWhiteSpace(path) || !File.Exists(path) || new FileInfo(path).Length == 0)
+            {
+                if (!string.IsNullOrWhiteSpace(path) && File.Exists(path)) File.Delete(path);
+                CollapseWikiHeroImage();
                 return;
             }
 
@@ -785,6 +789,7 @@ public partial class PageHome
         catch (Exception ex)
         {
             Common.Log(ex, "KSP Wiki 配图下载失败", Common.LogLevel.Developer);
+            if (loadToken == _wikiHeroLoadToken) CollapseWikiHeroImage();
         }
     }
 
@@ -808,21 +813,36 @@ public partial class PageHome
             if (loadToken != _wikiHeroLoadToken || !ReferenceEquals(_wikiHeroImage, image)) return;
             PanWikiHeroImage.MinHeight = 0; // 真图到位后按图片自身高度收放
             PanWikiHeroImage.Visibility = Visibility.Visible;
+            ImgWikiHeroPlaceholder.Visibility = Visibility.Collapsed;
             image.Visibility = Visibility.Visible;
         };
         image.ImageLoadFailed += () =>
         {
             if (loadToken != _wikiHeroLoadToken || !ReferenceEquals(_wikiHeroImage, image)) return;
             // 配图拿不到就整块收起，不显示占位图或占位文字
-            PanWikiHeroImage.MinHeight = 0;
-            PanWikiHeroImage.Visibility = Visibility.Collapsed;
+            CollapseWikiHeroImage();
         };
         _wikiHeroImage = image;
-        PanWikiHeroImage.Children.Insert(1, image);
+        PanWikiHeroImage.Children.Insert(2, image); // 0 底色、1 占位图、2 真图、3 标签
+    }
+
+    /// <summary>收起配图区：没图或没拿到图时整块藏掉，不显示占位图或占位文字。</summary>
+    private void CollapseWikiHeroImage()
+    {
+        ImgWikiHeroPlaceholder.Visibility = Visibility.Collapsed;
+        ClearWikiHeroImage();
+        PanWikiHeroImage.MinHeight = 0;
+        PanWikiHeroImage.Visibility = Visibility.Collapsed;
+    }
+
+    private void WikiPlaceholder_ImageFailed(object sender, ExceptionRoutedEventArgs e)
+    {
+        Common.Log($"KSP Wiki 占位图加载失败：{e.ErrorException?.Message}$", Common.LogLevel.Developer);
     }
 
     private void ClearWikiHeroImage()
     {
+        ImgWikiHeroPlaceholder.Visibility = Visibility.Collapsed;
         if (_wikiHeroImage is null) return;
         PanWikiHeroImage.Children.Remove(_wikiHeroImage);
         _wikiHeroImage = null;
