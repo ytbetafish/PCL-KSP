@@ -38,6 +38,10 @@
                         <local:MyButton x:Name="BtnChangeset" Text="批量变更" Width="90" Margin="10,0,0,0"
                                         Click="BtnChangeset_Click" />
                     </StackPanel>
+                    <StackPanel Orientation="Horizontal" Margin="0,8,0,0">
+                        <local:MyButton x:Name="BtnScanUnmanaged" Text="扫描 AD" Width="90"
+                                        Click="BtnScanUnmanaged_Click" />
+                    </StackPanel>
                 </StackPanel>
             </local:MyCard>
 

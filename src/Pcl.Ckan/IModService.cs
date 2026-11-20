@@ -58,6 +58,15 @@ public interface IModService
     Task<ModInstallPlan?> GetInstallPlanAsync(string identifier, bool allowIncompatible = false, IReadOnlyList<string>? providerPicks = null, bool withRecommendations = false, CancellationToken cancellationToken = default);
 
     /// <summary>
+    /// 扫描 GameData 中的未托管 DLL 并更新注册表（CKAN 的 scan）；返回是否发现变化。
+    /// 只读实例会抛 <see cref="InstanceReadOnlyException"/>。
+    /// </summary>
+    Task<bool> ScanUnmanagedAsync(CancellationToken cancellationToken = default);
+
+    /// <summary>列出已扫描登记的未托管 DLL（AD，autodetected）。</summary>
+    Task<IReadOnlyList<ModUnmanagedItem>> GetUnmanagedAsync(CancellationToken cancellationToken = default);
+
+    /// <summary>
     /// 对多个模组一次性解析依赖，得到一个整体计划（CKAN Changeset 语义：
     /// 勾选一批模组 → 统一解析与冲突检查 → 一次性执行）。
     /// </summary>

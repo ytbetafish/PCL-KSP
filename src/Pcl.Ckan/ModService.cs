@@ -481,6 +481,22 @@ public sealed class ModService : IModService, IDisposable
                     Conflicts = conflicts?.Distinct(StringComparer.OrdinalIgnoreCase).ToList()
                 });
             }
+
+            // CKAN 的 AD（autodetected）：GameData 里已扫描登记、但不由任何已装模组负责的 DLL。
+            foreach (var dllIdentifier in reg.InstalledDlls)
+            {
+                if (installed.Keys.Any(k => string.Equals(k, dllIdentifier, StringComparison.OrdinalIgnoreCase)))
+                {
+                    continue;
+                }
+                var dllModule = LatestAvailable(dllIdentifier);
+                list.Add(ToResult(dllModule, dllIdentifier, installed) with
+                {
+                    IsInstalled = true,
+                    IsAutodetected = true,
+                    Name = dllModule?.name ?? dllIdentifier + "（AD）"
+                });
+            }
             return list;
         }, cancellationToken).ConfigureAwait(false);
         Trace($"已装投影 {results.Count} 条，{sw.ElapsedMilliseconds} ms");
@@ -538,6 +554,41 @@ public sealed class ModService : IModService, IDisposable
         }
 
         return Task.FromResult<IReadOnlyList<ModVersionInfo>>(list);
+    }
+
+    /// <inheritdoc />
+    public Task<bool> ScanUnmanagedAsync(CancellationToken cancellationToken = default)
+    {
+        if (_instance == null)
+        {
+            throw new InvalidOperationException("尚未附加 KSP 实例。");
+        }
+        if (_registryManager == null)
+        {
+            throw new InstanceReadOnlyException();
+        }
+
+        return Task.Run(() => _registryManager.ScanUnmanagedFiles(), cancellationToken);
+    }
+
+    /// <inheritdoc />
+    public Task<IReadOnlyList<ModUnmanagedItem>> GetUnmanagedAsync(CancellationToken cancellationToken = default)
+    {
+        var reg = Registry;
+        var list = new List<ModUnmanagedItem>();
+        if (reg == null)
+        {
+            return Task.FromResult<IReadOnlyList<ModUnmanagedItem>>(list);
+        }
+
+        return Task.Run(() =>
+        {
+            foreach (var dllIdentifier in reg.InstalledDlls)
+            {
+                list.Add(new ModUnmanagedItem(dllIdentifier, reg.DllPath(dllIdentifier), true));
+            }
+            return (IReadOnlyList<ModUnmanagedItem>)list;
+        }, cancellationToken);
     }
 
     /// <inheritdoc />

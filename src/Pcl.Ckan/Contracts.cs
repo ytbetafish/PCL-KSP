@@ -34,7 +34,9 @@ public sealed record ModSearchResult(
     /// <summary>元数据声明的最高兼容 KSP 版本；null 表示未声明。</summary>
     string? MaxKsp = null,
     /// <summary>已装模组声明被哪个模组替换（CKAN 的 replaced_by）；null 表示无替换关系。</summary>
-    string? ReplacedById = null);
+    string? ReplacedById = null,
+    /// <summary>是否为 CKAN 扫描出的未托管项（AD，autodetected）：由手动安装产生，CKAN 只能识别不能管理。</summary>
+    bool IsAutodetected = false);
 
 /// <summary>多提供者依赖中的一个候选模组（CKAN 的「provides」语义）。</summary>
 public sealed record ModProviderOption(string Identifier, string Name, string? Version);
@@ -55,6 +57,9 @@ public sealed record ModProviderChoice(
 public sealed record ModOptionalRelations(
     IReadOnlyList<string> Recommends,
     IReadOnlyList<string> Suggests);
+
+/// <summary>GameData 中未被 CKAN 注册表管理的 DLL（CKAN 的 AD / autodetected 项）。</summary>
+public sealed record ModUnmanagedItem(string Identifier, string? Path, bool IsDll);
 
 /// <summary>Audit recommendations 的一条：某个已装模组推荐/建议、但尚未安装的模组。</summary>
 public sealed record ModAuditItem(

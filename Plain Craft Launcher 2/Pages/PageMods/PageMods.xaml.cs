@@ -148,6 +148,7 @@ public partial class PageMods
         if (!mod.IsCompatible) info.Add("不兼容");
         if (!string.IsNullOrEmpty(mod.MaxKsp)) info.Add("最高 KSP " + mod.MaxKsp);
         if (!string.IsNullOrEmpty(mod.ReplacedById)) info.Add("可替换为 " + mod.ReplacedById);
+        if (mod.IsAutodetected) info.Add("AD（手动安装）");
 
         var item = new MyListItem
         {
@@ -472,6 +473,46 @@ public partial class PageMods
         {
             PanProgress.Visibility = Visibility.Collapsed;
             MessageBox.Show("卸载失败：" + ex.Message, "PCL KSP", MessageBoxButton.OK, MessageBoxImage.Error);
+        }
+    }
+
+    /// <summary>scan：扫描 GameData 中未托管的 DLL（CKAN 的 AD），并在列表中标注。</summary>
+    private async void BtnScanUnmanaged_Click(object sender, System.Windows.Input.MouseButtonEventArgs e)
+    {
+        try
+        {
+            PanLoad.Visibility = Visibility.Visible;
+            var changed = await GetService().ScanUnmanagedAsync();
+            var items = await GetService().GetUnmanagedAsync();
+            PanLoad.Visibility = Visibility.Collapsed;
+
+            var text = items.Count == 0
+                ? "未发现未托管的 DLL：GameData 中的 DLL 全部已在 CKAN 注册表登记。"
+                : $"发现 {items.Count} 个未托管的 DLL（AD / autodetected）：\n\n" +
+                  string.Join("\n", items.Take(20).Select(i =>
+                      "· " + i.Identifier + (string.IsNullOrEmpty(i.Path) ? "" : " —— " + i.Path))) +
+                  (items.Count > 20 ? $"\n…… 共 {items.Count} 个" : "") +
+                  "\n\n这些模组由手动安装产生：CKAN 能识别它们在游戏里，但无法安全卸载其文件。" +
+                  "如需纳入管理，请卸载手动版本后用对应 CKAN 模组重新安装一次。";
+            if (changed)
+            {
+                text += "\n\n（注册表已更新）";
+            }
+            MessageBox.Show(text, "扫描未托管模组", MessageBoxButton.OK, MessageBoxImage.Information);
+
+            _lastResults = await GetService().ListInstalledAsync();
+            ApplyFilter();
+        }
+        catch (InstanceReadOnlyException)
+        {
+            PanLoad.Visibility = Visibility.Collapsed;
+            MessageBox.Show("当前实例为只读（CKAN 注册表不可写），无法执行扫描。请关闭占用该实例的 CKAN 客户端后重试。",
+                "扫描未托管模组", MessageBoxButton.OK, MessageBoxImage.Warning);
+        }
+        catch (Exception ex)
+        {
+            PanLoad.Visibility = Visibility.Collapsed;
+            MessageBox.Show("扫描失败：" + ex.Message, "扫描未托管模组", MessageBoxButton.OK, MessageBoxImage.Error);
         }
     }
 
