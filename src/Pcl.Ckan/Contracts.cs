@@ -40,6 +40,9 @@ public sealed record ModSearchResult(
     /// <summary>该模组的最新版本安装包是否已在本地下载缓存中（CKAN 的 Cached 状态）。</summary>
     bool IsCached = false);
 
+/// <summary>模组内容（Contents 页）的一条：安装包内的文件路径，或安装描述符的目标位置。</summary>
+public sealed record ModContentEntry(string Path, string? InstallTo);
+
 /// <summary>下载缓存的统计信息。</summary>
 public sealed record ModCacheStats(int FileCount, long TotalBytes, string CachePath);
 

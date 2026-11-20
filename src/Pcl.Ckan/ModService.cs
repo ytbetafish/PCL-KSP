@@ -557,6 +557,55 @@ public sealed class ModService : IModService, IDisposable
     }
 
     /// <inheritdoc />
+    public Task<IReadOnlyList<ModContentEntry>> GetContentsAsync(string identifier, CancellationToken cancellationToken = default)
+    {
+        var mod = LatestAvailable(identifier);
+        var list = new List<ModContentEntry>();
+        if (mod == null)
+        {
+            return Task.FromResult<IReadOnlyList<ModContentEntry>>(list);
+        }
+
+        return Task.Run(() =>
+        {
+            string? cachedZip = null;
+            if (_instance != null)
+            {
+                try
+                {
+                    using var cache = new NetModuleCache(_instance.DownloadCacheDir);
+                    cachedZip = cache.GetCachedFilename(mod);
+                }
+                catch { /* 缓存不可读时退回描述符 */ }
+            }
+
+            // 已缓存：直接枚举安装包内的文件，这才是 CKAN Contents 页的真实内容。
+            if (!string.IsNullOrEmpty(cachedZip) && File.Exists(cachedZip!))
+            {
+                try
+                {
+                    using var archive = System.IO.Compression.ZipFile.OpenRead(cachedZip!);
+                    foreach (var entry in archive.Entries.Where(e => !e.FullName.EndsWith("/")).Take(400))
+                    {
+                        list.Add(new ModContentEntry(entry.FullName, null));
+                    }
+                }
+                catch { /* 非 zip 或损坏，退回描述符 */ }
+            }
+
+            if (list.Count == 0)
+            {
+                foreach (var stanza in mod.install ?? Array.Empty<ModuleInstallDescriptor>())
+                {
+                    var source = stanza.file ?? stanza.find ?? "*";
+                    list.Add(new ModContentEntry(source, stanza.install_to));
+                }
+            }
+            return (IReadOnlyList<ModContentEntry>)list;
+        }, cancellationToken);
+    }
+
+    /// <inheritdoc />
     public bool IsCached(string identifier)
     {
         var mod = LatestAvailable(identifier);

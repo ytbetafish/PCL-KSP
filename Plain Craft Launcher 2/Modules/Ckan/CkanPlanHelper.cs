@@ -588,3 +588,65 @@ internal static class CkanCacheDialog
         return (bytes / 1024d / 1024d / 1024d).ToString("0.00") + " GB";
     }
 }
+
+/// <summary>Contents 页：列出模组安装包内的文件（或未缓存时的安装描述符）。</summary>
+internal static class CkanContentsDialog
+{
+    internal static void Show(string moduleName, IReadOnlyList<ModContentEntry> entries)
+    {
+        var window = new Window
+        {
+            Title = "内容 - " + moduleName,
+            Width = 680,
+            Height = 560,
+            WindowStartupLocation = WindowStartupLocation.CenterScreen,
+            ShowInTaskbar = false
+        };
+        var main = Application.Current?.MainWindow;
+        if (main is { IsVisible: true })
+        {
+            window.Owner = main;
+            window.WindowStartupLocation = WindowStartupLocation.CenterOwner;
+        }
+
+        var root = new DockPanel { Margin = new Thickness(16, 14, 16, 14) };
+        var header = new TextBlock
+        {
+            Text = entries.Count == 0
+                ? $"「{moduleName}」没有可展示的安装内容（元数据缺少 install 描述符，且本地未缓存安装包）。"
+                : $"「{moduleName}」将安装 {entries.Count} 项内容。" +
+                  (entries.Any(e => e.InstallTo == null) ? "（来自已缓存的安装包）" : "（来自元数据安装描述符）"),
+            TextWrapping = TextWrapping.Wrap,
+            Margin = new Thickness(0, 0, 0, 10)
+        };
+        DockPanel.SetDock(header, Dock.Top);
+        root.Children.Add(header);
+
+        var body = new ScrollViewer { VerticalScrollBarVisibility = ScrollBarVisibility.Auto };
+        body.Content = new TextBlock
+        {
+            Text = string.Join(Environment.NewLine, entries.Select(e =>
+                e.InstallTo is null ? e.Path : e.Path + "  →  " + e.InstallTo)),
+            FontFamily = new System.Windows.Media.FontFamily("Consolas"),
+            FontSize = 12,
+            TextWrapping = TextWrapping.Wrap
+        };
+        root.Children.Add(body);
+
+        var bottom = new StackPanel
+        {
+            Orientation = Orientation.Horizontal,
+            HorizontalAlignment = HorizontalAlignment.Right,
+            Margin = new Thickness(0, 12, 0, 0)
+        };
+        DockPanel.SetDock(bottom, Dock.Bottom);
+        root.Children.Add(bottom);
+
+        var btnClose = new MyButton { Text = "关闭", Width = 90 };
+        btnClose.Click += (_, _) => window.Close();
+        bottom.Children.Add(btnClose);
+
+        window.Content = root;
+        window.Show();
+    }
+}

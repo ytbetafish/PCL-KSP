@@ -84,6 +84,8 @@
                                         ColorType="Highlight" Click="BtnInstall_Click" Visibility="Collapsed" />
                         <local:MyButton x:Name="BtnUninstall" Text="卸载" Width="80" Height="30" Margin="10,0,0,0"
                                         Click="BtnUninstall_Click" Visibility="Collapsed" />
+                        <local:MyButton x:Name="BtnContents" Text="内容" Width="80" Height="30" Margin="10,0,0,0"
+                                        Click="BtnContents_Click" Visibility="Collapsed" />
                     </StackPanel>
                 </StackPanel>
             </local:MyCard>

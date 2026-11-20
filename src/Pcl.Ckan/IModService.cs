@@ -66,6 +66,12 @@ public interface IModService
     /// <summary>列出已扫描登记的未托管 DLL（AD，autodetected）。</summary>
     Task<IReadOnlyList<ModUnmanagedItem>> GetUnmanagedAsync(CancellationToken cancellationToken = default);
 
+    /// <summary>
+    /// 模组会安装哪些内容（CKAN 的 Contents 页）：已缓存时枚举安装包内的文件列表，
+    /// 未缓存时退回元数据里的安装描述符。
+    /// </summary>
+    Task<IReadOnlyList<ModContentEntry>> GetContentsAsync(string identifier, CancellationToken cancellationToken = default);
+
     /// <summary>该模组的最新版本安装包是否已在下载缓存中（CKAN 的 Cached 状态）。</summary>
     bool IsCached(string identifier);
 

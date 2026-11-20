@@ -310,6 +310,7 @@ public partial class PageMods
             LabSuggests.Visibility = Visibility.Collapsed;
             BtnInstall.Visibility = Visibility.Collapsed;
             BtnUninstall.Visibility = Visibility.Collapsed;
+            BtnContents.Visibility = Visibility.Collapsed;
             BtnTranslate.Visibility = Visibility.Collapsed;
             return;
         }
@@ -327,6 +328,7 @@ public partial class PageMods
         }
         BtnInstall.Visibility = string.IsNullOrWhiteSpace(KspSettings.Current.KspRootPath) ? Visibility.Collapsed : Visibility.Visible;
         BtnUninstall.Visibility = _selected.IsInstalled ? Visibility.Visible : Visibility.Collapsed;
+        BtnContents.Visibility = Visibility.Visible;
         BtnTranslate.Visibility = string.IsNullOrWhiteSpace(_originalDescription) ? Visibility.Collapsed : Visibility.Visible;
 
         // 拉一下依赖列表
@@ -496,6 +498,24 @@ public partial class PageMods
         {
             PanProgress.Visibility = Visibility.Collapsed;
             MessageBox.Show("卸载失败：" + ex.Message, "PCL KSP", MessageBoxButton.OK, MessageBoxImage.Error);
+        }
+    }
+
+    /// <summary>Contents：查看模组会安装哪些文件（已缓存时读安装包，未缓存时读描述符）。</summary>
+    private async void BtnContents_Click(object sender, System.Windows.Input.MouseButtonEventArgs e)
+    {
+        if (_selected is null)
+        {
+            return;
+        }
+        try
+        {
+            var entries = await GetService().GetContentsAsync(_selected.Identifier);
+            CkanContentsDialog.Show(_selected.Name, entries);
+        }
+        catch (Exception ex)
+        {
+            MessageBox.Show("读取内容失败：" + ex.Message, "模组内容", MessageBoxButton.OK, MessageBoxImage.Error);
         }
     }
 
