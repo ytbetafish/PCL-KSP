@@ -425,20 +425,17 @@ public partial class PageInstanceCompResource : IPageView
         string ext;
         if (choice == 2)
         {
-            var lines = new List<string> { "名称,Identifier,版本,作者,下载量,发布日期" };
-            lines.AddRange(rows.Select(m =>
-                $"{Csv(m.Name)},{Csv(m.Identifier)},{Csv(m.Version)},{Csv(m.Author)},{m.Downloads},{m.ReleaseDate:yyyy-MM-dd}"));
-            content = string.Join("\r\n", lines);
+            content = ModListExport.BuildCsv(rows);
             filter = "CSV 文件|*.csv";
             ext = ".csv";
         }
         else
         {
-            content = string.Join("\r\n", rows.Select(m =>
-                $"{m.Name} | {m.Version} | {m.Author} | {m.Identifier}"));
+            content = ModListExport.BuildText(rows);
             filter = "文本文件|*.txt";
             ext = ".txt";
         }
+
 
         try
         {

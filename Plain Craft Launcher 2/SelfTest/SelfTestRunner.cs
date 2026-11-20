@@ -494,6 +494,49 @@ public static class SelfTestRunner
             return $"5 条中：图标 {withIcon}、下载量 {withDownloads}、作者 {withAuthor}；样例={list[0].Name}";
         });
 
+        await CaseAsync("misc/modlist-export", () =>
+        {
+            var rows = new[]
+            {
+                new Pcl.Ckan.ModSearchResult(Identifier: "AlphaMod", Name: "Alpha Mod", Description: null,
+                    Author: "Author,With,Comma", License: "MIT", Version: "1.2.0", Homepage: null,
+                    IsInstalled: true, HasUpdate: false),
+                new Pcl.Ckan.ModSearchResult(Identifier: "BetaMod", Name: "Beta \"Quoted\" Mod", Description: null,
+                    Author: "Plain", License: "GPL-3.0", Version: "0.9", Homepage: null,
+                    IsInstalled: true, HasUpdate: false),
+                new Pcl.Ckan.ModSearchResult(Identifier: "GammaMod", Name: "Gamma Mod", Description: null,
+                    Author: null, License: null, Version: "2.0", Homepage: null,
+                    IsInstalled: true, HasUpdate: false)
+            };
+
+            var txt = PCL.ModListExport.BuildText(rows);
+            var csv = PCL.ModListExport.BuildCsv(rows);
+            if (!txt.StartsWith("Alpha Mod | 1.2.0 |", StringComparison.Ordinal))
+                throw new InvalidOperationException("TXT 未按名称排序：" + txt.Split('\n')[0]);
+            if (!csv.StartsWith(PCL.ModListExport.CsvHeader, StringComparison.Ordinal))
+                throw new InvalidOperationException("CSV 缺表头");
+            if (!csv.Contains("\"Author,With,Comma\""))
+                throw new InvalidOperationException("CSV 未转义含逗号字段");
+            if (!csv.Contains("\"Beta \"\"Quoted\"\" Mod\""))
+                throw new InvalidOperationException("CSV 未转义引号字段");
+            if (!txt.Contains("Author,With,Comma") || txt.Contains("\"Author,With,Comma\""))
+                throw new InvalidOperationException("TXT 未按原文输出含逗号字段（不应做 CSV 转义）");
+            if (txt.Split('\n').Length != 3 || csv.Split('\n').Length != 4)
+                throw new InvalidOperationException($"行数不符：TXT {txt.Split('\n').Length} / CSV {csv.Split('\n').Length}");
+
+            var dir = Path.Combine(Path.GetTempPath(), "pcl-export-selftest");
+            Directory.CreateDirectory(dir);
+            var txtPath = Path.Combine(dir, "list.txt");
+            var csvPath = Path.Combine(dir, "list.csv");
+            File.WriteAllText(txtPath, txt, new System.Text.UTF8Encoding(true));
+            File.WriteAllText(csvPath, csv, new System.Text.UTF8Encoding(true));
+            var backTxt = File.ReadAllText(txtPath, System.Text.Encoding.UTF8);
+            var backCsv = File.ReadAllText(csvPath, System.Text.Encoding.UTF8);
+            if (!backTxt.Equals(txt, StringComparison.Ordinal) || !backCsv.Equals(csv, StringComparison.Ordinal))
+                throw new InvalidOperationException("落盘后读回内容不一致");
+            Directory.Delete(dir, true);
+            return $"TXT {txt.Length} 字符 / CSV {csv.Length} 字符，转义与排序均正确";
+        });
         await CaseAsync("homepage/preset-list", () =>
         {
             var all = HomePagePreset.All;
