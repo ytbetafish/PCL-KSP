@@ -96,7 +96,11 @@ public partial class PageKspInstance
         {
             var buildId = Path.Combine(root, "KSP_Data", "buildID.txt");
             var versionTxt = Path.Combine(root, "version.txt");
-            if (File.Exists(buildId))
+            // KSP 64 位版本号记录在根目录 buildID64.txt（形如 "build id = 03190"），优先走实例探测
+            var probed = new Pcl.Ckan.KspInstanceService().Probe(root)?.Version;
+            if (!string.IsNullOrWhiteSpace(probed))
+                LabKspVersion.Text = probed!;
+            else if (File.Exists(buildId))
                 LabKspVersion.Text = File.ReadAllText(buildId).Trim();
             else if (File.Exists(versionTxt))
                 LabKspVersion.Text = File.ReadAllText(versionTxt).Trim();
