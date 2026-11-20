@@ -41,12 +41,31 @@ public static class SelfTestRunner
 
     #region 用例执行框架
 
+    /// <summary>单用例默认超时（秒）：到点直接判 FAIL，避免任一挂起点拖死整轮回归。可用 PCL_SELFTEST_TIMEOUT 覆盖。</summary>
+    private static int CaseTimeoutSeconds
+    {
+        get
+        {
+            var raw = Environment.GetEnvironmentVariable("PCL_SELFTEST_TIMEOUT");
+            return int.TryParse(raw, out var v) && v >= 5 ? v : 120;
+        }
+    }
+
     private static async Task CaseAsync(string name, Func<Task<string?>> body)
     {
         var sw = System.Diagnostics.Stopwatch.StartNew();
         try
         {
-            var detail = await body().ConfigureAwait(false);
+            var work = Task.Run(body);
+            var timeout = CaseTimeoutSeconds;
+            var first = await Task.WhenAny(work, Task.Delay(TimeSpan.FromSeconds(timeout))).ConfigureAwait(false);
+            if (first != work)
+            {
+                _fail++;
+                Write($"FAIL {name} | Timeout: {timeout}s 未返回（疑似阻塞，已跳过继续后续用例） | {sw.ElapsedMilliseconds}ms");
+                return;
+            }
+            var detail = await work.ConfigureAwait(false);
             sw.Stop();
             _pass++;
             Write($"PASS {name} | {detail ?? "ok"} | {sw.ElapsedMilliseconds}ms");
