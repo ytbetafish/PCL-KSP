@@ -321,16 +321,34 @@ public sealed class ModService : IModService, IDisposable
         var catalog = await EnumerateCatalogLockedAsync(cancellationToken).ConfigureAwait(false);
         Trace($"Catalog enumerate {catalog.Count} in {sw.ElapsedMilliseconds} ms");
         sw.Restart();
-        var results = catalog.Where(m => MatchesQuery(m, query)).Select(ToResult).ToList();
-        Trace($"Projected {results.Count} in {sw.ElapsedMilliseconds} ms");
-        if (isEmptyQuery && results.Count > 0)
+        // 每条结果都要做兼容判定 / 版本上限 / 缓存检查：这些上下文必须在循环外取一次，
+        // 否则 3900+ 条会重复构造 VersionCriteria、重复扫缓存目录（实测占投影耗时的大头）。
+        var installed = Registry?.Installed() ?? new Dictionary<string, ModuleVersion>();
+        var criteria = _instance?.VersionCriteria();
+        NetModuleCache? cache = null;
+        try
         {
-            lock (_catalogLock)
-            {
-                _cachedAll = results;
-            }
+            if (_instance != null) cache = new NetModuleCache(_instance.DownloadCacheDir);
         }
-        return results;
+        catch { /* 缓存目录不可用时视为未缓存 */ }
+        try
+        {
+            var results = catalog.Where(m => MatchesQuery(m, query))
+                .Select(m => ToResult(m, m.identifier, installed, criteria, cache)).ToList();
+            Trace($"Projected {results.Count} in {sw.ElapsedMilliseconds} ms");
+            if (isEmptyQuery && results.Count > 0)
+            {
+                lock (_catalogLock)
+                {
+                    _cachedAll = results;
+                }
+            }
+            return results;
+        }
+        finally
+        {
+            cache?.Dispose();
+        }
     }
 
     /// <inheritdoc />
@@ -1522,18 +1540,29 @@ public sealed class ModService : IModService, IDisposable
     private ModSearchResult ToResult(CkanModule? mod)
     {
         var installed = Registry?.Installed() ?? new Dictionary<string, ModuleVersion>();
-        return ToResult(mod, mod?.identifier ?? string.Empty, installed);
+        return ToResult(mod, mod?.identifier ?? string.Empty, installed, _instance?.VersionCriteria(), null);
     }
 
     private ModSearchResult ToResult(CkanModule? mod, string identifier, IReadOnlyDictionary<string, ModuleVersion> installed)
+    {
+        return ToResult(mod, identifier, installed, _instance?.VersionCriteria(), null);
+    }
+
+    /// <summary>投影单条结果。<paramref name="criteria"/> / <paramref name="cache"/> 由批量调用方复用，避免逐条重复构造。</summary>
+    private ModSearchResult ToResult(
+        CkanModule? mod,
+        string identifier,
+        IReadOnlyDictionary<string, ModuleVersion> installed,
+        GameVersionCriteria? criteria,
+        NetModuleCache? cache)
     {
         bool isInstalled = installed.TryGetValue(identifier, out var installedVersion);
         bool hasUpdate = isInstalled && mod != null && mod.version.CompareTo(installedVersion) > 0;
 
         bool compatible = true;
-        if (mod != null && _instance != null)
+        if (mod != null && criteria != null)
         {
-            try { compatible = mod.IsCompatible(_instance.VersionCriteria()); }
+            try { compatible = mod.IsCompatible(criteria); }
             catch { /* leave default */ }
         }
 
@@ -1549,24 +1578,20 @@ public sealed class ModService : IModService, IDisposable
 
         // CKAN 的 Replaceable 状态：已装模组声明 replaced_by 且替换者与当前 KSP 兼容时，提示可替换。
         string? replacedById = null;
-        if (isInstalled && _instance != null && Registry != null)
+        if (isInstalled && _instance != null && Registry != null && criteria != null)
         {
             try
             {
-                replacedById = Registry.GetReplacement(identifier, _instance.StabilityToleranceConfig, _instance.VersionCriteria())
+                replacedById = Registry.GetReplacement(identifier, _instance.StabilityToleranceConfig, criteria)
                     ?.ReplaceWith?.identifier;
             }
             catch { /* 缺元数据时不展示 */ }
         }
 
         bool isCached = false;
-        if (mod != null && _instance != null)
+        if (mod != null && cache != null)
         {
-            try
-            {
-                using var cache = new NetModuleCache(_instance.DownloadCacheDir);
-                isCached = cache.IsCached(mod);
-            }
+            try { isCached = cache.IsCached(mod); }
             catch { /* 缓存目录不可用时视为未缓存 */ }
         }
 
@@ -1592,7 +1617,6 @@ public sealed class ModService : IModService, IDisposable
             ReleaseStatus: mod?.release_status?.ToString(),
             Kind: mod?.kind.ToString());
     }
-
     /// <inheritdoc />
     public (IReadOnlyList<string> reverseDeps, IReadOnlyList<string> conflicts) GetReverseAndConflicts(string identifier)
     {
