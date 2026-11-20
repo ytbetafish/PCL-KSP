@@ -74,10 +74,8 @@
                 <!-- 主条目：大横幅图 + 标题胶囊 + 正文 -->
                 <local:MyCard x:Name="CardWikiHero" Title="随机条目" Margin="0,0,0,15">
                     <StackPanel Margin="0,38,0,0">
-                        <Grid Height="230" Margin="20,0,20,0" ClipToBounds="True">
+                        <Grid x:Name="PanWikiHeroImage" Height="230" Margin="20,0,20,0" ClipToBounds="True">
                             <Border CornerRadius="4" Background="{DynamicResource ColorBrushSemiTransparent}" />
-                            <TextBlock x:Name="LabWikiHeroPlaceholder" HorizontalAlignment="Center" VerticalAlignment="Center"
-                                       FontSize="12.5" Opacity="0.5" Text="正在获取条目配图…" IsHitTestVisible="False" />
                             <local:MyImage x:Name="ImgWikiHero" Stretch="UniformToFill" CornerRadius="4" Visibility="Collapsed" />
                             <Border x:Name="BorWikiHeroTag" HorizontalAlignment="Left" VerticalAlignment="Bottom"
                                     Margin="14" Padding="12,4" CornerRadius="13" Background="#B3000000">

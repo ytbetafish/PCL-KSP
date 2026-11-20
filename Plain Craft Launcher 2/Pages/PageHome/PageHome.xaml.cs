@@ -71,14 +71,14 @@ public partial class PageHome
         };
         ImgWikiHero.ImageLoaded += () =>
         {
+            PanWikiHeroImage.Visibility = Visibility.Visible;
             ImgWikiHero.Visibility = Visibility.Visible;
-            LabWikiHeroPlaceholder.Visibility = Visibility.Collapsed;
         };
         ImgWikiHero.ImageLoadFailed += () =>
         {
+            // 配图拿不到就整块收起，不显示占位图或占位文字
+            PanWikiHeroImage.Visibility = Visibility.Collapsed;
             ImgWikiHero.Visibility = Visibility.Collapsed;
-            LabWikiHeroPlaceholder.Visibility = Visibility.Visible;
-            LabWikiHeroPlaceholder.Text = "配图加载失败，可点「换一条」重试。";
         };
         ApplyHomeMode();
     }
@@ -452,8 +452,7 @@ public partial class PageHome
             if (token.IsCancellationRequested) return;
             LabWikiTitle.Text = "KSP Wiki 条目加载失败";
             LabWikiText.Text = ex.Message + "\n点「换一条」重试。";
-            LabWikiHeroPlaceholder.Visibility = Visibility.Visible;
-            LabWikiHeroPlaceholder.Text = "条目加载失败";
+            PanWikiHeroImage.Visibility = Visibility.Collapsed;
         }
         finally
         {
@@ -468,33 +467,31 @@ public partial class PageHome
         LabWikiText.Text = "";
         LabWikiHeroTag.Text = "";
         BorWikiHeroTag.Visibility = Visibility.Collapsed;
+        PanWikiHeroImage.Visibility = Visibility.Collapsed;
         ImgWikiHero.Visibility = Visibility.Collapsed;
         ImgWikiHero.Source = "";
-        LabWikiHeroPlaceholder.Visibility = Visibility.Visible;
-        LabWikiHeroPlaceholder.Text = "正在获取条目配图…";
         PanWikiRelated.Children.Clear();
         CardWikiRelatedHost.Visibility = Visibility.Collapsed;
         BtnWikiOpen.IsEnabled = false;
         BtnWikiNext.IsEnabled = false;
     }
 
-    /// <summary>设置主卡的大横幅图；没有配图时退回文字占位。</summary>
+    /// <summary>设置主卡的大横幅图；没有配图时整块收起，不显示任何占位。</summary>
     private void ShowWikiHeroImage(string title, string? imageUrl)
     {
         LabWikiHeroTag.Text = title;
         if (imageUrl is null)
         {
+            PanWikiHeroImage.Visibility = Visibility.Collapsed;
             BorWikiHeroTag.Visibility = Visibility.Collapsed;
             ImgWikiHero.Visibility = Visibility.Collapsed;
             ImgWikiHero.Source = "";
-            LabWikiHeroPlaceholder.Visibility = Visibility.Visible;
-            LabWikiHeroPlaceholder.Text = "这个条目在 Wiki 上没有配图";
             return;
         }
 
+        // 图片下载完成后再整块显示，避免出现空白灰块
+        PanWikiHeroImage.Visibility = Visibility.Collapsed;
         BorWikiHeroTag.Visibility = Visibility.Visible;
-        LabWikiHeroPlaceholder.Visibility = Visibility.Visible;
-        LabWikiHeroPlaceholder.Text = "正在加载配图…";
         ImgWikiHero.Visibility = Visibility.Collapsed;
         ImgWikiHero.Source = imageUrl;
     }
@@ -564,34 +561,20 @@ public partial class PageHome
         var card = new MyCard { Title = title, Margin = new Thickness(0, 0, 0, 12) };
         var stack = new StackPanel { Margin = new Thickness(0, 38, 0, 0) };
 
-        var imageHost = new Grid { Height = 132, Margin = new Thickness(16, 0, 16, 0), ClipToBounds = true };
-        var back = new Border { CornerRadius = new CornerRadius(4) };
-        back.SetResourceReference(Border.BackgroundProperty, "ColorBrushSemiTransparent");
-        imageHost.Children.Add(back);
-        if (imageUrl is null)
+        if (imageUrl is not null)
         {
-            var placeholder = new TextBlock
-            {
-                Text = "该条目没有配图",
-                FontSize = 12,
-                Opacity = 0.5,
-                HorizontalAlignment = HorizontalAlignment.Center,
-                VerticalAlignment = VerticalAlignment.Center
-            };
-            imageHost.Children.Add(placeholder);
-        }
-        else
-        {
-            var image = new MyImage
+            var imageHost = new Grid { Height = 132, Margin = new Thickness(16, 0, 16, 0), ClipToBounds = true };
+            var back = new Border { CornerRadius = new CornerRadius(4) };
+            back.SetResourceReference(Border.BackgroundProperty, "ColorBrushSemiTransparent");
+            imageHost.Children.Add(back);
+            imageHost.Children.Add(new MyImage
             {
                 Source = imageUrl,
                 Stretch = Stretch.UniformToFill,
                 CornerRadius = new CornerRadius(4)
-            };
-            imageHost.Children.Add(image);
+            });
+            stack.Children.Add(imageHost);
         }
-
-        stack.Children.Add(imageHost);
 
         var text = new TextBlock
         {
