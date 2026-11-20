@@ -18,6 +18,8 @@ namespace PCL.Pages;
 public partial class PageHome
 {
     private const string UpdateLogText =
+        "2026-11-20\n" +
+        "· 设置页「主页」新增「自定义网址」档：从远端 XAML 地址拉取主页内容，带本地缓存与失败重试。\n" +
         "2026-11-19\n" +
         "· 主页按原版结构恢复：左栏启动面板（含启动中动画、进度、阶段与取消），右栏公告 / 社区 / 更新日志卡片。\n" +
         "· 设置页「主页」可选择显示方式：空白、预设、本地 XAML 文件。\n" +
@@ -53,6 +55,8 @@ public partial class PageHome
     private CancellationTokenSource? _presetCts;
     private CancellationTokenSource? _wikiCts;
     private string _wikiUrl = string.Empty;
+    private string _customUrl = string.Empty;
+    private Func<Task>? _retry;
 
     public PageHome()
     {
@@ -81,13 +85,20 @@ public partial class PageHome
         var mode = KspSettings.Current.HomePageMode;
         // 本地文件档未选择文件时，按原版语义回落到空白
         if (mode == 2 && string.IsNullOrWhiteSpace(KspSettings.Current.HomePageLocalFile)) mode = 0;
+        // 自定义网址档没填有效地址时，同样按原版语义回落到空白
+        if (mode == 3 && !IsUsableHomeUrl(KspSettings.Current.HomePageUrl)) mode = 0;
         if (mode == 1)
         {
             LoadPreset(KspSettings.Current.HomePagePreset);
             return;
         }
         HideAllViews();
+        _customUrl = string.Empty;
+        _retry = null;
+        PanCustomHost.Content = null;
+        PanCustomHost.Visibility = Visibility.Collapsed;
         if (mode == 2) LoadCustom(KspSettings.Current.HomePageLocalFile);
+        if (mode == 3) LoadCustomUrl(KspSettings.Current.HomePageUrl);
     }
 
     private void HideAllViews()
@@ -103,6 +114,8 @@ public partial class PageHome
     {
         var preset = HomePagePreset.Find(HomePagePreset.Resolve(id));
         _currentPreset = preset;
+        _retry = null;
+        _customUrl = string.Empty;
         _presetCts?.Cancel();
         _wikiCts?.Cancel();
         HideAllViews();
@@ -134,17 +147,31 @@ public partial class PageHome
     }
 
     /// <summary>联网预设：先取缓存立即显示，再拉远端覆盖（与原版 LoadFromNetwork 的做法一致）。</summary>
-    private async Task LoadNetworkPresetAsync(HomePagePreset preset)
+    private Task LoadNetworkPresetAsync(HomePagePreset preset)
+    {
+        return LoadNetworkPageAsync(preset.Url!, preset.Title, "preset-" + preset.Id + ".xaml", "预设主页");
+    }
+
+    /// <summary>自定义网址主页：与联网预设同一条通路，缓存文件名按地址哈希区分。</summary>
+    private void LoadCustomUrl(string url)
+    {
+        var target = url.Trim();
+        _customUrl = target;
+        _ = LoadNetworkPageAsync(target, "自定义主页", "preset-url-" + ShortHash(target) + ".xaml", "自定义主页");
+    }
+
+    private async Task LoadNetworkPageAsync(string url, string title, string cacheFileName, string label)
     {
         var cts = new CancellationTokenSource();
         _presetCts = cts;
         var token = cts.Token;
+        _retry = () => LoadNetworkPageAsync(url, title, cacheFileName, label);
 
         CardCustomError.Visibility = Visibility.Collapsed;
-        LabPresetLoading.Text = "正在加载「" + preset.Title + "」…";
+        LabPresetLoading.Text = "正在加载「" + title + "」…";
         CardPresetLoading.Visibility = Visibility.Visible;
 
-        var cache = Path.Combine(CacheDir, "preset-" + preset.Id + ".xaml");
+        var cache = Path.Combine(CacheDir, cacheFileName);
         var hasCache = false;
         if (File.Exists(cache))
         {
@@ -162,7 +189,7 @@ public partial class PageHome
 
         try
         {
-            var text = await Http.GetStringAsync(preset.Url!, token).ConfigureAwait(true);
+            var text = await Http.GetStringAsync(url, token).ConfigureAwait(true);
             if (token.IsCancellationRequested) return;
             if (string.IsNullOrWhiteSpace(text)) throw new InvalidOperationException("服务器返回内容为空。");
             try
@@ -182,7 +209,7 @@ public partial class PageHome
             else
             {
                 CardPresetLoading.Visibility = Visibility.Collapsed;
-                if (!hasCache) ShowError("预设主页解析失败：" + parseError);
+                if (!hasCache) ShowError(label + "解析失败：" + parseError);
             }
         }
         catch (Exception ex)
@@ -190,10 +217,31 @@ public partial class PageHome
             if (token.IsCancellationRequested) return;
             CardPresetLoading.Visibility = Visibility.Collapsed;
             if (!hasCache)
-                ShowError("预设主页加载失败：" + ex.Message);
+                ShowError(label + "加载失败：" + ex.Message);
         }
     }
 
+    /// <summary>判断填写的地址是否可直接当作远端主页拉取。</summary>
+    private static bool IsUsableHomeUrl(string? url)
+    {
+        if (string.IsNullOrWhiteSpace(url)) return false;
+        try
+        {
+            var uri = new Uri(url.Trim());
+            return (uri.Scheme == "http" || uri.Scheme == "https") && !string.IsNullOrWhiteSpace(uri.Host);
+        }
+        catch
+        {
+            return false;
+        }
+    }
+
+    /// <summary>取地址的短哈希，用作单个网址主页的缓存文件名，避免换地址后读到旧缓存。</summary>
+    private static string ShortHash(string text)
+    {
+        var bytes = System.Security.Cryptography.SHA256.HashData(Encoding.UTF8.GetBytes(text));
+        return Convert.ToHexString(bytes).Substring(0, 12).ToLowerInvariant();
+    }
     /// <summary>将上游 XAML 片段清洗、包裹成可解析页面并挂到宿主。</summary>
     private bool TryShowFragment(string raw, out string error)
     {
@@ -305,15 +353,16 @@ public partial class PageHome
     private void ShowError(string message)
     {
         LabCustomError.Text = message;
-        BtnPresetRetry.Visibility = _currentPreset.Url is not null ? Visibility.Visible : Visibility.Collapsed;
+        BtnPresetRetry.Visibility = _retry is null ? Visibility.Collapsed : Visibility.Visible;
         CardCustomError.Visibility = Visibility.Visible;
     }
 
     private void BtnPresetRetry_Click(object sender, MouseButtonEventArgs e)
     {
-        if (_currentPreset.Url is null) return;
+        if (_retry is null) return;
+        var retry = _retry;
         CardCustomError.Visibility = Visibility.Collapsed;
-        _ = LoadNetworkPresetAsync(_currentPreset);
+        _ = retry();
     }
 
     private const string WikiApi = "https://wiki.kerbalspaceprogram.com/api.php";

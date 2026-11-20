@@ -81,12 +81,21 @@ public partial class PageAppearance
             KspSettings.Current.HomePageMode = 0;
             KspSettings.Save();
         }
+        if (mode == 3 && string.IsNullOrWhiteSpace(KspSettings.Current.HomePageUrl))
+        {
+            mode = 0;
+            KspSettings.Current.HomePageMode = 0;
+            KspSettings.Save();
+        }
         RadioHomeBlank.Checked = mode == 0;
         RadioHomePreset.Checked = mode == 1;
         RadioHomeLocal.Checked = mode == 2;
+        RadioHomeUrl.Checked = mode == 3;
         TextHomeFile.Text = KspSettings.Current.HomePageLocalFile ?? "";
+        TextHomeUrl.Text = KspSettings.Current.HomePageUrl ?? "";
         PanHomeLocal.Visibility = mode == 2 ? System.Windows.Visibility.Visible : System.Windows.Visibility.Collapsed;
         PanHomePreset.Visibility = mode == 1 ? System.Windows.Visibility.Visible : System.Windows.Visibility.Collapsed;
+        PanHomeUrl.Visibility = mode == 3 ? System.Windows.Visibility.Visible : System.Windows.Visibility.Collapsed;
         EnsurePresetItems();
         SelectComboByTag(ComboHomePreset, HomePagePreset.Resolve(KspSettings.Current.HomePagePreset).ToString());
         _homeModeSyncing = false;
@@ -101,11 +110,14 @@ public partial class PageAppearance
         RadioHomeBlank.Checked = mode == 0;
         RadioHomePreset.Checked = mode == 1;
         RadioHomeLocal.Checked = mode == 2;
+        RadioHomeUrl.Checked = mode == 3;
         _homeModeSyncing = false;
         KspSettings.Current.HomePageMode = mode;
         KspSettings.Save();
         PanHomeLocal.Visibility = mode == 2 ? System.Windows.Visibility.Visible : System.Windows.Visibility.Collapsed;
         PanHomePreset.Visibility = mode == 1 ? System.Windows.Visibility.Visible : System.Windows.Visibility.Collapsed;
+        PanHomeUrl.Visibility = mode == 3 ? System.Windows.Visibility.Visible : System.Windows.Visibility.Collapsed;
+        if (mode == 3 && TextHomeUrl.Text.Length == 0) TextHomeUrl.Focus();
     }
 
     private void BtnHomeBrowse_Click(object sender, System.Windows.Input.MouseButtonEventArgs e)
@@ -124,16 +136,26 @@ public partial class PageAppearance
             RadioHomeBlank.Checked = false;
             RadioHomePreset.Checked = false;
             RadioHomeLocal.Checked = true;
+            RadioHomeUrl.Checked = false;
             _homeModeSyncing = false;
             KspSettings.Current.HomePageMode = 2;
             PanHomeLocal.Visibility = System.Windows.Visibility.Visible;
             PanHomePreset.Visibility = System.Windows.Visibility.Collapsed;
+            PanHomeUrl.Visibility = System.Windows.Visibility.Collapsed;
         }
         KspSettings.Save();
     }
 
 
 
+    private void HomeUrl_TextChange(object sender, TextChangedEventArgs e)
+    {
+        if (_homeModeSyncing) return;
+        var url = TextHomeUrl.Text.Trim();
+        if (url == (KspSettings.Current.HomePageUrl ?? "")) return;
+        KspSettings.Current.HomePageUrl = url;
+        KspSettings.Save();
+    }
     private void EnsurePresetItems()
     {
         if (ComboHomePreset.Items.Count == HomePagePreset.All.Length && ComboHomePreset.Items.Count > 0) return;

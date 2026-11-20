@@ -70,6 +70,7 @@
                             <ColumnDefinition Width="1*" />
                             <ColumnDefinition Width="1*" />
                             <ColumnDefinition Width="1*" />
+                            <ColumnDefinition Width="1*" />
                             <ColumnDefinition Width="0.2*" />
                         </Grid.ColumnDefinitions>
                         <local:MyRadioBox x:Name="RadioHomeBlank" Grid.Column="0" Height="22" Text="空白"
@@ -78,6 +79,8 @@
                                           Tag="1" Check="HomeMode_Check" />
                         <local:MyRadioBox x:Name="RadioHomeLocal" Grid.Column="2" Height="22" Text="本地文件"
                                           Tag="2" Check="HomeMode_Check" />
+                        <local:MyRadioBox x:Name="RadioHomeUrl" Grid.Column="3" Height="22" Text="自定义网址"
+                                          Tag="3" Check="HomeMode_Check" />
                     </Grid>
 <Grid x:Name="PanHomePreset" Margin="0,14,0,0" Height="28" Visibility="Collapsed">
                         <Grid.ColumnDefinitions>
@@ -100,8 +103,16 @@
                         <local:MyButton x:Name="BtnHomeBrowse" Grid.Column="2" Height="34" Margin="10,0,0,0"
                                         MinWidth="90" Padding="13,0" Text="浏览…" Click="BtnHomeBrowse_Click" />
                     </Grid>
-                    <TextBlock Margin="0,16,0,0" Opacity="0.6" FontSize="12" TextWrapping="Wrap"
-                               Text="未选择时默认空白，不显示任何内容；预设档可选择内置主页（公告、社区与更新日志）、你知道吗（一条随机小贴士）、KSP Wiki 随机条目（本地排版，内容取自 KSP Wiki），以及原版中与 Minecraft 无关的第三方预设（Bangumi 番剧、GitHub 仪表盘、今日新闻热点、PCL CE 公告栏等联网主页）；本地文件会加载所选 XAML 文件作为主页内容。设置后返回主页生效。" />
+                    <Grid x:Name="PanHomeUrl" Margin="0,14,0,0" Height="34" Visibility="Collapsed">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto" />
+                            <ColumnDefinition Width="1*" />
+                        </Grid.ColumnDefinitions>
+                        <TextBlock VerticalAlignment="Center" Margin="0,0,15,0" Text="主页地址" />
+                        <local:MyTextBox x:Name="TextHomeUrl" Grid.Column="1" Height="34"
+                                         TextChanged="HomeUrl_TextChange" />
+                    </Grid>                    <TextBlock Margin="0,16,0,0" Opacity="0.6" FontSize="12" TextWrapping="Wrap"
+                               Text="未选择时默认空白，不显示任何内容；预设档可选择内置主页（公告、社区与更新日志）、你知道吗（一条随机小贴士）、KSP Wiki 随机条目（本地排版，内容取自 KSP Wiki），以及原版中与 Minecraft 无关的第三方预设（Bangumi 番剧、GitHub 仪表盘、今日新闻热点、PCL CE 公告栏等联网主页）；本地文件会加载所选 XAML 文件作为主页内容；自定义网址会从填写的 http(s) 地址拉取 XAML 主页内容（本地缓存，失败时显示重试）。设置后返回主页生效。" />
                 </StackPanel>
             </local:MyCard>
         </StackPanel>

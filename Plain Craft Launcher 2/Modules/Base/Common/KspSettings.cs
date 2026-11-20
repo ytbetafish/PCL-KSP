@@ -51,12 +51,14 @@ public static class KspSettings
         public string KspGameDataPath { get; set; } = "";
         public string KspLogsPath { get; set; } = "";
 
-        /// <summary>主页显示方式：0 空白、1 预设（默认）、2 本地 XAML 文件。</summary>
+        /// <summary>主页显示方式：0 空白、1 预设、2 本地 XAML 文件、3 自定义网址。</summary>
         public int HomePageMode { get; set; } = 0;
         /// <summary>预设主页编号：0 PCL-KSP 内置主页、1 你知道吗。</summary>
         public int HomePagePreset { get; set; } = 0;
         /// <summary>「本地文件」模式下的主页 XAML 路径。</summary>
         public string HomePageLocalFile { get; set; } = "";
+        /// <summary>「自定义网址」模式下的主页 XAML 地址。</summary>
+        public string HomePageUrl { get; set; } = "";
     }
 
     /// <summary>国内公开的 CKAN 元数据镜像（坎喵 KerbCat 公共加速源）。</summary>
