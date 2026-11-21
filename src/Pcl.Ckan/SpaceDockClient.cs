@@ -1,6 +1,7 @@
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
+using System.Net;
 using System.Net.Http;
 using System.Net.Http.Headers;
 using System.Text.Json;
@@ -21,8 +22,10 @@ public sealed class SpaceDockClient
 {
     private const string BaseUrl = "https://spacedock.info";
 
+    /// <summary>6 秒超时：SpaceDock 偶发慢响应时不至于把整页回填拖住（HttpClient 默认 100 秒）。</summary>
     private static readonly HttpClient _http = new()
     {
+        Timeout = TimeSpan.FromSeconds(6),
         DefaultRequestHeaders = { UserAgent = { ProductInfoHeaderValue.Parse("Pcl.Ckan/1.0") } }
     };
 
@@ -69,7 +72,12 @@ public sealed class SpaceDockClient
                 .ConfigureAwait(false);
             if (!resp.IsSuccessStatusCode)
             {
-                _cache[modId] = null;
+                // 只有 404 才是"该模组在 SpaceDock 上不存在"，可永久记为 null；
+                // 5xx / 403 / 429 多半是临时故障，不写缓存，下次进页面仍会重试。
+                if (resp.StatusCode == HttpStatusCode.NotFound)
+                {
+                    _cache[modId] = null;
+                }
                 return null;
             }
 
@@ -81,7 +89,7 @@ public sealed class SpaceDockClient
         }
         catch
         {
-            _cache[modId] = null;
+            // 网络异常 / 超时同样不写缓存：此前把失败永久缓存，断网一次后整个进程都拿不到图标。
             return null;
         }
 
