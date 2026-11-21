@@ -60,6 +60,7 @@ public partial class PageComp : Grid
             PanContent.Visibility = Visibility.Visible;
             Common.Log($"[CKAN] RefreshList 完成，卡片 {PanProjects.Children.Count} 个");
             _ = EnrichCurrentPageAsync();
+            _ = RefreshWhenCatalogReadyAsync();
         }
         catch (Exception ex)
         {
@@ -71,6 +72,34 @@ public partial class PageComp : Grid
         {
             PanLoad.Visibility = Visibility.Collapsed;
             _loading = false;
+        }
+    }
+
+    /// <summary>
+    /// 首屏可能用的是磁盘快照（CKAN 首次解析仓库数据要 ~19 秒，不该让页面干等）。
+    /// 这里等后台把真实目录算完，条数变了就静默换一次数据：不弹加载圈、不动用户当前筛选。
+    /// </summary>
+    private async Task RefreshWhenCatalogReadyAsync()
+    {
+        try
+        {
+            var build = Launcher.Ckan.CatalogBuildTask;
+            if (build.IsCompleted)
+                return;
+            await build.ConfigureAwait(true);
+            if (_loading)
+                return;
+            var fresh = await Launcher.Ckan.SearchAsync(null).ConfigureAwait(true);
+            if (fresh.Count == _rawResults.Count)
+                return;
+            _rawResults = fresh.ToList();
+            PopulateTags();
+            RebuildFromRaw();
+            _ = EnrichCurrentPageAsync();
+        }
+        catch
+        {
+            // 静默刷新失败不影响已经渲染出来的列表
         }
     }
 

@@ -60,10 +60,34 @@ public partial class PageMods
                 GetService().AttachInstance(ksp.Load(root));
             });
             await LoadInstalledAsync();
+            _ = RefreshInstalledWhenCatalogReadyAsync();
         }
         catch (Exception ex)
         {
             LabModDesc.Text = "KSP 实例附加失败：" + ex.Message;
+        }
+    }
+
+    /// <summary>
+    /// 首屏的已装列表可能只用了注册表数据（全量目录还在后台解析，避免用户被十几秒卡住）。
+    /// 等目录算完再静默补一次完整数据：依赖、冲突、可更新标记都会到位。
+    /// </summary>
+    private async Task RefreshInstalledWhenCatalogReadyAsync()
+    {
+        try
+        {
+            var build = GetService().CatalogBuildTask;
+            if (build.IsCompleted)
+                return;
+            await build;
+            if (_filter != "installed")
+                return;
+            _lastResults = await GetService().ListInstalledAsync();
+            ApplyFilter();
+        }
+        catch
+        {
+            // 静默补齐失败不影响已经渲染出来的列表
         }
     }
 
