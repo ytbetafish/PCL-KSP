@@ -29,9 +29,13 @@ public static class KspSettings
         /// <summary>内存中的明文密钥。不参与序列化：落盘只写 <see cref="TranslateApiKeyEnc"/>。</summary>
         [JsonIgnore]
         public string TranslateApiKey { get; set; } = "";
-        /// <summary>旧版设置文件里的明文密钥，仅用于一次性迁移读取，之后不再写入。</summary>
+        /// <summary>
+        /// 旧版设置文件里的明文密钥，仅用于一次性迁移读取；空值时不再序列化到文件，
+        /// 只有 DPAPI 不可用、必须退回明文时才会重新出现。
+        /// </summary>
         [JsonPropertyName("TranslateApiKey")]
-        public string TranslateApiKeyPlainLegacy { get; set; } = "";
+        [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+        public string? TranslateApiKeyPlainLegacy { get; set; }
         /// <summary>DPAPI 加密后的密钥密文（v1: 前缀标识加密格式）。</summary>
         [JsonPropertyName("TranslateApiKeyEnc")]
         public string TranslateApiKeyEnc { get; set; } = "";
@@ -115,7 +119,7 @@ public static class KspSettings
                 // 明文密钥迁移：有密文先解回内存；旧版明文则在下次 Save 时转成密文。
                 Current.TranslateApiKeyPlainLegacy ??= "";
                 if (!string.IsNullOrEmpty(Current.TranslateApiKeyEnc))
-                    Current.TranslateApiKey = DecryptForStore(Current.TranslateApiKeyEnc) ?? Current.TranslateApiKeyPlainLegacy;
+                    Current.TranslateApiKey = DecryptForStore(Current.TranslateApiKeyEnc) ?? Current.TranslateApiKeyPlainLegacy ?? "";
                 else
                     Current.TranslateApiKey = Current.TranslateApiKeyPlainLegacy;
             }
@@ -230,17 +234,26 @@ public static class KspSettings
     {
         try
         {
-            // 密钥只落盘密文；DPAPI 不可用时退回明文，避免用户已填的钥匙在升级后失效。
-            var encrypted = EncryptForStore(Current.TranslateApiKey);
-            if (encrypted is null)
+            // 密钥只落盘密文；未填密钥时两个密钥字段都不写。DPAPI 不可用时退回明文，避免已填的钥匙升级后失效。
+            var key = Current.TranslateApiKey ?? "";
+            if (key.Length == 0)
             {
                 Current.TranslateApiKeyEnc = "";
-                Current.TranslateApiKeyPlainLegacy = Current.TranslateApiKey;
+                Current.TranslateApiKeyPlainLegacy = null;
             }
             else
             {
-                Current.TranslateApiKeyEnc = encrypted;
-                Current.TranslateApiKeyPlainLegacy = "";
+                var encrypted = EncryptForStore(key);
+                if (encrypted is null)
+                {
+                    Current.TranslateApiKeyEnc = "";
+                    Current.TranslateApiKeyPlainLegacy = key;
+                }
+                else
+                {
+                    Current.TranslateApiKeyEnc = encrypted;
+                    Current.TranslateApiKeyPlainLegacy = null;
+                }
             }
 
             // 原子写：先写临时文件再替换，避免写一半或被占用导致的损坏/权限异常。

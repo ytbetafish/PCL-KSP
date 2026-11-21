@@ -321,11 +321,20 @@ public static class SelfTestRunner
                 throw new InvalidOperationException("设置文件里仍能看到明文密钥");
             if (!json.Contains("TranslateApiKeyEnc", StringComparison.Ordinal))
                 throw new InvalidOperationException("设置文件缺少密文字段 TranslateApiKeyEnc");
+            if (json.Contains("\"TranslateApiKey\":", StringComparison.Ordinal))
+                throw new InvalidOperationException("设置文件仍写出旧的明文密钥键（TranslateApiKey）");
         }
         finally
         {
             KspSettings.Current.TranslateApiKey = original;
             KspSettings.Save();
+        }
+        // 还原后若用户本就没填密钥，文件里不应再出现旧的明文密钥键。
+        if (string.IsNullOrEmpty(original))
+        {
+            var after = File.ReadAllText(KspSettings.SettingsFilePath, System.Text.Encoding.UTF8);
+            if (after.Contains("\"TranslateApiKey\":", StringComparison.Ordinal))
+                throw new InvalidOperationException("未填密钥时设置文件仍写出 TranslateApiKey 键");
         }
         return "密文落盘，设置文件不含明文（DPAPI）";
     }
