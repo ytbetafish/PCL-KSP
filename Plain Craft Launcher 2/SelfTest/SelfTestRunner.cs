@@ -33,7 +33,20 @@ public static class SelfTestRunner
         if (want is "all" or "settings" or "") await GroupSettingsAsync();
         if (want is "all" or "ckan") await GroupCkanAsync();
         if (want is "all" or "misc") await GroupMiscAsync();
-        if (want is "all" or "live") await GroupLiveAsync();
+        if (want is "all" or "live")
+        {
+            // live 组会真实卸载/重装模组、启动 KSP、清空下载缓存，属破坏性用例：
+            // 必须显式设置 PCL_SELFTEST_LIVE_CONFIRM=1 才执行，避免随手跑 all 就动了玩家的游戏目录。
+            if (Environment.GetEnvironmentVariable("PCL_SELFTEST_LIVE_CONFIRM") == "1")
+            {
+                await GroupLiveAsync();
+            }
+            else
+            {
+                Write("SKIP live/group-confirm | 破坏性分组已跳过，需设置 PCL_SELFTEST_LIVE_CONFIRM=1 才执行");
+                _skip++;
+            }
+        }
 
         Write($"========== 自测结束 PASS={_pass} FAIL={_fail} SKIP={_skip} {DateTime.Now:HH:mm:ss} ==========");
         Flush();
