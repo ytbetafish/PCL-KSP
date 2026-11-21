@@ -23,6 +23,12 @@ public interface IModService
     Task WarmUpAsync(CancellationToken cancellationToken = default);
 
     /// <summary>
+    /// 当前正在后台构建全量目录的任务（没有则已完成）。
+    /// 首屏可能先用磁盘快照渲染，页面可 await 本任务，等真实目录算完后再静默换一次数据。
+    /// </summary>
+    Task CatalogBuildTask { get; }
+
+    /// <summary>
     /// 对结果列表 [start, start+count) 区间做 SpaceDock 联网回填（图标、下载量、作者等），
     /// 原地写回列表；失败项保持原值。调用方可缓存已回填区间，避免重复网络请求。
     /// </summary>

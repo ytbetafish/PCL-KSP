@@ -46,6 +46,12 @@ public sealed class ModService : IModService, IDisposable
     private volatile bool _refreshInFlight;
     /// <summary>最近一次成功枚举的目录快照：刷新下载期间读请求直接吃它，避免被网络阻塞。</summary>
     private List<CkanModule>? _cachedModules;
+    /// <summary>CKAN 数据目录（config.json / repo-data 都在这里）。</summary>
+    private readonly string _dataDir;
+    /// <summary><see cref="_cachedAll"/> 目前装的是磁盘快照、真实目录仍在后台重算。</summary>
+    private bool _fromSnapshot;
+    /// <summary>本轮启动已经尝试过读快照（避免每次都重读磁盘）。仓库刷新后重置。</summary>
+    private bool _snapshotTried;
 
     /// <summary>诊断埋点汇（如启动器 log4net）；为空时仅写入内存日志。</summary>
     public Action<string>? TraceSink { get; set; }
@@ -72,6 +78,7 @@ public sealed class ModService : IModService, IDisposable
         Log = user as StringBuilderUser ?? new StringBuilderUser();
         _user = Log;
         dataDir ??= Path.Combine(Path.GetTempPath(), "Pcl.Ckan");
+        _dataDir = dataDir;
         Directory.CreateDirectory(dataDir);
         _config = new JsonConfiguration(Path.Combine(dataDir, "config.json"));
         _repoData = new RepositoryDataManager(Path.Combine(dataDir, "repo-data"));
@@ -265,12 +272,17 @@ public sealed class ModService : IModService, IDisposable
                 _cachedAll = null;
                 _cachedModules = null;
                 _warmTask = null;
+                _fromSnapshot = false;
+                _snapshotTried = false;
             }
         }
         finally
         {
             _catalogGate.Release();
         }
+
+        // 仓库数据已被网络刷新改写，立刻在后台重算一次：既让后续页面秒开，也把新数据写进快照
+        _ = WarmUpAsync(CancellationToken.None);
     }
 
     /// <inheritdoc />
@@ -297,6 +309,18 @@ public sealed class ModService : IModService, IDisposable
                 }
             }
         }
+        // 快照阶段（真实目录仍在后台解析）：直接过滤快照，别让一次关键词搜索等上十几秒。
+        lock (_catalogLock)
+        {
+            if (_fromSnapshot && _cachedAll is not null)
+            {
+                var label = _cachedAll;
+                var filtered = isEmptyQuery ? label : label.Where(r => MatchesQuery(r, query)).ToList();
+                Trace($"Search 快照过滤：{label.Count} 条 → {filtered.Count} 条");
+                return filtered;
+            }
+        }
+
         // 仓库刷新进行中：直接用已缓存的全量投影过滤，避免被刷新的网络耗时卡住搜索
         if (_refreshInFlight)
         {
@@ -316,8 +340,36 @@ public sealed class ModService : IModService, IDisposable
         return await BuildAllAsync(query, isEmptyQuery, cancellationToken).ConfigureAwait(false);
     }
 
-    /// <summary>Catalog enumerate + project + cache write. Shared by warm-up and on-demand search; does not go through the warmTask reuse branch (avoids awaiting itself).</summary>
+    /// <summary>目录全量投影的入口：首屏优先吃磁盘快照，同时让后台去重算真实目录。</summary>
     private async Task<IReadOnlyList<ModSearchResult>> BuildAllAsync(string? query, bool isEmptyQuery, CancellationToken cancellationToken)
+    {
+        if (isEmptyQuery)
+        {
+            var snapshot = TryLoadSnapshot();
+            if (snapshot is not null)
+            {
+                Trace($"Snapshot 命中 {snapshot.Count} 条，首屏不再等 CKAN 解析仓库数据");
+                lock (_catalogLock)
+                {
+                    _cachedAll ??= snapshot;
+                    _fromSnapshot = true;
+                }
+                // 幂等：真实目录在后台算完后覆盖 _cachedAll 并重写快照，页面随后静默换数据
+                _ = StartRealCatalogBuild(CancellationToken.None);
+                return snapshot;
+            }
+        }
+
+        var results = await BuildAllCoreAsync(query, isEmptyQuery, cancellationToken).ConfigureAwait(false);
+        if (isEmptyQuery)
+        {
+            SaveSnapshot(results);
+        }
+        return results;
+    }
+
+    /// <summary>Catalog enumerate + project + cache write。快照入口不会复用它的结果，避免"快照自我确认"。</summary>
+    private async Task<IReadOnlyList<ModSearchResult>> BuildAllCoreAsync(string? query, bool isEmptyQuery, CancellationToken cancellationToken)
     {
         var sw = Stopwatch.StartNew();
         var catalog = await EnumerateCatalogLockedAsync(cancellationToken).ConfigureAwait(false);
@@ -343,6 +395,7 @@ public sealed class ModService : IModService, IDisposable
                 lock (_catalogLock)
                 {
                     _cachedAll = results;
+                    _fromSnapshot = false;
                 }
             }
             return results;
@@ -354,18 +407,133 @@ public sealed class ModService : IModService, IDisposable
     }
 
     /// <inheritdoc />
+    public Task CatalogBuildTask
+    {
+        get
+        {
+            lock (_catalogLock)
+            {
+                return _warmTask ?? Task.CompletedTask;
+            }
+        }
+    }
+
+    private string SnapshotPath => Path.Combine(_dataDir, "catalog-snapshot.json");
+
+    /// <summary>全量目录正在后台解析（尚无 CkanModule 缓存）：此时任何需要目录的读操作都应改走快速路径。</summary>
+    private bool CatalogBuildPending
+    {
+        get
+        {
+            lock (_catalogLock)
+            {
+                return _cachedModules is null && _warmTask is { IsCompleted: false };
+            }
+        }
+    }
+
+    /// <summary>当前游戏版本的字符串形式，用于快照指纹（不同 KSP 版本的兼容判定结果不同）。</summary>
+    private string? CurrentGameVersion()
+    {
+        try
+        {
+            var criteria = _instance?.VersionCriteria();
+            return criteria is null
+                ? null
+                : string.Join(",", criteria.Versions.Select(v => v.ToString()));
+        }
+        catch
+        {
+            return null;
+        }
+    }
+
+    /// <summary>读取并校验磁盘快照；已装状态按当前注册表重算，避免"刚装的模组显示成未安装"。</summary>
+    private IReadOnlyList<ModSearchResult>? TryLoadSnapshot()
+    {
+        var signature = CatalogSnapshot.BuildSignature(_dataDir, CurrentGameVersion());
+        if (string.IsNullOrEmpty(signature))
+            return null;
+        var snapshot = CatalogSnapshot.TryLoad(SnapshotPath, signature);
+        return snapshot is null ? null : RefreshInstalledFlags(snapshot);
+    }
+
+
+    private void SaveSnapshot(IReadOnlyList<ModSearchResult> results)
+    {
+        var signature = CatalogSnapshot.BuildSignature(_dataDir, CurrentGameVersion());
+        if (string.IsNullOrEmpty(signature))
+            return;
+        CatalogSnapshot.Save(SnapshotPath, signature, results);
+    }
+
+    private IReadOnlyList<ModSearchResult> RefreshInstalledFlags(IReadOnlyList<ModSearchResult> snapshot)
+    {
+        Dictionary<string, ModuleVersion>? installed;
+        try { installed = Registry?.Installed(); } catch { installed = null; }
+        if (installed is null || installed.Count == 0)
+            return snapshot;
+
+        var list = new List<ModSearchResult>(snapshot.Count);
+        foreach (var r in snapshot)
+        {
+            var isInstalled = installed.ContainsKey(r.Identifier);
+            list.Add(r.IsInstalled == isInstalled ? r : r with { IsInstalled = isInstalled });
+        }
+        return list;
+    }
+
+    /// <inheritdoc />
     public Task WarmUpAsync(CancellationToken cancellationToken = default)
+    {
+        // 先试磁盘快照：读盘放在锁外，拿到就先让页面用，真实目录照旧在后台重算。
+        var needSnapshot = false;
+        lock (_catalogLock)
+        {
+            // 快照不算"已算完"：_fromSnapshot 为真时仍必须继续重算真实目录。
+            if (_cachedAll is not null && !_fromSnapshot)
+                return Task.CompletedTask;
+            if (_cachedAll is null && !_snapshotTried)
+            {
+                _snapshotTried = true;
+                needSnapshot = true;
+            }
+        }
+
+        if (needSnapshot)
+        {
+            var snapshot = TryLoadSnapshot();
+            if (snapshot is not null)
+            {
+                Trace($"Snapshot 命中 {snapshot.Count} 条，首屏不再等 CKAN 解析仓库数据");
+                lock (_catalogLock)
+                {
+                    _cachedAll ??= snapshot;
+                    _fromSnapshot = true;
+                }
+            }
+        }
+
+        return StartRealCatalogBuild(cancellationToken);
+    }
+
+    /// <summary>后台算真实目录（幂等）：算完覆盖 _cachedAll 并重写快照。</summary>
+    private Task StartRealCatalogBuild(CancellationToken cancellationToken)
     {
         lock (_catalogLock)
         {
-            if (_cachedAll is not null)
+            if (_cachedAll is not null && !_fromSnapshot)
                 return Task.CompletedTask;
             _warmTask ??= Task.Run(async () =>
             {
                 try
                 {
                     Trace("WarmUp enumerate start");
-                    await BuildAllAsync(null, true, cancellationToken).ConfigureAwait(false);
+                    var results = await BuildAllCoreAsync(null, true, cancellationToken).ConfigureAwait(false);
+                    if (results.Count > 0)
+                    {
+                        SaveSnapshot(results);
+                    }
                     Trace("WarmUp enumerate done");
                 }
                 catch
@@ -385,6 +553,16 @@ public sealed class ModService : IModService, IDisposable
             return;
         count = Math.Min(count, results.Count - start);
 
+        // 一次性取目录并建立 标识 -> 模块 映射。此前逐条调用 LatestAvailable，
+        // 每次都要重扫 CKAN 仓库、对不在目录里的标识还会抛 ModuleNotFoundKraken（异常构造开销极大），
+        // 82 条已装模组因此要 2.5 s。这里一次枚举（有缓存/快照时为毫秒级）后 O(1) 查表。
+        var catalog = await EnumerateCatalogLockedAsync(cancellationToken).ConfigureAwait(false);
+        var byId = new Dictionary<string, CkanModule>(StringComparer.OrdinalIgnoreCase);
+        foreach (var m in catalog)
+        {
+            byId[m.identifier] = m;
+        }
+
         using var semaphore = new SemaphoreSlim(8);
         var tasks = new List<Task>();
         for (var i = 0; i < count; i++)
@@ -395,7 +573,8 @@ public sealed class ModService : IModService, IDisposable
                 await semaphore.WaitAsync(cancellationToken).ConfigureAwait(false);
                 try
                 {
-                    var mod = LatestAvailable(results[idx].Identifier);
+                    // 目录里没有该标识（DLL 手动安装、redistributable 等）时直接跳过，不抛异常。
+                    var mod = byId.TryGetValue(results[idx].Identifier, out var catalogMod) ? catalogMod : null;
                     if (mod?.resources?.spacedock is not { } url)
                         return;
                     if (!SpaceDockClient.TryParseModId(url, out var modId))
@@ -482,6 +661,15 @@ public sealed class ModService : IModService, IDisposable
             return Array.Empty<ModSearchResult>();
         }
 
+        // 全量目录还在后台解析时，这里本会等十几秒；先给只有注册表信息的快速列表，
+        // 页面拿到后会在 CatalogBuildTask 完成时再补一次完整数据（依赖/冲突/更新标记）。
+        if (CatalogBuildPending)
+        {
+            var quick = await ListInstalledQuickAsync(cancellationToken).ConfigureAwait(false);
+            Trace($"已装快捷返回 {quick.Count} 条（全量目录解析中）");
+            return quick;
+        }
+
         var sw = Stopwatch.StartNew();
         var catalog = await EnumerateCatalogLockedAsync(cancellationToken).ConfigureAwait(false);
         var results = await Task.Run(() =>
@@ -561,23 +749,30 @@ public sealed class ModService : IModService, IDisposable
     }
 
     /// <inheritdoc />
-    public Task<IReadOnlyList<ModVersionInfo>> GetVersionsAsync(string identifier, CancellationToken cancellationToken = default)
+    public async Task<IReadOnlyList<ModVersionInfo>> GetVersionsAsync(string identifier, CancellationToken cancellationToken = default)
     {
         var reg = Registry;
         var list = new List<ModVersionInfo>();
         if (_instance == null || reg == null || string.IsNullOrWhiteSpace(identifier))
         {
-            return Task.FromResult<IReadOnlyList<ModVersionInfo>>(list);
+            return list;
         }
 
         List<CkanModule> modules;
         try
         {
-            modules = reg.AvailableByIdentifier(identifier).ToList();
+            // 与枚举同一条锁纪律：仓库刷新会整批替换 repo-data，刷新期间读注册表会拿到空版本列表。
+            modules = await Task.Run(() =>
+            {
+                lock (_repoLock)
+                {
+                    return reg.AvailableByIdentifier(identifier).ToList();
+                }
+            }, cancellationToken).ConfigureAwait(false);
         }
         catch
         {
-            return Task.FromResult<IReadOnlyList<ModVersionInfo>>(list);
+            return list;
         }
 
         var criteria = _instance.VersionCriteria();
@@ -608,7 +803,7 @@ public sealed class ModService : IModService, IDisposable
                 compatible));
         }
 
-        return Task.FromResult<IReadOnlyList<ModVersionInfo>>(list);
+        return list;
     }
 
     /// <inheritdoc />
