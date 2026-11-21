@@ -102,25 +102,7 @@ public static class CkanCompAdapter
 
     /// <summary>
     /// 将一组 CKAN 版本信息批量映射为 CompFile 列表。
-    /// </summary>
-    private static JsonArray BuildTags(IReadOnlyList<string>? tags)
-{
-    var array = new JsonArray();
-    if (tags == null)
-    {
-        return array;
-    }
-    foreach (var tag in tags)
-    {
-        if (!string.IsNullOrWhiteSpace(tag))
-        {
-            array.Add(tag);
-        }
-    }
-    return array;
-}
-
-public static List<Comp.CompFile> ToFiles(IReadOnlyList<ModVersionInfo> versions)
+    public static List<Comp.CompFile> ToFiles(IReadOnlyList<ModVersionInfo> versions)
     {
         ArgumentNullException.ThrowIfNull(versions);
         return versions.Select(ToFile).ToList();
@@ -138,5 +120,22 @@ public static List<Comp.CompFile> ToFiles(IReadOnlyList<ModVersionInfo> versions
         {
             return fallback;
         }
+    }
+
+    private static JsonArray BuildTags(IReadOnlyList<string>? tags)
+    {
+        var array = new JsonArray();
+        if (tags == null)
+        {
+            return array;
+        }
+        foreach (var tag in tags)
+        {
+            if (!string.IsNullOrWhiteSpace(tag))
+            {
+                array.Add(tag);
+            }
+        }
+        return array;
     }
 }
