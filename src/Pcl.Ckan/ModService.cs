@@ -42,6 +42,11 @@ public sealed class ModService : IModService, IDisposable
     private IReadOnlyList<ModSearchResult>? _cachedAll;
     private Task? _warmTask;
     private readonly SemaphoreSlim _catalogGate = new(1, 1);
+    /// <summary>
+    /// 安装/卸载写入门控。CKAN 的 ModuleInstaller 与 registry 都不支持并发写，且下载地址加速改写
+    /// 用的 _accelOriginals 是非线程安全字典、会直接改 CkanModule.download，多个写操作必须串行。
+    /// </summary>
+    private readonly SemaphoreSlim _planGate = new(1, 1);
     /// <summary>仓库网络刷新进行中：此时搜索直接吃已有缓存，避免被刷新的网络耗时阻塞。</summary>
     private volatile bool _refreshInFlight;
     /// <summary>最近一次成功枚举的目录快照：刷新下载期间读请求直接吃它，避免被网络阻塞。</summary>
@@ -1411,7 +1416,7 @@ public sealed class ModService : IModService, IDisposable
         }
 
         // CKAN 的安装/卸载是同步阻塞调用，必须移到后台线程，否则批量更新会卡死 UI 线程。
-        return Task.Run(() =>
+        return RunExclusive(() =>
         {
             var opts = RelationshipResolverOptions.DependsOnlyOpts(_instance.StabilityToleranceConfig);
             opts.allow_incompatible = plan.AllowIncompatible;
@@ -1553,7 +1558,7 @@ public sealed class ModService : IModService, IDisposable
             throw new InstanceReadOnlyException();
         }
 
-        return Task.Run(() =>
+        return RunExclusive(() =>
         {
             Directory.CreateDirectory(_instance.DownloadCacheDir);
             var cache = new NetModuleCache(_instance.DownloadCacheDir);
@@ -1579,7 +1584,7 @@ public sealed class ModService : IModService, IDisposable
             throw new InstanceReadOnlyException();
         }
 
-        return Task.Run(() =>
+        return RunExclusive(() =>
         {
             Directory.CreateDirectory(_instance.DownloadCacheDir);
             var cache = new NetModuleCache(_instance.DownloadCacheDir);
@@ -1592,6 +1597,21 @@ public sealed class ModService : IModService, IDisposable
             progress?.Report($"Uninstalled '{identifier}'.");
         }, cancellationToken);
     }
+
+    /// <summary>把 CKAN 的写操作串行化：安装/卸载共用同一把门，避免注册表与下载地址改写互相踩。</summary>
+    private Task RunExclusive(Action action, CancellationToken cancellationToken)
+        => Task.Run(async () =>
+        {
+            await _planGate.WaitAsync(cancellationToken).ConfigureAwait(false);
+            try
+            {
+                action();
+            }
+            finally
+            {
+                _planGate.Release();
+            }
+        }, cancellationToken);
 
     // ---- internals -----------------------------------------------------------
 
