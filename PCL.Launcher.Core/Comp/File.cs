@@ -301,8 +301,7 @@ public static partial class Comp
                 url = url.Replace(result.FileName, WebUtility.UrlEncode(result.FileName));
             url = url.Replace("+", "%20");
 
-            return GameDownload.DlSourceModDownloadGet(
-                HandleCurseForgeDownloadUrls(url));
+            return [HandleCurseForgeDownloadUrls(url)];
         }
 
         private static List<string> BuildCurseForgeDependencies(
@@ -325,7 +324,6 @@ public static partial class Comp
             CompType type)
         {
             var gameVersions = rawGameVersions
-                .Where(McInstanceInfo.IsFormatFit)
                 .Select(NormalizeGameVersion)
                 .Distinct()
                 .ToList();
@@ -338,7 +336,7 @@ public static partial class Comp
                     [
                         .. LauncherText.SortByPredicate(
                             gameVersions,
-                            McVersionComparer.CompareVersionGe)
+                            GameVersionComparer.CompareVersionGe)
                     ];
                     if (type == CompType.ModPack)
                         gameVersions = [gameVersions[0]];
@@ -396,8 +394,7 @@ public static partial class Comp
                 if (file is not null)
                 {
                     result.FileName = (string?)file["filename"];
-                    result.DownloadUrls =
-                        GameDownload.DlSourceModDownloadGet(file["url"]?.ToString() ?? "");
+                    result.DownloadUrls = [file["url"]?.ToString() ?? ""];
                     result.Hash = (string?)file["hashes"]?["sha1"];
                 }
             }
@@ -511,7 +508,7 @@ public static partial class Comp
                     [
                         .. LauncherText.SortByPredicate(
                             gameVersions,
-                            McVersionComparer.CompareVersionGe)
+                            GameVersionComparer.CompareVersionGe)
                     ];
                     if (type == CompType.ModPack)
                         gameVersions = [gameVersions[0]];

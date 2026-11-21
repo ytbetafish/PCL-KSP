@@ -1,4 +1,4 @@
-﻿using PCL.Core.App.Localization;
+using PCL.Core.App.Localization;
 
 namespace PCL;
 
@@ -207,7 +207,7 @@ public static partial class Comp
             return version;
         if (string.Equals(
                 version,
-                McInstanceInfo.UnknownVanillaName,
+                "Unknown",
                 StringComparison.OrdinalIgnoreCase))
             return CompFile.UnknownGameVersion;
         if (version.StartsWith("b1.", StringComparison.OrdinalIgnoreCase))

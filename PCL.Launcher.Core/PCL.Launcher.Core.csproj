@@ -21,6 +21,7 @@
         <PackageReference Include="Downloader" Version="5.9.4" />
         <PackageReference Include="protobuf-net" Version="3.2.56" />
     </ItemGroup>
+
     <ItemGroup>
         <Using Include="PCL.Text" />
         <Using Include="System.Text.Json" />

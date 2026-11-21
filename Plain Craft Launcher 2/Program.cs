@@ -1,4 +1,4 @@
-using System.Diagnostics;
+﻿using System.Diagnostics;
 using System.Windows.Input;
 using PCL.Core.App;
 using PCL.Core.App.Essentials;
@@ -45,10 +45,6 @@ internal static class Program
         // 加载框架的 UI 通知由 WPF 层接管（任务栏、下载按钮）
         LoadingUi.Current = new LoadingUiBridge();
         LauncherUi.Interaction = new WpfUserInteraction();
-        UpdateUi.Current = new WpfUpdateUi();
-        AnnouncementActions.Current = new WpfAnnouncementActions();
-        WatcherUi.Current = new WpfWatcherUi();
-        MediaService.Current = new WpfMediaService();
         LogFilter.Current = new WpfLogFilter();
         RestrictedFeatures.Current = new WpfRestrictedFeatures();
         CompNavigation.Current = new WpfCompNavigationService();

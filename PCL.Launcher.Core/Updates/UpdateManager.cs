@@ -1,4 +1,4 @@
-﻿using System.ComponentModel;
+using System.ComponentModel;
 using System.Diagnostics;
 using PCL.Core.App;
 using PCL.Core.App.Localization;
@@ -85,19 +85,33 @@ public static class UpdateManager
                 });
             if (triggerRestartAndByEnd)
             {
-                UpdateUi.Current?.ExitApplication(true);
+                if (triggerRestart)
+                {
+                    try
+                    {
+                        Process.Start(
+                            new ProcessStartInfo(Basics.ExecutablePath)
+                            {
+                                UseShellExecute = true
+                            });
+                    }
+                    catch (Exception ex)
+                    {
+                        LauncherCommon.Log(ex, "重启启动器失败");
+                    }
+                }
+
+                Environment.Exit(0);
                 LauncherCommon.Log("[System] 已由于更新强制结束程序");
             }
         }
         catch (Win32Exception ex)
         {
             LauncherCommon.Log(ex, "自动更新时触发 Win32 错误，疑似被拦截");
-            UpdateUi.Current?.ShowMessageBox(
+            LauncherUi.Interaction?.ShowMessageBox(
                 Lang.Text("Update.Error.UpdateBlockedMessage", LauncherPaths.ExecutableDirectory),
                 Lang.Text("Update.Error.UpdateBlocked"),
                 Lang.Text("Common.Action.Confirm"),
-                "",
-                "",
                 true);
         }
     }
@@ -149,7 +163,7 @@ public static class UpdateManager
     /// <param name="IsUpdate">是否为更新时启动</param>
     public static void ShowCeAnnounce()
     {
-        UpdateUi.Current?.ShowMessageBox(
+        LauncherUi.Interaction?.ShowMessageBox(
             Lang.Text("Update.CommunityNotice.Body"),
             Lang.Text("Update.CommunityNotice.Title"),
             Lang.Text("Update.CommunityNotice.Confirm"));

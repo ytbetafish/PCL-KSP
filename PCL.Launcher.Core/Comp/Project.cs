@@ -1,4 +1,4 @@
-namespace PCL;
+﻿namespace PCL;
 
 public static partial class Comp
 {
@@ -95,27 +95,8 @@ public static partial class Comp
         /// </summary>
         public CompProject(JsonObject data)
         {
-            var result = data.ContainsKey("Tags")
-                ? _BuildFromCompJson(data)
-                : data.ContainsKey("summary")
-                    ? _BuildFromCurseForge(data)
-                    : _BuildFromModrinth(data);
-
-            if (!data.ContainsKey("Tags"))
-            {
-                if (result.Tags.Count == 0)
-                    result.Tags.Add("Download.Comp.Category.Other");
-
-                result.Tags = [.. result.Tags.Distinct()];
-
-                result.ModLoaders =
-                [
-                    .. result
-                        .ModLoaders
-                        .Distinct()
-                        .OrderBy(t => t)
-                ];
-            }
+            // PCL-KSP: 仅保留自定义 Json（含 Tags 字段）分支，CurseForge / Modrinth 分支已随 MC 平台层移除。
+            var result = _BuildFromCompJson(data);
 
             FromCurseForge = result.FromCurseForge;
             Type = result.Type;

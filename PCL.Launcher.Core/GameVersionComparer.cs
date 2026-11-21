@@ -1,13 +1,17 @@
-﻿namespace PCL;
+namespace PCL;
 
-public static class McVersionComparer
+/// <summary>
+///     通用游戏版本号比较器（由原版 McVersionComparer 剥离 Minecraft 依赖而来）。
+/// </summary>
+public static class GameVersionComparer
 {
     public const string UNKNOWN_VERSION_KEY = "UnknownVersion";
+
+    private const string UnknownVersionName = "Unknown";
 
     /// <summary>
     ///     比较两个版本名；等同 Left >= Right。
     ///     无法比较两个预发布版的大小。
-    ///     支持的格式：未知版本, 1.13.2, 1.7.10-pre4, 1.8_pre, 1.14 Pre-Release 2, 1.14.4 C6
     /// </summary>
     public static bool CompareVersionGe(string left, string right)
     {
@@ -15,21 +19,20 @@ public static class McVersionComparer
     }
 
     /// <summary>
-    ///     比较两个版本名，若 Left 较新则返回 1，相同则返回 0，Right 较新则返回 -1；等同 Left - Right。
+    ///     比较两个版本名，若 Left 较新则返回 1，相同则返回 0，Right 较新则返回 -1。
     ///     无法比较两个预发布版的大小。
-    ///     支持的格式：未知版本, 26.1-snapshot-1，1.13.2, 1.7.10-pre4, 1.8_pre, 1.14 Pre-Release 2, 1.14.4 C6
     /// </summary>
     public static int CompareVersion(string? left, string? right)
     {
         var leftUnknown = string.IsNullOrEmpty(left)
             || string.Equals(
                 left,
-                McInstanceInfo.UnknownVanillaName,
+                UnknownVersionName,
                 StringComparison.OrdinalIgnoreCase);
         var rightUnknown = string.IsNullOrEmpty(right)
             || string.Equals(
                 right,
-                McInstanceInfo.UnknownVanillaName,
+                UnknownVersionName,
                 StringComparison.OrdinalIgnoreCase);
         if (leftUnknown || rightUnknown)
         {
@@ -104,8 +107,6 @@ public static class McVersionComparer
 
             i += 1;
         }
-
-        return 0;
     }
 
     /// <summary>

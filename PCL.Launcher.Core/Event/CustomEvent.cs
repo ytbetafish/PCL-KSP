@@ -77,7 +77,7 @@ public class CustomEvent
             if (ActionMap.TryGetValue(type, out var action))
                 action(arg, type);
             else
-                LaunchUi.ShowMessageBox(
+                LauncherUi.Interaction?.ShowMessageBox(
                     Lang.Text("Event.Error.UnknownType", type.ToString()),
                     Lang.Text("Event.Error.Title"));
         }
@@ -120,7 +120,7 @@ public class CustomEvent
         arg = arg.Replace('\\', '/');
         if (!arg.Contains("://") || arg.StartsWithF("file", true))
         {
-            LaunchUi.ShowMessageBox(
+            LauncherUi.Interaction?.ShowMessageBox(
                 Lang.Text("Event.Error.UrlRequired"),
                 Lang.Text("Event.Error.Title"));
             return;
@@ -162,22 +162,26 @@ public class CustomEvent
     private static void _LaunchGame(string arg, EventType type)
     {
         var args = SplitArgs(arg);
-        if (args[0] == "\\current")
-        {
-            if (InstanceList.McMcInstanceSelected is null)
-                throw new InvalidOperationException(Lang.Text("Event.LaunchGame.SelectVersion"));
-            args[0] = InstanceList.McMcInstanceSelected.Name;
-        }
+        var root = args.Length > 0 && args[0] != "\\current" && System.IO.Directory.Exists(args[0])
+            ? args[0]
+            : LauncherState.SelectedKspDirectory;
+        if (string.IsNullOrWhiteSpace(root) || !System.IO.Directory.Exists(root))
+            throw new InvalidOperationException(Lang.Text("Event.LaunchGame.SelectVersion"));
+
+        var exeX64 = System.IO.Path.Combine(root, "KSP_x64.exe");
+        var exe = System.IO.File.Exists(exeX64) ? exeX64 : System.IO.Path.Combine(root, "KSP.exe");
+        if (!System.IO.File.Exists(exe))
+            throw new InvalidOperationException("未找到 KSP_x64.exe / KSP.exe。");
 
         LauncherCommon.RunInUi(() =>
         {
-            var launchOptions = new GameLaunch.McLaunchOptions
-            {
-                ServerIp = args.Length >= 2 ? args[1] : null,
-                instance = new McInstance(args[0])
-            };
-            if (GameLaunch.McLaunchStart(launchOptions))
-                LauncherUi.Interaction?.ShowHint(Lang.Text("Event.LaunchGame.Starting", args[0]));
+            LauncherUi.Interaction?.ShowHint("正在启动 Kerbal Space Program");
+            System.Diagnostics.Process.Start(
+                new System.Diagnostics.ProcessStartInfo(exe)
+                {
+                    WorkingDirectory = root,
+                    UseShellExecute = true
+                });
         });
     }
 
@@ -233,7 +237,7 @@ public class CustomEvent
         if (args.Length == 1)
             throw new ArgumentException(
                 Lang.Text("Event.Error.MissingArgs", type.ToString(), "Title|Content"));
-        LaunchUi.ShowMessageBox(
+        LauncherUi.Interaction?.ShowMessageBox(
             FixNewlines(args[1]),
             FixNewlines(args[0]),
             args.Length > 2 ? args[2] : Lang.Text("Common.Action.Confirm"));
@@ -293,7 +297,7 @@ public class CustomEvent
         args[0] = args[0].Replace('\\', '/');
         if (!args[0].StartsWithF("http://", true) && !args[0].StartsWithF("https://", true))
         {
-            LaunchUi.ShowMessageBox(
+            LauncherUi.Interaction?.ShowMessageBox(
                 Lang.Text("Event.Error.DownloadUrlRequired"),
                 Lang.Text("Event.Error.Title"));
             return;
@@ -329,7 +333,7 @@ public class CustomEvent
         {
             if (!CanWriteSettingFromCustomEvent(args[0]))
                 return;
-            item.SetValueNoType(args[1], InstanceList.McMcInstanceSelected?.PathInstance);
+            item.SetValueNoType(args[1], LauncherState.SelectedKspDirectory);
         }
 
         if (args.Length == 2)
@@ -502,16 +506,10 @@ public class CustomEvent
         if (States.Hint.HomepageCommand)
             return true;
 
-        return LaunchUi.ShowMessageBox(
+        return LauncherUi.Interaction?.ShowConfirm(
                 Lang.Text("Event.Safety.ConfirmMessage", message),
                 Lang.Text("Event.Safety.Title"),
                 Lang.Text("Common.Action.Continue"),
-                Lang.Text("Event.Safety.ContinueAlways"),
-                Lang.Text("Common.Action.Cancel")) switch
-            {
-                1 => true,
-                2 => States.Hint.HomepageCommand = true,
-                _ => false
-            };
+                Lang.Text("Common.Action.Cancel")) ?? false;
     }
 }

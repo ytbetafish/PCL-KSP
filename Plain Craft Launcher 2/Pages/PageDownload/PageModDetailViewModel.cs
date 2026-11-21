@@ -145,12 +145,12 @@ public partial class PageModDetailViewModel : ViewModelBase
             if (isYSpecial)
                 return -1;
             // 比较版本号
-            var versionCodeSort = -McVersionComparer.CompareVersion(sx.Replace(sx.BeforeFirst(" ") + " ", ""),
+            var versionCodeSort = -GameVersionComparer.CompareVersion(sx.Replace(sx.BeforeFirst(" ") + " ", ""),
                 sy.Replace(sy.BeforeFirst(" ") + " ", ""));
             if (versionCodeSort != 0)
                 return versionCodeSort;
             // 比较全部
-            return -McVersionComparer.CompareVersion(sx, sy);
+            return -GameVersionComparer.CompareVersion(sx, sy);
         }
     }
 }

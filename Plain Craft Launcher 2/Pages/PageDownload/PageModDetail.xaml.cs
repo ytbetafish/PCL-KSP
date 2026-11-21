@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections;
 using System.Collections.ObjectModel;
 using System.Diagnostics.Eventing.Reader;
@@ -395,7 +395,7 @@ public partial class PageModDetail : IPageView
         {
             instanceFilters = results.SelectMany(v => v.GameVersions)
                 .Select(v => GetGroupedVersionName(v, groupedDrop, groupedOld)).Distinct()
-                .OrderByDescending(s => s, new McVersionComparer.VersionComparer()).ToList();
+                .OrderByDescending(s => s, new GameVersionComparer.VersionComparer()).ToList();
             modLoaderFilters = results.SelectMany(v => v.ModLoaders).Select(l => l.ToString()).Distinct()
                 .OrderByDescending(s => s).ToList();
         }
@@ -548,7 +548,7 @@ public partial class PageModDetail : IPageView
 
                 // 判定 Loader 逻辑
                 if (hasMultipleLoaders && version.Type == Comp.CompType.Mod &&
-                    McInstanceInfo.IsFormatFit(verName))
+                    !string.IsNullOrEmpty(verName))
                 {
                     foreach (var loader in version.ModLoaders)
                     {
@@ -720,21 +720,13 @@ public partial class PageModDetail : IPageView
 
     private string GetGroupedVersionName(string name, bool groupedByDrop, bool foldOld)
     {
-        if (name is null)
+        // PCL-KSP: KSP 版本按「主版本.次版本」分组（例如 1.12.5 → 1.12），不再使用 MC 的 Drop 体系。
+        if (string.IsNullOrEmpty(name))
             return Lang.Text("Download.Comp.Detail.VersionGroup.Other");
-        if (name.Contains('w'))
-            return Lang.Text("Download.Comp.Detail.VersionGroup.Snapshot");
-        if (foldOld && McInstanceInfo.VersionToDrop(name, true) < 120)
-            return Lang.Text("Download.Comp.Detail.VersionGroup.Old");
-        if (groupedByDrop)
-        {
-            var drop = McInstanceInfo.VersionToDrop(name, true);
-            if (drop >= 0)
-                return McInstanceInfo.DropToVersion(drop);
+        if (!groupedByDrop)
             return name;
-        }
-
-        return name;
+        var parts = name.Split('.');
+        return parts.Length >= 2 ? $"{parts[0]}.{parts[1]}" : name;
     }
 
     #endregion

@@ -5,17 +5,6 @@ namespace PCL;
 /// </summary>
 public static class LauncherState
 {
-    /// <summary>当前选中的 Minecraft 实例。</summary>
-    public static McInstance? SelectedInstance { get; set; }
-
-    /// <summary>选中实例发生变化时触发，供 UI 清理缓存。</summary>
-    public static event Action<McInstance?>? InstanceSelectionChanged;
-
-    public static void NotifyInstanceSelectionChanged(McInstance? instance)
-    {
-        InstanceSelectionChanged?.Invoke(instance);
-    }
-
-    /// <summary>当前选中的 KSP 安装路径（占位，后续接入真实实例管理）。</summary>
+    /// <summary>当前选中的 KSP 安装路径。</summary>
     public static string? SelectedKspDirectory { get; set; }
 }
