@@ -209,10 +209,10 @@ public static class LauncherCommon
                     return line[(index + 1)..];
             }
         }
-        catch
-        {
-            // ignored
-        }
+            catch (System.Exception innerEx)
+            {
+                PCL.Core.Logging.Swallowed.Report(innerEx);
+            }
 
         return defaultValue;
     }
@@ -239,10 +239,10 @@ public static class LauncherCommon
                 content.Select(pair => $"{pair.Key}:{pair.Value}"),
                 Encoding.UTF8);
         }
-        catch
-        {
-            // ignored
-        }
+            catch (System.Exception innerEx)
+            {
+                PCL.Core.Logging.Swallowed.Report(innerEx);
+            }
     }
 
     public static int GetHash(string text)

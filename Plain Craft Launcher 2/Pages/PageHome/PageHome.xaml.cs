@@ -188,10 +188,10 @@ public partial class PageHome
                 if (TryShowFragment(File.ReadAllText(cache, Encoding.UTF8), out _))
                     hasCache = true;
             }
-            catch
-            {
-                // 缓存损坏，忽略，等待网络
-            }
+                catch (System.Exception innerEx)
+                {
+                    PCL.Core.Logging.Swallowed.Report(innerEx);
+                }
         }
         if (hasCache) CardPresetLoading.Visibility = Visibility.Collapsed;
 
@@ -206,10 +206,10 @@ public partial class PageHome
                 Directory.CreateDirectory(CacheDir);
                 File.WriteAllText(cache, text, new UTF8Encoding(false));
             }
-            catch
-            {
-                // 缓存写失败不影响显示
-            }
+                catch (System.Exception innerEx)
+                {
+                    PCL.Core.Logging.Swallowed.Report(innerEx);
+                }
             if (TryShowFragment(text, out var parseError))
             {
                 CardPresetLoading.Visibility = Visibility.Collapsed;

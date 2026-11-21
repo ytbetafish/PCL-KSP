@@ -45,8 +45,9 @@ public class MyImage : Image
                         if (value.StartsWithF(Common.pathTemp) && File.Exists(value))
                             File.Delete(value);
                     }
-                    catch
+                    catch (System.Exception innerEx)
                     {
+                        PCL.Core.Logging.Swallowed.Report(innerEx);
                     }
                 }
             })); // 在这里先触发可能的文件读取，尽量避免在 UI 线程中读取文件

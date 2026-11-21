@@ -42,7 +42,14 @@ public sealed class StringBuilderUser : CKAN.IUser
     public void RaiseProgress(string message, int percent)
     {
         Append($"[Progress {percent}%] {message}");
-        try { ProgressReported?.Invoke(message, percent); } catch { /* 回调异常不得影响 CKAN */ }
+        try
+        {
+            ProgressReported?.Invoke(message, percent);
+        }
+        catch (System.Exception innerEx)
+        {
+            Swallow.Report(innerEx);
+        }
     }
 
     /// <summary>CKAN 的下载速率（字节/秒），供任务管理页显示左边栏的「下载速度」。</summary>
@@ -72,15 +79,36 @@ public sealed class StringBuilderUser : CKAN.IUser
             percent = (int)Math.Clamp(transferred * 100d / ExpectedBytes, 0d, 99d);
         }
 
-        try { ProgressReported?.Invoke(rateCounter.Summary, percent); } catch { /* 回调异常不得影响 CKAN */ }
-        try { SpeedReported?.Invoke(LastBytesPerSecond); } catch { /* 回调异常不得影响 CKAN */ }
+        try
+        {
+            ProgressReported?.Invoke(rateCounter.Summary, percent);
+        }
+        catch (System.Exception innerEx)
+        {
+            Swallow.Report(innerEx);
+        }
+        try
+        {
+            SpeedReported?.Invoke(LastBytesPerSecond);
+        }
+        catch (System.Exception innerEx)
+        {
+            Swallow.Report(innerEx);
+        }
     }
 
     public void RaiseMessage(string message, params object[] args)
     {
         var text = string.Format(message, args);
         Append($"[Msg] {text}");
-        try { MessageReported?.Invoke(text); } catch { /* 回调异常不得影响 CKAN */ }
+        try
+        {
+            MessageReported?.Invoke(text);
+        }
+        catch (System.Exception innerEx)
+        {
+            Swallow.Report(innerEx);
+        }
     }
 
     private void Append(string line)

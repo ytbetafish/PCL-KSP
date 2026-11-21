@@ -52,9 +52,7 @@ public static partial class Common
                             return;
                     }
                 }
-                catch (IOException)
-                {
-                }
+catch (IOException ex) { PCL.Core.Logging.Swallowed.Report(ex); }
 
             Thread.Sleep(50);
         }

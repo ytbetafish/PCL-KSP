@@ -182,10 +182,10 @@ public partial class Application
                 LogWrapper.Error(e.Exception, Lang.Text("SystemDialog.Error.Unexpected.Message"));
             }
         }
-        catch
-        {
-            // Equivalent to On Error Resume Next for safety in the global handler
-        }
+            catch (System.Exception innerEx)
+            {
+                PCL.Core.Logging.Swallowed.Report(innerEx);
+            }
     }
 
     // Win32 API declaration for DLL directory configuration

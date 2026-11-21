@@ -97,10 +97,10 @@ public partial class PageComp : Grid
             RebuildFromRaw();
             _ = EnrichCurrentPageAsync();
         }
-        catch
-        {
-            // 静默刷新失败不影响已经渲染出来的列表
-        }
+            catch (System.Exception innerEx)
+            {
+                PCL.Core.Logging.Swallowed.Report(innerEx);
+            }
     }
 
     /// <summary>读取排序下拉框选中项（与原版 CompSortType 编号一致）。</summary>
@@ -345,10 +345,7 @@ public partial class PageComp : Grid
                 }
             });
         }
-        catch (OperationCanceledException)
-        {
-            // 翻页取消，丢弃本次回填结果。
-        }
+catch (OperationCanceledException ex) { PCL.Core.Logging.Swallowed.Report(ex); }
         catch (Exception ex)
         {
             Common.Log(ex, "当前页模组信息回填失败");

@@ -105,7 +105,14 @@ internal static class CatalogSnapshot
         }
         catch
         {
-            try { if (File.Exists(temp)) File.Delete(temp); } catch { }
+            try
+            {
+                if (File.Exists(temp)) File.Delete(temp);
+            }
+            catch (System.Exception innerEx)
+            {
+                Swallow.Report(innerEx);
+            }
         }
     }
 }

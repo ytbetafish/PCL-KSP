@@ -122,10 +122,10 @@ public partial class PageSelectLeft : IRefreshable, IPageView
         {
             version = _kspService.Probe(path)?.Version;
         }
-        catch
-        {
-            // 版本探测失败不影响列表展示。
-        }
+            catch (System.Exception innerEx)
+            {
+                PCL.Core.Logging.Swallowed.Report(innerEx);
+            }
 
         var item = new MyListItem
         {

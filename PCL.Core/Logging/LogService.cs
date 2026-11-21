@@ -45,7 +45,11 @@ public class LogService : ILifecycleLogService
     public Task StartAsync()
     {
         Context.Trace("正在初始化 Logger 实例");
-        var config = new LoggerConfiguration(Path.Combine(Basics.ExecutableDirectory, "PCL", "Log"));
+        // 日志体积有界：单文件 4 MB 即轮转，最多保留 8 份（合计约 32 MB），旧文件自动删除。
+        var config = new LoggerConfiguration(
+            Path.Combine(Basics.ExecutableDirectory, "PCL", "Log"),
+            MaxFileSize: 4 * 1024 * 1024,
+            MaxKeepOldFile: 8);
         _logger = new Logger(config);
         Context.Trace("正在注册日志事件");
         LogWrapper.OnLog += _OnWrapperLog;

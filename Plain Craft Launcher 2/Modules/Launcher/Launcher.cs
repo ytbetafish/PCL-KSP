@@ -55,6 +55,8 @@ public static partial class Launcher
         try
         {
             var settings = KspSettings.Current;
+            // CKAN 适配层不引用 PCL.Core，把它的空 catch 日志接到本程序的日志文件里。
+            Pcl.Ckan.Swallow.Sink = msg => Common.Log(msg);
             ModService.ApplyNetworkSettings(settings.HttpProxy);
             var service = new ModService(dataDir: settings.CkanDataDir);
             service.MirrorUrls = new System.Collections.Generic.List<string>(settings.CkanMirrorUrls);
@@ -76,13 +78,28 @@ public static partial class Launcher
             // writes it; the two must not run in parallel to avoid the non-thread-safe Core dictionary.
             _ = System.Threading.Tasks.Task.Run(async () =>
             {
-                try { await service.WarmUpAsync().ConfigureAwait(false); } catch { }
-                try { await service.RefreshMasterRegistryAsync().ConfigureAwait(false); } catch { }
+                try
+                {
+                    await service.WarmUpAsync().ConfigureAwait(false);
+                }
+                catch (System.Exception innerEx)
+                {
+                    PCL.Core.Logging.Swallowed.Report(innerEx);
+                }
+                try
+                {
+                    await service.RefreshMasterRegistryAsync().ConfigureAwait(false);
+                }
+                catch (System.Exception innerEx)
+                {
+                    PCL.Core.Logging.Swallowed.Report(innerEx);
+                }
             });
         }
-        catch
+        catch (Exception ex)
         {
             // CKAN 初始化失败不影响启动；列表在服务不可用时显示空态
+            PCL.Core.Logging.Swallowed.Report(ex);
             _ckanService ??= new ModService();
         }
     }
@@ -127,9 +144,9 @@ public static partial class Launcher
                 {
                     Common.RunInUi(() => frmMain?.DragTick());
                 }
-                catch
+                catch (System.Exception innerEx)
                 {
-                    // 时钟回调异常不终止时钟线程
+                    PCL.Core.Logging.Swallowed.Report(innerEx);
                 }
                 Thread.Sleep(49);
             }
@@ -171,10 +188,10 @@ public static partial class Launcher
             using var writeKey = Registry.CurrentUser.OpenSubKey(gpuPreferenceRegistryKey, true);
             writeKey?.SetValue(executable, wantHighPerformance ? highPerformancePreference : defaultPreference);
         }
-        catch
-        {
-            // GPU 偏好设置失败不影响启动
-        }
+            catch (System.Exception innerEx)
+            {
+                PCL.Core.Logging.Swallowed.Report(innerEx);
+            }
     }
 
     /// <summary>
@@ -198,10 +215,10 @@ public static partial class Launcher
                 return tempFolder;
             }
         }
-        catch
-        {
-            // ignored
-        }
+            catch (System.Exception innerEx)
+            {
+                PCL.Core.Logging.Swallowed.Report(innerEx);
+            }
 
         var fallbackFolder = Path.Combine(
             SystemPaths.DriveLetter,

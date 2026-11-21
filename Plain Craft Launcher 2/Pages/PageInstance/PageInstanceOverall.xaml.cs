@@ -126,10 +126,10 @@ public partial class PageInstanceOverall : IPageView
             if (!string.IsNullOrEmpty(v))
                 return v;
         }
-        catch
-        {
-            // 服务层探测失败时回退本地文件读取。
-        }
+            catch (System.Exception innerEx)
+            {
+                PCL.Core.Logging.Swallowed.Report(innerEx);
+            }
 
         var buildId = Path.Combine(root, "KSP_Data", "buildID.txt");
         var versionTxt = Path.Combine(root, "version.txt");
@@ -140,10 +140,10 @@ public partial class PageInstanceOverall : IPageView
             if (File.Exists(versionTxt))
                 return File.ReadAllText(versionTxt).Trim();
         }
-        catch
-        {
-            // 忽略读取失败。
-        }
+            catch (System.Exception innerEx)
+            {
+                PCL.Core.Logging.Swallowed.Report(innerEx);
+            }
 
         return "未知";
     }

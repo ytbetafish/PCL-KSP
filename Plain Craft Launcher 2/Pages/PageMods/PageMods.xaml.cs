@@ -82,10 +82,10 @@ public partial class PageMods
             _lastResults = await GetService().ListInstalledAsync();
             ApplyFilter();
         }
-        catch
-        {
-            // 静默补齐失败不影响已经渲染出来的列表
-        }
+            catch (System.Exception innerEx)
+            {
+                PCL.Core.Logging.Swallowed.Report(innerEx);
+            }
     }
 
     /// <summary>加载当前实例已安装的模组列表（默认视图）。</summary>
@@ -217,7 +217,14 @@ public partial class PageMods
     private async void BtnFilterUpdates_Click(object sender, System.Windows.Input.MouseButtonEventArgs e)
     {
         _filter = "updates";
-        try { _lastResults = await GetService().ListInstalledAsync(); } catch { }
+        try
+        {
+            _lastResults = await GetService().ListInstalledAsync();
+        }
+        catch (System.Exception innerEx)
+        {
+            PCL.Core.Logging.Swallowed.Report(innerEx);
+        }
         ApplyFilter();
     }
 
@@ -501,7 +508,10 @@ public partial class PageMods
                 withRecommendations = answer == MessageBoxResult.Yes;
             }
         }
-        catch { /* 推荐关系读取失败不阻断安装 */ }
+            catch (System.Exception innerEx)
+            {
+                PCL.Core.Logging.Swallowed.Report(innerEx);
+            }
 
         try
         {

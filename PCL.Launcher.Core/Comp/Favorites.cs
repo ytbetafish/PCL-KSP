@@ -1,4 +1,4 @@
-﻿using System.Text.Json.Serialization;
+using System.Text.Json.Serialization;
 using PCL.Core.App;
 using PCL.Core.App.Localization;
 using PCL.Core.Utils;
@@ -44,10 +44,7 @@ public static partial class Comp
                                     migrate)
                             ];
                     }
-                    catch (Exception)
-                    {
-                        // ignored
-                    }
+catch (Exception ex) { PCL.Core.Logging.Swallowed.Report(ex); }
                 }
 
                 if (rawList is null || rawList.Count == 0)

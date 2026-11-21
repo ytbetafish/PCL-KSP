@@ -113,10 +113,10 @@ public static class ThemeManager
                 contextMenu.UpdateDefaultStyle();
             }
         }
-        catch
-        {
-            // 忽略个别错误
-        }
+            catch (System.Exception innerEx)
+            {
+                PCL.Core.Logging.Swallowed.Report(innerEx);
+            }
     }
 
     private static void RefreshContextMenusInElement(DependencyObject element)
@@ -136,9 +136,9 @@ public static class ThemeManager
             for (int i = 0; i < childrenCount; i++)
                 RefreshContextMenusInElement(VisualTreeHelper.GetChild(element, i));
         }
-        catch
-        {
-            // 忽略个别元素的错误，继续处理其他元素
-        }
+            catch (System.Exception innerEx)
+            {
+                PCL.Core.Logging.Swallowed.Report(innerEx);
+            }
     }
 }

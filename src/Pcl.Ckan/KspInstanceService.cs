@@ -70,10 +70,10 @@ public sealed class KspInstanceService
                 }
             }
         }
-        catch
-        {
-            // Detection is best-effort; fall through to manual paths.
-        }
+            catch (System.Exception innerEx)
+            {
+                Swallow.Report(innerEx);
+            }
 
         // 3) Scan every fixed drive for adjacent "Kerbal Space Program*" directories that
         //    contain KSP_x64.exe + GameData (covers GOG copies next to the primary install).
@@ -87,10 +87,10 @@ public sealed class KspInstanceService
                     TryAdd(candidates, sub);
                 }
             }
-            catch
-            {
-                // ignore inaccessible drives
-            }
+                catch (System.Exception innerEx)
+                {
+                    Swallow.Report(innerEx);
+                }
         }
 
         return candidates.Distinct(StringComparer.OrdinalIgnoreCase).ToList();
@@ -137,10 +137,10 @@ public sealed class KspInstanceService
             var inst = Load(rootPath, Path.GetFileName(rootPath));
             version = inst.Version()?.ToString();
         }
-        catch
-        {
-            // Version detection is best-effort.
-        }
+            catch (System.Exception innerEx)
+            {
+                Swallow.Report(innerEx);
+            }
 
         version ??= ReadBuildId(rootPath);
         return new KspInstanceInfo(rootPath, version);
@@ -182,10 +182,10 @@ public sealed class KspInstanceService
                 }
             }
         }
-        catch
-        {
-            // best effort
-        }
+            catch (System.Exception innerEx)
+            {
+                Swallow.Report(innerEx);
+            }
 
         return null;
     }

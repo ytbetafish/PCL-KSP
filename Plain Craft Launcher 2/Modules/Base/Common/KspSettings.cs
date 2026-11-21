@@ -98,10 +98,10 @@ public static class KspSettings
             if (!File.Exists(target) && File.Exists(legacyShared))
                 File.Copy(legacyShared, target, true);
         }
-        catch
-        {
-            // 迁移失败不致命，继续使用默认/现有路径。
-        }
+            catch (System.Exception innerEx)
+            {
+                PCL.Core.Logging.Swallowed.Report(innerEx);
+            }
         return target;
     }
 
@@ -139,10 +139,10 @@ public static class KspSettings
                 Save();
             }
         }
-        catch
-        {
-            // 回填失败不致命
-        }
+            catch (System.Exception innerEx)
+            {
+                PCL.Core.Logging.Swallowed.Report(innerEx);
+            }
 
         // 一次性迁移：旧版（工程名 PKL 时期）把 CKAN 数据目录放在 %APPDATA%\PKL\Ckan。
         try
@@ -158,16 +158,16 @@ public static class KspSettings
                 if (Directory.Exists(legacyCkan) && !Directory.Exists(newCkan))
                 {
                     try { Directory.Move(legacyCkan, newCkan); }
-                    catch { /* 搬家失败就用新路径重新初始化 */ }
+catch (System.Exception innerEx) { PCL.Core.Logging.Swallowed.Report(innerEx); }
                 }
                 Current.CkanDataDir = newCkan;
                 Save();
             }
         }
-        catch
-        {
-            // 迁移失败不致命
-        }
+            catch (System.Exception innerEx)
+            {
+                PCL.Core.Logging.Swallowed.Report(innerEx);
+            }
     }
 
     /// <summary>实例在下拉框/列表里显示的名字：有自定义名用自定义名，否则用目录名。</summary>
@@ -266,7 +266,7 @@ public static class KspSettings
         {
             // 写盘失败不致命，但不静默吞掉——至少留个痕迹。
             try { File.AppendAllText(Path.Combine(Path.GetTempPath(), "pclksp-settings-save-error.log"),
-                $"[{DateTime.Now}] save to {_path} failed{Environment.NewLine}"); } catch { }
+                $"[{DateTime.Now}] save to {_path} failed{Environment.NewLine}"); }catch (System.Exception innerEx) { PCL.Core.Logging.Swallowed.Report(innerEx); }
         }
     }
 }

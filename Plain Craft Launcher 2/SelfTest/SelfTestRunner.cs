@@ -33,6 +33,7 @@ public static class SelfTestRunner
         if (want is "all" or "settings" or "") await GroupSettingsAsync();
         if (want is "all" or "ckan") await GroupCkanAsync();
         if (want is "all" or "misc") await GroupMiscAsync();
+        if (want is "all" or "log") await GroupLogAsync();
         if (want is "all" or "live")
         {
             // live 组会真实卸载/重装模组、启动 KSP、清空下载缓存，属破坏性用例：
@@ -117,10 +118,10 @@ public static class SelfTestRunner
             Directory.CreateDirectory(dir);
             File.WriteAllText(Path.Combine(dir, "selftest-last.log"), Report.ToString(), new UTF8Encoding(false));
         }
-        catch
-        {
-            // 写盘失败不影响运行日志里的结论
-        }
+            catch (System.Exception innerEx)
+            {
+                PCL.Core.Logging.Swallowed.Report(innerEx);
+            }
     }
 
     #endregion
@@ -694,6 +695,36 @@ public static class SelfTestRunner
         });
     }
 
+    #region 日志
+
+    private static async Task GroupLogAsync()
+    {
+        Write("---------- 分组：日志 ----------");
+
+        await CaseAsync("log/swallow-throttle", () =>
+        {
+            var beforeMerged = PCL.Core.Logging.Swallowed.MergedTotal;
+            var beforeSites = PCL.Core.Logging.Swallowed.SiteCount;
+            for (var i = 0; i < 3; i++)
+                PCL.Core.Logging.Swallowed.Report(new InvalidOperationException("selftest-swallow-" + i));
+            var merged = PCL.Core.Logging.Swallowed.MergedTotal - beforeMerged;
+            var sites = PCL.Core.Logging.Swallowed.SiteCount - beforeSites;
+            if (merged != 2) throw new InvalidOperationException($"同站点 3 次本应合并 2 次，实际合并 {merged} 次");
+            if (sites != 1) throw new InvalidOperationException($"本应只新增 1 个调用点，实际 {sites} 个");
+            return $"同站点 3 次 → 落盘 1 条、合并 {merged} 次、调用点 +{sites}";
+        });
+
+        await CaseAsync("log/swallow-window", () =>
+        {
+            var window = PCL.Core.Logging.Swallowed.QuietWindow;
+            var maxSites = PCL.Core.Logging.Swallowed.MaxSites;
+            if (window <= TimeSpan.Zero) throw new InvalidOperationException("限流窗口未生效：" + window);
+            if (maxSites <= 0) throw new InvalidOperationException("调用点上限异常：" + maxSites);
+            return $"窗口={window.TotalSeconds:0}s，调用点上限={maxSites}";
+        });
+    }
+
+    #endregion
     #endregion
 
     #region 实例实改（破坏性，用户已授权）
@@ -837,7 +868,14 @@ public static class SelfTestRunner
             var pid = p.Id;
             await Task.Delay(8000);
             var alive = !p.HasExited;
-            try { if (alive) p.Kill(true); } catch { }
+            try
+            {
+                if (alive) p.Kill(true);
+            }
+            catch (System.Exception innerEx)
+            {
+                PCL.Core.Logging.Swallowed.Report(innerEx);
+            }
             if (!alive) throw new InvalidOperationException("KSP 启动后 8 秒内就退出了，可能启动崩溃");
             return $"{Path.GetFileName(exe)} 启动成功并存活 8 秒（PID {pid}），已结束";
         });

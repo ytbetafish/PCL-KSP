@@ -74,10 +74,8 @@ public class LoaderDownload : Loading.LoaderBase
                         entered = true;
                         await ProcessFileAsync(file, cancellationToken).ConfigureAwait(false);
                     }
-                    catch (OperationCanceledException) when (cancellationToken
-                                                                 .IsCancellationRequested)
-                    {
-                    }
+catch (OperationCanceledException ex) when (cancellationToken
+                                                                 .IsCancellationRequested) { PCL.Core.Logging.Swallowed.Report(ex); }
                     catch (Exception ex)
                     {
                         file.AddError(ex);

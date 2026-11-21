@@ -151,7 +151,14 @@ public sealed class CkanUpdateLoader : Loading.LoaderBase
     public override void Abort()
     {
         _cancelled = true;
-        try { _cts.Cancel(); } catch { /* 已释放则忽略 */ }
+        try
+        {
+            _cts.Cancel();
+        }
+        catch (System.Exception innerEx)
+        {
+            PCL.Core.Logging.Swallowed.Report(innerEx);
+        }
         foreach (var step in _steps)
         {
             if (step.State is LoadState.Waiting or LoadState.Loading)
@@ -185,9 +192,9 @@ public sealed class CkanUpdateLoader : Loading.LoaderBase
                 ? Lang.Text("Speed.Progress.Total")
                 : $"{Current.name}（{_finished + 1}/{_steps.Count}）";
         }
-        catch
-        {
-            // 本地化不可用时保持原名
-        }
+            catch (System.Exception innerEx)
+            {
+                PCL.Core.Logging.Swallowed.Report(innerEx);
+            }
     }
 }

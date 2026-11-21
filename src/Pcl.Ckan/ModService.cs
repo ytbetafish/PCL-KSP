@@ -66,8 +66,22 @@ public sealed class ModService : IModService, IDisposable
 
     private void Trace(string message)
     {
-        try { Log.RaiseMessage(message); } catch { }
-        try { TraceSink?.Invoke(message); } catch { }
+        try
+        {
+            Log.RaiseMessage(message);
+        }
+        catch (System.Exception innerEx)
+        {
+            Swallow.Report(innerEx);
+        }
+        try
+        {
+            TraceSink?.Invoke(message);
+        }
+        catch (System.Exception innerEx)
+        {
+            Swallow.Report(innerEx);
+        }
     }
 
     /// <summary>
@@ -103,7 +117,14 @@ public sealed class ModService : IModService, IDisposable
     {
         if (!string.IsNullOrWhiteSpace(proxy))
         {
-            try { WebRequest.DefaultWebProxy = new WebProxy(proxy, true); } catch { }
+            try
+            {
+                WebRequest.DefaultWebProxy = new WebProxy(proxy, true);
+            }
+            catch (System.Exception innerEx)
+            {
+                Swallow.Report(innerEx);
+            }
         }
     }
 
@@ -264,7 +285,14 @@ public sealed class ModService : IModService, IDisposable
         catch (Exception ex)
         {
             Trace($"仓库 Update 失败（{swRefresh.ElapsedMilliseconds}ms）: {ex.GetType().Name}: {ex.Message}");
-            try { _user.RaiseError("刷新仓库注册表失败: " + ex.Message); } catch { }
+            try
+            {
+                _user.RaiseError("刷新仓库注册表失败: " + ex.Message);
+            }
+            catch (System.Exception innerEx)
+            {
+                Swallow.Report(innerEx);
+            }
         }
         finally
         {
@@ -310,7 +338,14 @@ public sealed class ModService : IModService, IDisposable
             if (warmTask is not null)
             {
                 Trace("Search waiting warmTask");
-                try { await warmTask.ConfigureAwait(false); } catch { }
+                try
+                {
+                    await warmTask.ConfigureAwait(false);
+                }
+                catch (System.Exception innerEx)
+                {
+                    Swallow.Report(innerEx);
+                }
                 lock (_catalogLock)
                 {
                     if (_cachedAll is not null)
@@ -393,7 +428,10 @@ public sealed class ModService : IModService, IDisposable
         {
             if (_instance != null) cache = new NetModuleCache(_instance.DownloadCacheDir);
         }
-        catch { /* 缓存目录不可用时视为未缓存 */ }
+            catch (System.Exception innerEx)
+            {
+                Swallow.Report(innerEx);
+            }
         try
         {
             var results = catalog.Where(m => MatchesQuery(m, query))
@@ -545,10 +583,10 @@ public sealed class ModService : IModService, IDisposable
                     }
                     Trace("WarmUp enumerate done");
                 }
-                catch
-                {
-                    // Warm-up failure must not block; the download page loads on demand.
-                }
+                    catch (System.Exception innerEx)
+                    {
+                        Swallow.Report(innerEx);
+                    }
             }, cancellationToken);
             return _warmTask;
         }
@@ -835,7 +873,10 @@ public sealed class ModService : IModService, IDisposable
                     using var cache = new NetModuleCache(_instance.DownloadCacheDir);
                     cachedZip = cache.GetCachedFilename(mod);
                 }
-                catch { /* 缓存不可读时退回描述符 */ }
+                    catch (System.Exception innerEx)
+                    {
+                        Swallow.Report(innerEx);
+                    }
             }
 
             // 已缓存：直接枚举安装包内的文件，这才是 CKAN Contents 页的真实内容。
@@ -849,7 +890,10 @@ public sealed class ModService : IModService, IDisposable
                         list.Add(new ModContentEntry(entry.FullName, null));
                     }
                 }
-                catch { /* 非 zip 或损坏，退回描述符 */ }
+                    catch (System.Exception innerEx)
+                    {
+                        Swallow.Report(innerEx);
+                    }
             }
 
             if (list.Count == 0)
@@ -1169,7 +1213,10 @@ public sealed class ModService : IModService, IDisposable
                         display = candidate!.name;
                     }
                 }
-                catch { /* 元数据缺失时保留标识 */ }
+                    catch (System.Exception innerEx)
+                    {
+                        Swallow.Report(innerEx);
+                    }
                 if (!list.Contains(display, StringComparer.OrdinalIgnoreCase))
                 {
                     list.Add(display);
@@ -1363,7 +1410,10 @@ public sealed class ModService : IModService, IDisposable
                         toRemove.Add(installedId);
                     }
                 }
-                catch { /* 缺元数据的已装项跳过 */ }
+                    catch (System.Exception innerEx)
+                    {
+                        Swallow.Report(innerEx);
+                    }
             }
 
             return Task.FromResult<ModInstallPlan?>(new ModInstallPlan(
@@ -1842,7 +1892,7 @@ public sealed class ModService : IModService, IDisposable
         if (mod != null && criteria != null)
         {
             try { compatible = mod.IsCompatible(criteria); }
-            catch { /* leave default */ }
+catch (System.Exception innerEx) { Swallow.Report(innerEx); }
         }
 
         // CKAN 模块元数据不含图标 URL（ResourcesDescriptor 无 icon 字段），图标留待 SpaceDock 兜底。
@@ -1852,7 +1902,7 @@ public sealed class ModService : IModService, IDisposable
         if (mod != null)
         {
             try { maxKsp = mod.LatestCompatibleGameVersion().ToString(); }
-            catch { /* 元数据缺版本范围时不展示 */ }
+catch (System.Exception innerEx) { Swallow.Report(innerEx); }
         }
 
         // CKAN 的 Replaceable 状态：已装模组声明 replaced_by 且替换者与当前 KSP 兼容时，提示可替换。
@@ -1864,14 +1914,17 @@ public sealed class ModService : IModService, IDisposable
                 replacedById = Registry.GetReplacement(identifier, _instance.StabilityToleranceConfig, criteria)
                     ?.ReplaceWith?.identifier;
             }
-            catch { /* 缺元数据时不展示 */ }
+                catch (System.Exception innerEx)
+                {
+                    Swallow.Report(innerEx);
+                }
         }
 
         bool isCached = false;
         if (mod != null && cache != null)
         {
             try { isCached = cache.IsCached(mod); }
-            catch { /* 缓存目录不可用时视为未缓存 */ }
+catch (System.Exception innerEx) { Swallow.Report(innerEx); }
         }
 
         return new ModSearchResult(
@@ -1985,7 +2038,21 @@ public sealed class ModService : IModService, IDisposable
 
     public void Dispose()
     {
-        try { _registryManager?.Dispose(); } catch { /* best effort */ }
-        try { _manager.Dispose(); } catch { /* best effort */ }
+        try
+        {
+            _registryManager?.Dispose();
+        }
+        catch (System.Exception innerEx)
+        {
+            Swallow.Report(innerEx);
+        }
+        try
+        {
+            _manager.Dispose();
+        }
+        catch (System.Exception innerEx)
+        {
+            Swallow.Report(innerEx);
+        }
     }
 }

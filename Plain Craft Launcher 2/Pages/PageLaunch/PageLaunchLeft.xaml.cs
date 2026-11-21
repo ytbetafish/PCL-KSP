@@ -125,10 +125,10 @@ public partial class PageLaunchLeft
             _activeProcess.EnableRaisingEvents = true;
             _activeProcess.Exited += OnKspExited;
         }
-        catch
-        {
-            // 进程事件不可用时忽略，仅影响退出后自动恢复
-        }
+            catch (System.Exception innerEx)
+            {
+                PCL.Core.Logging.Swallowed.Report(innerEx);
+            }
 
         // 等待主窗口出现，最长约 2 分钟（KSP 加载较慢）
         SetStage("等待游戏窗口", 40);
@@ -175,10 +175,10 @@ public partial class PageLaunchLeft
             {
                 _activeProcess.Kill(true);
             }
-            catch
-            {
-                // 忽略取消失败
-            }
+                catch (System.Exception innerEx)
+                {
+                    PCL.Core.Logging.Swallowed.Report(innerEx);
+                }
         }
         HideLaunching();
     }
@@ -189,8 +189,22 @@ public partial class PageLaunchLeft
         {
             if (_activeProcess is not null)
             {
-                try { _activeProcess.Exited -= OnKspExited; } catch { }
-                try { _activeProcess.Dispose(); } catch { }
+                try
+                {
+                    _activeProcess.Exited -= OnKspExited;
+                }
+                catch (System.Exception innerEx)
+                {
+                    PCL.Core.Logging.Swallowed.Report(innerEx);
+                }
+                try
+                {
+                    _activeProcess.Dispose();
+                }
+                catch (System.Exception innerEx)
+                {
+                    PCL.Core.Logging.Swallowed.Report(innerEx);
+                }
                 _activeProcess = null;
             }
             HideLaunching();

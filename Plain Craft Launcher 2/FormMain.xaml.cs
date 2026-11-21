@@ -228,7 +228,10 @@ public partial class FormMain
             LabTitleLogo.Text = "PCL KSP";
             LabTitleLogo.Visibility = Visibility.Visible;
         }
-        catch { }
+            catch (System.Exception innerEx)
+            {
+                PCL.Core.Logging.Swallowed.Report(innerEx);
+            }
         // PLC 彩蛋
         if (RandomUtils.NextInt(1, 1000) == 233)
             ShapeTitleLogo.Data = (Geometry)new GeometryConverter().ConvertFromString(
