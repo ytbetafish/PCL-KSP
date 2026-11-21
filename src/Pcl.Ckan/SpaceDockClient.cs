@@ -30,6 +30,8 @@ public sealed class SpaceDockClient
     };
 
     private readonly ConcurrentDictionary<int, SpaceDockMod?> _cache = new();
+    /// <summary>同一 id 的进行中请求：并发调用复用一个 Task，避免列表快速滚动时把 SpaceDock 打到 429。</summary>
+    private readonly ConcurrentDictionary<int, Task<SpaceDockMod?>> _inflight = new();
 
     private sealed class ApiMod
     {
@@ -65,10 +67,26 @@ public sealed class SpaceDockClient
         if (_cache.TryGetValue(modId, out var cached))
             return cached;
 
+        // 并发击穿保护：同一个 id 同时只发一次请求，其余调用等这一次的结果。
+        var task = _inflight.GetOrAdd(modId, id => FetchCoreAsync(id));
+        try
+        {
+            return await task.WaitAsync(cancellationToken).ConfigureAwait(false);
+        }
+        finally
+        {
+            // 请求结束后把共享任务移出表：永久结果已写入 _cache；超时/5xx 等临时失败留给下次重试。
+            if (_inflight.TryGetValue(modId, out var current) && ReferenceEquals(current, task))
+                _inflight.TryRemove(modId, out _);
+        }
+    }
+
+    private async Task<SpaceDockMod?> FetchCoreAsync(int modId)
+    {
         ApiMod? api;
         try
         {
-            using var resp = await _http.GetAsync($"{BaseUrl}/api/mod/{modId}", cancellationToken)
+            using var resp = await _http.GetAsync($"{BaseUrl}/api/mod/{modId}", CancellationToken.None)
                 .ConfigureAwait(false);
             if (!resp.IsSuccessStatusCode)
             {
@@ -81,10 +99,10 @@ public sealed class SpaceDockClient
                 return null;
             }
 
-            await using var stream = await resp.Content.ReadAsStreamAsync(cancellationToken)
+            await using var stream = await resp.Content.ReadAsStreamAsync(CancellationToken.None)
                 .ConfigureAwait(false);
             api = await JsonSerializer.DeserializeAsync<ApiMod>(stream,
-                new JsonSerializerOptions { PropertyNameCaseInsensitive = true }, cancellationToken)
+                new JsonSerializerOptions { PropertyNameCaseInsensitive = true }, CancellationToken.None)
                 .ConfigureAwait(false);
         }
         catch
