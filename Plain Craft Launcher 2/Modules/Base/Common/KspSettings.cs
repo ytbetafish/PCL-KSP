@@ -57,8 +57,6 @@ public static class KspSettings
         public string GitHubAccelerationPrefix { get; set; } = "https://ghfast.top/";
 
         public string HttpProxy { get; set; } = "";
-        public int DownloadConcurrency { get; set; } = 4;
-        public int HttpTimeoutSeconds { get; set; } = 30;
 
         public List<string> Instances { get; set; } = new();
         /// <summary>实例的自定义显示名（键为实例根目录，值为用户起的名字）。</summary>

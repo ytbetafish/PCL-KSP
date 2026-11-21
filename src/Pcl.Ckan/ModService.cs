@@ -94,19 +94,17 @@ public sealed class ModService : IModService, IDisposable
     }
 
     /// <summary>
-    /// Apply process-wide network settings: HTTP proxy.
+    /// Apply process-wide network settings: HTTP proxy only.
     /// CKAN 的下载器是 WebClient 实现，而 .NET 10 里 ServicePointManager 的连接数/空闲超时
-    /// 对 WebClient(HttpWebRequest) 已不再生效（调用它只会换来 SYSLIB0014 警告），因此这里只设置代理，
-    /// 不再假装设置并发与超时。
+    /// 对 WebClient(HttpWebRequest) 已不再生效（调用它只会换来 SYSLIB0014 警告），
+    /// 所以设置页不再提供并发/超时两项，这里也只设置代理。
     /// </summary>
-    public static void ApplyNetworkSettings(string? proxy, int concurrency, int timeoutSeconds)
+    public static void ApplyNetworkSettings(string? proxy)
     {
         if (!string.IsNullOrWhiteSpace(proxy))
         {
             try { WebRequest.DefaultWebProxy = new WebProxy(proxy, true); } catch { }
         }
-        _ = concurrency;
-        _ = timeoutSeconds;
     }
 
     /// <inheritdoc />

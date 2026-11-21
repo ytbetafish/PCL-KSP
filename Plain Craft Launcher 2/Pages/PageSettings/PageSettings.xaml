@@ -73,10 +73,6 @@
                             <RowDefinition Height="34" />
                             <RowDefinition Height="9" />
                             <RowDefinition Height="34" />
-                            <RowDefinition Height="9" />
-                            <RowDefinition Height="34" />
-                            <RowDefinition Height="9" />
-                            <RowDefinition Height="34" />
                         </Grid.RowDefinitions>
                         <TextBlock Grid.Row="0" VerticalAlignment="Center" Margin="0,0,25,0" Text="数据目录" />
                         <Grid Grid.Row="0" Grid.Column="1" Grid.ColumnSpan="2">
@@ -106,17 +102,13 @@
                         </StackPanel>
                         <TextBlock Grid.Row="8" VerticalAlignment="Center" Margin="0,0,25,0" Text="HTTP 代理" />
                         <local:MyTextBox Grid.Row="8" Grid.Column="1" Grid.ColumnSpan="2" x:Name="TxtProxy" Height="34" />
-                        <TextBlock Grid.Row="10" VerticalAlignment="Center" Margin="0,0,25,0" Text="并发下载数" />
-                        <local:MyTextBox Grid.Row="10" Grid.Column="1" Grid.ColumnSpan="2" x:Name="TxtConcurrency" Height="34" />
-                        <TextBlock Grid.Row="12" VerticalAlignment="Center" Margin="0,0,25,0" Text="超时秒数" />
-                        <local:MyTextBox Grid.Row="12" Grid.Column="1" Grid.ColumnSpan="2" x:Name="TxtTimeout" Height="34" />
-                        <TextBlock Grid.Row="14" VerticalAlignment="Center" Margin="0,0,25,0" Text="模组索引" />
-                        <StackPanel Grid.Row="14" Grid.Column="1" Grid.ColumnSpan="2" Orientation="Horizontal" VerticalAlignment="Center">
+                        <TextBlock Grid.Row="10" VerticalAlignment="Center" Margin="0,0,25,0" Text="模组索引" />
+                        <StackPanel Grid.Row="10" Grid.Column="1" Grid.ColumnSpan="2" Orientation="Horizontal" VerticalAlignment="Center">
                             <local:MyButton x:Name="BtnRefreshRepo" Text="刷新索引" Height="34" Width="100" Click="BtnRefreshRepo_Click" />
                             <TextBlock x:Name="LabCkanStatus" Text="" FontSize="12" Opacity="0.7" Margin="14,0,0,0" VerticalAlignment="Center" />
                         </StackPanel>
-                        <TextBlock Grid.Row="16" VerticalAlignment="Center" Margin="0,0,25,0" Text="清单管理" />
-                        <StackPanel Grid.Row="16" Grid.Column="1" Grid.ColumnSpan="2" Orientation="Horizontal" VerticalAlignment="Center">
+                        <TextBlock Grid.Row="12" VerticalAlignment="Center" Margin="0,0,25,0" Text="清单管理" />
+                        <StackPanel Grid.Row="12" Grid.Column="1" Grid.ColumnSpan="2" Orientation="Horizontal" VerticalAlignment="Center">
                             <local:MyButton Text="导出清单" Width="110" Height="34" Click="BtnExportMods_Click" />
                             <local:MyButton Text="导入 .ckan" Width="110" Height="34" Margin="10,0,0,0" Click="BtnImportMods_Click" />
                         </StackPanel>

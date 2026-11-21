@@ -29,10 +29,7 @@ public partial class PageMods
 
     private static ModService GetService()
     {
-        ModService.ApplyNetworkSettings(
-            KspSettings.Current.HttpProxy,
-            KspSettings.Current.DownloadConcurrency,
-            KspSettings.Current.HttpTimeoutSeconds);
+        ModService.ApplyNetworkSettings(KspSettings.Current.HttpProxy);
         if (_modService is null)
         {
             _modService = new ModService(dataDir: KspSettings.Current.CkanDataDir);

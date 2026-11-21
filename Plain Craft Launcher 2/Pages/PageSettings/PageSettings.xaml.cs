@@ -36,8 +36,6 @@ public partial class PageSettings
         }
 
         TxtProxy.Text = KspSettings.Current.HttpProxy;
-        TxtConcurrency.Text = KspSettings.Current.DownloadConcurrency.ToString();
-        TxtTimeout.Text = KspSettings.Current.HttpTimeoutSeconds.ToString();
 
         RefreshInstancesList();
         RefreshKspInfo();
@@ -223,10 +221,6 @@ public partial class PageSettings
         KspSettings.Current.CkanStabilityTolerance =
             OptPre.Checked ? "PreRelease" : OptTesting.Checked ? "Testing" : "Stable";
         KspSettings.Current.HttpProxy = TxtProxy.Text.Trim();
-        int.TryParse(TxtConcurrency.Text.Trim(), out var conc);
-        if (conc > 0) KspSettings.Current.DownloadConcurrency = conc;
-        int.TryParse(TxtTimeout.Text.Trim(), out var to);
-        if (to > 0) KspSettings.Current.HttpTimeoutSeconds = to;
         KspSettings.Save();
         LabSaved.Text = "已保存。";
     }

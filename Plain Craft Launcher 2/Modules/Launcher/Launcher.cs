@@ -55,10 +55,7 @@ public static partial class Launcher
         try
         {
             var settings = KspSettings.Current;
-            ModService.ApplyNetworkSettings(
-                settings.HttpProxy,
-                settings.DownloadConcurrency,
-                settings.HttpTimeoutSeconds);
+            ModService.ApplyNetworkSettings(settings.HttpProxy);
             var service = new ModService(dataDir: settings.CkanDataDir);
             service.MirrorUrls = new System.Collections.Generic.List<string>(settings.CkanMirrorUrls);
             service.OfficialRepoUrl = settings.CkanMasterRepoUrl;

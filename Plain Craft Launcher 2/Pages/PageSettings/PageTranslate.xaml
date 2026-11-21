@@ -45,17 +45,9 @@
                         </Grid.ColumnDefinitions>
                         <Grid.RowDefinitions>
                             <RowDefinition Height="34" />
-                            <RowDefinition Height="9" />
-                            <RowDefinition Height="34" />
-                            <RowDefinition Height="9" />
-                            <RowDefinition Height="34" />
                         </Grid.RowDefinitions>
                         <TextBlock Grid.Row="0" VerticalAlignment="Center" Margin="0,0,25,0" Text="HTTP 代理" />
                         <local:MyTextBox Grid.Row="0" Grid.Column="1" x:Name="TxtProxy" Height="34" />
-                        <TextBlock Grid.Row="2" VerticalAlignment="Center" Margin="0,0,25,0" Text="下载并发数" />
-                        <local:MyTextBox Grid.Row="2" Grid.Column="1" x:Name="TxtConcurrency" Height="34" />
-                        <TextBlock Grid.Row="4" VerticalAlignment="Center" Margin="0,0,25,0" Text="超时时间（秒）" />
-                        <local:MyTextBox Grid.Row="4" Grid.Column="1" x:Name="TxtTimeout" Height="34" />
                     </Grid>
                     <StackPanel Orientation="Horizontal" Margin="0,20,0,0">
                         <local:MyButton Text="保存" Height="34" Width="100" Click="BtnSave_Click" />
