@@ -200,6 +200,7 @@ public partial class PageHome
             var text = await Http.GetStringAsync(url, token).ConfigureAwait(true);
             if (token.IsCancellationRequested) return;
             if (string.IsNullOrWhiteSpace(text)) throw new InvalidOperationException("服务器返回内容为空。");
+            if (HasUnsafeXaml(text)) throw new InvalidOperationException("远端主页包含不安全的 XAML 构造，已拒绝。");
             try
             {
                 Directory.CreateDirectory(CacheDir);
@@ -236,7 +237,8 @@ public partial class PageHome
         try
         {
             var uri = new Uri(url.Trim());
-            return (uri.Scheme == "http" || uri.Scheme == "https") && !string.IsNullOrWhiteSpace(uri.Host);
+            // 只接受 https：明文 http 的主页可被中间人替换成任意 XAML。
+            return uri.Scheme == "https" && !string.IsNullOrWhiteSpace(uri.Host);
         }
         catch
         {
@@ -255,6 +257,11 @@ public partial class PageHome
     {
         try
         {
+            if (HasUnsafeXaml(raw))
+            {
+                error = "主页内容包含不安全的 XAML 构造（x:Class / clr-namespace / ObjectDataProvider 等），已拒绝加载。";
+                return false;
+            }
             var element = XamlReader.Parse(PrepareFragment(raw)) as UIElement;
             if (element is null)
             {
@@ -273,6 +280,17 @@ public partial class PageHome
             error = ex.Message;
             return false;
         }
+    }
+
+    /// <summary>拒绝能构造任意对象的 XAML 片段（命名空间回退、类型声明与静态/资源注入）。</summary>
+    internal static bool HasUnsafeXaml(string raw)
+    {
+        if (string.IsNullOrEmpty(raw)) return false;
+        foreach (var marker in new[] { "clr-namespace", "x:Class", "x:Code", "x:Static", "ObjectDataProvider", "EventSetter" })
+        {
+            if (raw.Contains(marker, StringComparison.OrdinalIgnoreCase)) return true;
+        }
+        return false;
     }
 
     /// <summary>
