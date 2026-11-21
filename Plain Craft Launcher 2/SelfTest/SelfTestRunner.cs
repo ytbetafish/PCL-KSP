@@ -286,6 +286,35 @@ public static class SelfTestRunner
 
         await CaseAsync("settings/save-and-parse-back", () =>
             Task.FromResult(ProbeSettingsFile()));
+
+        await CaseAsync("settings/translate-key-encrypted", () =>
+            Task.FromResult(ProbeTranslateKeyEncryption()));
+    }
+
+    private static string ProbeTranslateKeyEncryption()
+    {
+        const string sentinel = "SELFTEST-SENTINEL-KEY-9F3A";
+        var cipher = KspSettings.EncryptForStore(sentinel);
+        if (string.IsNullOrEmpty(cipher)) throw new InvalidOperationException("加密不可用（DPAPI 失败），密钥无法加密落盘");
+        if (KspSettings.DecryptForStore(cipher) != sentinel) throw new InvalidOperationException("密文无法解回原文");
+
+        var original = KspSettings.Current.TranslateApiKey;
+        try
+        {
+            KspSettings.Current.TranslateApiKey = sentinel;
+            KspSettings.Save();
+            var json = File.ReadAllText(KspSettings.SettingsFilePath, System.Text.Encoding.UTF8);
+            if (json.Contains(sentinel, StringComparison.Ordinal))
+                throw new InvalidOperationException("设置文件里仍能看到明文密钥");
+            if (!json.Contains("TranslateApiKeyEnc", StringComparison.Ordinal))
+                throw new InvalidOperationException("设置文件缺少密文字段 TranslateApiKeyEnc");
+        }
+        finally
+        {
+            KspSettings.Current.TranslateApiKey = original;
+            KspSettings.Save();
+        }
+        return "密文落盘，设置文件不含明文（DPAPI）";
     }
 
     private static string ProbeSettingsFile()

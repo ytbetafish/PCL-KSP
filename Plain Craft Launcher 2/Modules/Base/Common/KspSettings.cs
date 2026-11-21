@@ -2,6 +2,8 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Text.Json;
+using System.Text.Json.Serialization;
+using PCL.Core.Utils.Secret;
 
 namespace PCL;
 
@@ -24,7 +26,15 @@ public static class KspSettings
     {
         public string KspRootPath { get; set; } = "";
         public string TranslateBaseUrl { get; set; } = "https://api.deepseek.com/v1";
+        /// <summary>内存中的明文密钥。不参与序列化：落盘只写 <see cref="TranslateApiKeyEnc"/>。</summary>
+        [JsonIgnore]
         public string TranslateApiKey { get; set; } = "";
+        /// <summary>旧版设置文件里的明文密钥，仅用于一次性迁移读取，之后不再写入。</summary>
+        [JsonPropertyName("TranslateApiKey")]
+        public string TranslateApiKeyPlainLegacy { get; set; } = "";
+        /// <summary>DPAPI 加密后的密钥密文（v1: 前缀标识加密格式）。</summary>
+        [JsonPropertyName("TranslateApiKeyEnc")]
+        public string TranslateApiKeyEnc { get; set; } = "";
         public string TranslateModel { get; set; } = "deepseek-chat";
 
         public string CkanDataDir { get; set; } =
@@ -101,6 +111,13 @@ public static class KspSettings
             {
                 var json = File.ReadAllText(_path);
                 Current = JsonSerializer.Deserialize<SettingsData>(json) ?? new SettingsData();
+
+                // 明文密钥迁移：有密文先解回内存；旧版明文则在下次 Save 时转成密文。
+                Current.TranslateApiKeyPlainLegacy ??= "";
+                if (!string.IsNullOrEmpty(Current.TranslateApiKeyEnc))
+                    Current.TranslateApiKey = DecryptForStore(Current.TranslateApiKeyEnc) ?? Current.TranslateApiKeyPlainLegacy;
+                else
+                    Current.TranslateApiKey = Current.TranslateApiKeyPlainLegacy;
             }
         }
         catch
@@ -186,10 +203,46 @@ public static class KspSettings
         }
     }
 
+    /// <summary>设置文件路径（自测用）。</summary>
+    internal static string SettingsFilePath => _path;
+
+    /// <summary>把密钥转成落盘密文；空值返回空串，加密不可用返回 null。</summary>
+    internal static string? EncryptForStore(string? plain)
+    {
+        if (string.IsNullOrEmpty(plain)) return "";
+        try { return "v1:" + EncryptHelper.SecretEncrypt(plain); }
+        catch { return null; }
+    }
+
+    /// <summary>解回密文；格式不认识或解不开返回 null，由调用方决定回退。</summary>
+    internal static string? DecryptForStore(string? stored)
+    {
+        if (string.IsNullOrEmpty(stored)) return "";
+        try
+        {
+            var payload = stored.StartsWith("v1:", StringComparison.Ordinal) ? stored.Substring(3) : stored;
+            return EncryptHelper.SecretDecrypt(payload);
+        }
+        catch { return null; }
+    }
+
     public static void Save()
     {
         try
         {
+            // 密钥只落盘密文；DPAPI 不可用时退回明文，避免用户已填的钥匙在升级后失效。
+            var encrypted = EncryptForStore(Current.TranslateApiKey);
+            if (encrypted is null)
+            {
+                Current.TranslateApiKeyEnc = "";
+                Current.TranslateApiKeyPlainLegacy = Current.TranslateApiKey;
+            }
+            else
+            {
+                Current.TranslateApiKeyEnc = encrypted;
+                Current.TranslateApiKeyPlainLegacy = "";
+            }
+
             // 原子写：先写临时文件再替换，避免写一半或被占用导致的损坏/权限异常。
             var tmp = _path + ".tmp";
             File.WriteAllText(tmp, JsonSerializer.Serialize(Current, _jsonOpts));
