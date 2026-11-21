@@ -31,6 +31,9 @@ public sealed class ModService : IModService, IDisposable
     private readonly IUser _user;
     private readonly IConfiguration _config;
     private readonly RepositoryDataManager _repoData;
+    private readonly object _relationLock = new();
+    private Dictionary<string, string[]>? _reverseIndex;
+    private Dictionary<string, string[]>? _conflictIndex;
     private readonly GameInstanceManager _manager;
 
     private GameInstance? _instance;
@@ -144,6 +147,7 @@ public sealed class ModService : IModService, IDisposable
         _readonlyRegistry = null;
         _manager.SetCurrentInstance(instance);
         _registryManager = RegistryManager.Instance(instance, _repoData);
+        InvalidateRelationCache();
     }
 
     /// <summary>
@@ -156,6 +160,7 @@ public sealed class ModService : IModService, IDisposable
         _registryManager?.Dispose();
         _registryManager = null;
         _readonlyRegistry = RegistryManager.ReadOnlyRegistry(instance, _repoData);
+        InvalidateRelationCache();
     }
 
     /// <summary>
@@ -279,6 +284,7 @@ public sealed class ModService : IModService, IDisposable
                 _warmTask = null;
                 _fromSnapshot = false;
                 _snapshotTried = false;
+                InvalidateRelationCache();
             }
         }
         finally
@@ -1615,6 +1621,7 @@ public sealed class ModService : IModService, IDisposable
 
     // ---- internals -----------------------------------------------------------
 
+    /// <summary>把"某标识的反向依赖/冲突方"追加进映射，大小写不敏感去重。</summary>
     private static void AddRel(Dictionary<string, List<string>> map, string key, string display)
     {
         if (!map.TryGetValue(key, out var list))
@@ -1622,15 +1629,62 @@ public sealed class ModService : IModService, IDisposable
             list = new List<string>();
             map[key] = list;
         }
-        if (!list.Contains(display, StringComparer.OrdinalIgnoreCase))
+        if (!list.Any(v => string.Equals(v, display, StringComparison.OrdinalIgnoreCase)))
+        {
             list.Add(display);
+        }
     }
 
-    /// <summary>按仓库地址去重：Repository 字典以 uri 为判重键，重复地址会导致仓库数据缓存字典撞 key。</summary>
+    /// <summary>按仓库地址去重：Repository 表以 uri 为判重键，重复地址会让仓库数据缓存字典撞 key。</summary>
     private static List<CKAN.Repository> DistinctRepos(IEnumerable<CKAN.Repository>? repos)
         => repos?.GroupBy(r => r.uri?.ToString() ?? r.name)
                  .Select(g => g.First())
+                 // CKAN 内部仓库表以 Repository.ToString()（名称+优先级+地址）为 key，
+                 // 同 ToString() 的两条记录进去就会撞 key 抛 ArgumentException，这里一并去掉。
+                 .GroupBy(r => SafeRepoKey(r))
+                 .Select(g => g.First())
                  .ToList() ?? new List<CKAN.Repository>();
+
+    private static string SafeRepoKey(CKAN.Repository repo)
+    {
+        try
+        {
+            return repo.ToString() ?? repo.name ?? "";
+        }
+        catch
+        {
+            return repo.name ?? "";
+        }
+    }
+
+    /// <summary>
+    /// 读仓库缓存里的可用模组。CKAN 内部按 Repository.ToString() 建字典，仓库表里只要有两行同名同址
+    /// 就会整批抛 ArgumentException；这种情况退回逐仓库枚举，坏的那一条跳过并记日志，别让一处脏数据废掉全部。
+    /// </summary>
+    private List<CKAN.AvailableModule> LoadAvailableModulesSafely(IReadOnlyList<CKAN.Repository> repos)
+    {
+        try
+        {
+            return _repoData.GetAllAvailableModules(repos).ToList();
+        }
+        catch (ArgumentException ex)
+        {
+            Trace($"[reldeps] 批量枚举仓库撞 key：{ex.Message}；改为逐仓库枚举");
+        }
+        var result = new List<CKAN.AvailableModule>();
+        foreach (var repo in repos)
+        {
+            try
+            {
+                result.AddRange(_repoData.GetAllAvailableModules(new List<CKAN.Repository> { repo }));
+            }
+            catch (Exception ex)
+            {
+                Trace($"[reldeps] 跳过仓库 {SafeRepoKey(repo)}：{ex.GetType().Name}: {ex.Message}");
+            }
+        }
+        return result;
+    }
 
     /// <summary>在门控内枚举全量目录，串行访问 CKAN Core，避免并发刷新/搜索撞内部仓库字典。</summary>
     private async Task<List<CkanModule>> EnumerateCatalogLockedAsync(CancellationToken cancellationToken)
@@ -1681,7 +1735,7 @@ public sealed class ModService : IModService, IDisposable
 
         var repos = DistinctRepos(reg.Repositories.Values);
         var byId = new Dictionary<string, CkanModule>(System.StringComparer.OrdinalIgnoreCase);
-        foreach (var avail in _repoData.GetAllAvailableModules(repos))
+        foreach (var avail in LoadAvailableModulesSafely(repos))
         {
             CkanModule? best = null;
             foreach (var m in avail.AllAvailable())
@@ -1847,26 +1901,88 @@ public sealed class ModService : IModService, IDisposable
     /// <inheritdoc />
     public (IReadOnlyList<string> reverseDeps, IReadOnlyList<string> conflicts) GetReverseAndConflicts(string identifier)
     {
-        var deps = new List<string>();
-        var conflicts = new List<string>();
-        if (_instance == null) return (deps, conflicts);
+        if (_instance == null) return (Array.Empty<string>(), Array.Empty<string>());
         try
         {
-            var repos = DistinctRepos(Registry?.Repositories?.Values ?? Enumerable.Empty<CKAN.Repository>());
-            foreach (var am in _repoData.GetAllAvailableModules(repos))
+            lock (_relationLock)
             {
-                foreach (var mod in am.AllAvailable())
+                EnsureRelationIndex();
+                var rev = _reverseIndex != null && _reverseIndex.TryGetValue(identifier, out var r)
+                    ? r
+                    : Array.Empty<string>();
+                var con = _conflictIndex != null && _conflictIndex.TryGetValue(identifier, out var c)
+                    ? c
+                    : Array.Empty<string>();
+                return (rev, con);
+            }
+        }
+        catch (Exception ex)
+        {
+            // 索引不可用时降级为空结果：调用方只用它做提示，不能因此让详情页崩掉；但要留下线索。
+            Trace($"[reldeps] {identifier} 索引失败: {ex.GetType().Name}: {ex.Message}");
+            return (Array.Empty<string>(), Array.Empty<string>());
+        }
+    }
+
+    /// <summary>关系索引失效：换实例或仓库数据刷新后必须重建。</summary>
+    private void InvalidateRelationCache()
+    {
+        lock (_relationLock)
+        {
+            _reverseIndex = null;
+            _conflictIndex = null;
+        }
+    }
+
+    /// <summary>
+    /// 一次性构建"哪些模组依赖我 / 与我能冲突"的索引。原实现每次调用都全量枚举仓库（O(N)），
+    /// 批量场景退化为 O(N²)；这里按仓库数据缓存，随 <see cref="InvalidateRelationCache"/> 失效重建。
+    /// </summary>
+    private void EnsureRelationIndex()
+    {
+        if (_reverseIndex != null && _conflictIndex != null) return;
+        var revMap = new Dictionary<string, List<string>>();
+        var conMap = new Dictionary<string, List<string>>();
+        var repos = DistinctRepos(Registry?.Repositories?.Values ?? Enumerable.Empty<CKAN.Repository>());
+        foreach (var am in LoadAvailableModulesSafely(repos))
+        {
+            foreach (var mod in am.AllAvailable())
+            {
+                var self = mod.identifier;
+                var display = mod.name ?? mod.identifier;
+                if (mod.depends != null)
                 {
-                    if (mod.identifier == identifier) continue;
-                    if (mod.depends?.Any(r => (r as CKAN.ModuleRelationshipDescriptor)?.name == identifier) == true)
-                        deps.Add(mod.name ?? mod.identifier);
-                    if (mod.conflicts?.Any(r => (r as CKAN.ModuleRelationshipDescriptor)?.name == identifier) == true)
-                        conflicts.Add(mod.name ?? mod.identifier);
+                    foreach (var rel in mod.depends)
+                    {
+                        var name = (rel as CKAN.ModuleRelationshipDescriptor)?.name;
+                        if (string.IsNullOrEmpty(name) || name == self) continue;
+                        AddToRelationMap(revMap, name, display);
+                    }
+                }
+                if (mod.conflicts != null)
+                {
+                    foreach (var rel in mod.conflicts)
+                    {
+                        var name = (rel as CKAN.ModuleRelationshipDescriptor)?.name;
+                        if (string.IsNullOrEmpty(name) || name == self) continue;
+                        AddToRelationMap(conMap, name, display);
+                    }
                 }
             }
         }
-        catch { /* ignore */ }
-        return (deps.Distinct().ToList(), conflicts.Distinct().ToList());
+        _reverseIndex = revMap.ToDictionary(kv => kv.Key, kv => kv.Value.ToArray());
+        _conflictIndex = conMap.ToDictionary(kv => kv.Key, kv => kv.Value.ToArray());
+        Trace($"[reldeps] 索引构建完成: 反向 {revMap.Count} 键 / 冲突 {conMap.Count} 键");
+    }
+
+    private static void AddToRelationMap(Dictionary<string, List<string>> map, string key, string value)
+    {
+        if (!map.TryGetValue(key, out var list))
+        {
+            list = new List<string>();
+            map[key] = list;
+        }
+        if (!list.Contains(value)) list.Add(value);
     }
 
     public void Dispose()
