@@ -68,7 +68,14 @@ public static class UpdateManager
                 + @"PCL\Plain Craft Launcher Community Edition.exe";
             if (!File.Exists(fileName))
             {
-                LauncherCommon.Log("[System] 更新失败：未找到更新文件");
+                // PCL-KSP 未随包分发 PCL-CE 的更新器：直接重启自身，不要卡在"更新失败"。
+                LauncherCommon.Log("[System] 未找到更新器，改为重启当前程序");
+                if (triggerRestart)
+                {
+                    try { Process.Start(new ProcessStartInfo(Basics.ExecutablePath) { UseShellExecute = true }); }
+                    catch (Exception ex) { LauncherCommon.Log("[System] 重启失败：" + ex.Message); return; }
+                    Environment.Exit(0);
+                }
                 return;
             }
 
