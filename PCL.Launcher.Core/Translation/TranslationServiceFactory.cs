@@ -1,14 +1,10 @@
 namespace PCL.Translation;
 
 /// <summary>
-///     翻译服务工厂：配置了 API 密钥时走 OpenAI 兼容接口，未配置时自动使用免注册的免费接口。
+///     翻译服务工厂。翻译功能只保留内置免费接口（腾讯交互翻译，失败回退 MyMemory），
+///     已移除需要 API 密钥的 AI 翻译实现。
 /// </summary>
 public static class TranslationServiceFactory
 {
-    public static ITranslationService Create(TranslationOptions options)
-    {
-        if (options is not null && !string.IsNullOrWhiteSpace(options.ApiKey))
-            return new OpenAiTranslationService(options);
-        return new FreeTranslationService();
-    }
+    public static ITranslationService Create() => new FreeTranslationService();
 }

@@ -108,12 +108,11 @@ dotnet build ".\Plain Craft Launcher 2.slnx" -c Release
 - [x] 任务管理页（右下角下载按钮进入）：任务列表、进度与取消；
 - [x] 横幅按需加载 + 磁盘缓存（上限 150 MB）；
 - [x] CKAN 源：默认启用国内镜像（坎喵公共源），支持多源与三种策略（仅镜像 / 官方优先 / 仅官方）；
-- [x] 简介翻译：模组简介「中 / EN」切换，OpenAI 兼容接口（默认 DeepSeek），设置页可配 BaseUrl / ApiKey / Model，内存缓存；
+- [x] 简介翻译：模组简介「中 / EN」切换，内置免费接口（腾讯交互翻译，失败回退 MyMemory），无需 API 密钥，内存缓存有上限；
 - [x] 启动 KSP 进程。
 
 仍在进行：
 
-- [ ] 翻译服务的「测试连接」按钮；
 - [ ] GitHub 下载加速镜像（`ghfast.top` / `gh-proxy.com` / `ghproxy.net` 等）的吞吐测试与接入。
 
 ## 五、分层架构

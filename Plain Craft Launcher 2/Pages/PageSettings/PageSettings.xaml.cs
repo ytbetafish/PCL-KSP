@@ -18,9 +18,6 @@ public partial class PageSettings
     {
         InitializeComponent();
         LabSettingsVersion.Text = "PCL-KSP v" + PCL.Core.App.Basics.VersionName;
-        TxtBaseUrl.Text = KspSettings.Current.TranslateBaseUrl;
-        TxtApiKey.Text = KspSettings.Current.TranslateApiKey;
-        TxtModel.Text = KspSettings.Current.TranslateModel;
         LabCkanDataDir.Text = KspSettings.Current.CkanDataDir;
         TxtMirrorUrls.Text = string.Join("\n", KspSettings.Current.CkanMirrorUrls);
         foreach (var item in CboStrategy.Items)
@@ -44,7 +41,6 @@ public partial class PageSettings
     {
         PanKsp.Visibility = key == "ksp" ? Visibility.Visible : Visibility.Collapsed;
         PanCkan.Visibility = key == "ckan" ? Visibility.Visible : Visibility.Collapsed;
-        PanTranslate.Visibility = key == "translate" ? Visibility.Visible : Visibility.Collapsed;
         PanAbout.Visibility = key == "about" ? Visibility.Visible : Visibility.Collapsed;
     }
 
@@ -212,9 +208,6 @@ public partial class PageSettings
 
     private void BtnSave_Click(object sender, System.Windows.Input.MouseButtonEventArgs e)
     {
-        KspSettings.Current.TranslateBaseUrl = TxtBaseUrl.Text.Trim();
-        KspSettings.Current.TranslateApiKey = TxtApiKey.Text.Trim();
-        KspSettings.Current.TranslateModel = TxtModel.Text.Trim();
         KspSettings.Current.CkanMirrorUrls = TxtMirrorUrls.Text.Split(new[]{'\r','\n'}, StringSplitOptions.RemoveEmptyEntries)
                             .Select(s => s.Trim()).Where(s => s.Length > 0).ToList();
         KspSettings.Current.CkanRepoStrategy = (CboStrategy.SelectedItem as System.Windows.Controls.ComboBoxItem)?.Tag as string ?? "MirrorOnly";

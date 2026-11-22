@@ -477,12 +477,7 @@ public partial class PageMods
             return;
         }
 
-        var svc = TranslationServiceFactory.Create(new TranslationOptions
-        {
-            BaseUrl = KspSettings.Current.TranslateBaseUrl,
-            ApiKey = KspSettings.Current.TranslateApiKey,
-            Model = KspSettings.Current.TranslateModel
-        });
+        var svc = TranslationServiceFactory.Create();
         LabModDesc.Text = "翻译中…";
         try
         {

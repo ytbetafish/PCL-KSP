@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections;
 using System.Collections.ObjectModel;
 using System.Diagnostics.Eventing.Reader;
@@ -244,12 +244,7 @@ public partial class PageModDetail : IPageView
         try
         {
             HintService.Show(Hints.Info(Lang.Text("Download.Comp.Detail.DescriptionTranslating", _project.TranslatedName)));
-            var svc = TranslationServiceFactory.Create(new TranslationOptions
-            {
-                BaseUrl = KspSettings.Current.TranslateBaseUrl,
-                ApiKey = KspSettings.Current.TranslateApiKey,
-                Model = KspSettings.Current.TranslateModel
-            });
+            var svc = TranslationServiceFactory.Create();
             var chineseDescription = await svc.TranslateAsync(_project.Description, "zh-CN");
             if (chineseDescription is null)
                 return;

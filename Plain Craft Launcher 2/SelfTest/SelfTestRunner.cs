@@ -166,29 +166,14 @@ public static class SelfTestRunner
             return $"输入 {text.Length} 字符，输出 {r.Length} 字符，{sw.ElapsedMilliseconds}ms";
         });
 
-        await CaseAsync("translate/factory-empty-key-uses-free", () =>
+        await CaseAsync("translate/factory-returns-free", () =>
         {
-            var svc = TranslationServiceFactory.Create(new TranslationOptions { ApiKey = "" });
+            var svc = TranslationServiceFactory.Create();
             if (svc is not FreeTranslationService)
-                throw new InvalidOperationException("未填密钥时未走免费实现：" + svc.GetType().Name);
+                throw new InvalidOperationException("工厂未返回免费实现：" + svc.GetType().Name);
             return "类型 FreeTranslationService";
         });
 
-        await CaseAsync("translate/factory-with-key-uses-openai", () =>
-        {
-            var svc = TranslationServiceFactory.Create(new TranslationOptions { ApiKey = "sk-selftest-fake" });
-            if (svc is not OpenAiTranslationService)
-                throw new InvalidOperationException("填了密钥却未走 OpenAI 兼容实现：" + svc.GetType().Name);
-            return "类型 OpenAiTranslationService";
-        });
-
-        await CaseAsync("translate/openai-empty-key-returns-null", async () =>
-        {
-            var svc = new OpenAiTranslationService(new TranslationOptions { ApiKey = "" });
-            var r = await svc.TranslateAsync(EnSample, "zh-CN");
-            if (r is not null) throw new InvalidOperationException("空密钥本应返回 null，实际：" + r);
-            return "按预期返回 null";
-        });
     }
 
     private static bool HasCjk(string s)
@@ -295,49 +280,10 @@ public static class SelfTestRunner
         await CaseAsync("settings/read-current", () =>
             Task.FromResult(
                 $"KspRoot={KspSettings.Current.KspRootPath}；策略={KspSettings.Current.CkanRepoStrategy}；" +
-                $"镜像={KspSettings.Current.CkanMirrorUrls.Count} 个；主页模式={KspSettings.Current.HomePageMode}；" +
-                $"API密钥={(string.IsNullOrWhiteSpace(KspSettings.Current.TranslateApiKey) ? "未填（走免费）" : "已填")}"));
+                $"镜像={KspSettings.Current.CkanMirrorUrls.Count} 个；主页模式={KspSettings.Current.HomePageMode}"));
 
         await CaseAsync("settings/save-and-parse-back", () =>
             Task.FromResult(ProbeSettingsFile()));
-
-        await CaseAsync("settings/translate-key-encrypted", () =>
-            Task.FromResult(ProbeTranslateKeyEncryption()));
-    }
-
-    private static string ProbeTranslateKeyEncryption()
-    {
-        const string sentinel = "SELFTEST-SENTINEL-KEY-9F3A";
-        var cipher = KspSettings.EncryptForStore(sentinel);
-        if (string.IsNullOrEmpty(cipher)) throw new InvalidOperationException("加密不可用（DPAPI 失败），密钥无法加密落盘");
-        if (KspSettings.DecryptForStore(cipher) != sentinel) throw new InvalidOperationException("密文无法解回原文");
-
-        var original = KspSettings.Current.TranslateApiKey;
-        try
-        {
-            KspSettings.Current.TranslateApiKey = sentinel;
-            KspSettings.Save();
-            var json = File.ReadAllText(KspSettings.SettingsFilePath, System.Text.Encoding.UTF8);
-            if (json.Contains(sentinel, StringComparison.Ordinal))
-                throw new InvalidOperationException("设置文件里仍能看到明文密钥");
-            if (!json.Contains("TranslateApiKeyEnc", StringComparison.Ordinal))
-                throw new InvalidOperationException("设置文件缺少密文字段 TranslateApiKeyEnc");
-            if (json.Contains("\"TranslateApiKey\":", StringComparison.Ordinal))
-                throw new InvalidOperationException("设置文件仍写出旧的明文密钥键（TranslateApiKey）");
-        }
-        finally
-        {
-            KspSettings.Current.TranslateApiKey = original;
-            KspSettings.Save();
-        }
-        // 还原后若用户本就没填密钥，文件里不应再出现旧的明文密钥键。
-        if (string.IsNullOrEmpty(original))
-        {
-            var after = File.ReadAllText(KspSettings.SettingsFilePath, System.Text.Encoding.UTF8);
-            if (after.Contains("\"TranslateApiKey\":", StringComparison.Ordinal))
-                throw new InvalidOperationException("未填密钥时设置文件仍写出 TranslateApiKey 键");
-        }
-        return "密文落盘，设置文件不含明文（DPAPI）";
     }
 
     private static string ProbeSettingsFile()
