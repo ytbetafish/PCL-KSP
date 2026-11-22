@@ -55,6 +55,9 @@ public class FreeTranslationService : ITranslationService
 
     private static async Task<string?> TryTencentAsync(string text, string target)
     {
+        // 腾讯免费接口对繁体目标的支持不稳定，繁体请求直接交给 MyMemory，免得把繁体请求翻成简体。
+        if (target == "zh-TW") return null;
+        var tencentTarget = target == "zh-CN" ? "zh" : target;
         var payload = new JsonObject
         {
             ["header"] = new JsonObject
@@ -70,7 +73,7 @@ public class FreeTranslationService : ITranslationService
                 ["lang"] = "auto",
                 ["text_list"] = new JsonArray(text)
             },
-            ["target"] = new JsonObject { ["lang"] = target }
+            ["target"] = new JsonObject { ["lang"] = tencentTarget }
         };
 
         try
@@ -94,8 +97,9 @@ public class FreeTranslationService : ITranslationService
             var first = arr is { Count: > 0 } ? arr[0]?.GetValue<string>() : null;
             return string.IsNullOrWhiteSpace(first) ? null : first;
         }
-        catch
+        catch (Exception ex)
         {
+            PCL.Core.Logging.Swallowed.Report(ex);
             return null;
         }
     }
@@ -128,8 +132,9 @@ public class FreeTranslationService : ITranslationService
             var translated = body?["responseData"]?["translatedText"]?.GetValue<string>();
             return string.IsNullOrWhiteSpace(translated) ? null : translated;
         }
-        catch
+        catch (Exception ex)
         {
+            PCL.Core.Logging.Swallowed.Report(ex);
             return null;
         }
     }
@@ -152,7 +157,8 @@ public class FreeTranslationService : ITranslationService
         var l = (lang ?? "zh-CN").Trim().ToLowerInvariant();
         return l switch
         {
-            "zh" or "zh-cn" or "zh-hans" or "zh-hant" or "zh-tw" => "zh",
+            "zh" or "zh-cn" or "zh-hans" => "zh-CN",
+            "zh-tw" or "zh-hant" or "zh-hk" => "zh-TW",
             "en" or "en-us" or "en-gb" => "en",
             "ja" or "jp" => "ja",
             "ko" or "kr" => "ko",
@@ -162,7 +168,7 @@ public class FreeTranslationService : ITranslationService
             "es" => "es",
             "pt" => "pt",
             "it" => "it",
-            _ => "zh"
+            _ => "zh-CN"
         };
     }
 

@@ -11,7 +11,8 @@ namespace PCL.Translation;
 public class OpenAiTranslationService : ITranslationService
 {
     private readonly TranslationOptions _options;
-    private static readonly HttpClient _http = new();
+    /// <summary>统一超时，避免后端卡住时翻译请求无限等待。</summary>
+    private static readonly HttpClient _http = new() { Timeout = TimeSpan.FromSeconds(60) };
 
     public OpenAiTranslationService(TranslationOptions options)
     {
@@ -57,7 +58,8 @@ public class OpenAiTranslationService : ITranslationService
 
         try
         {
-            using var resp = await _http.SendAsync(req).ConfigureAwait(false);
+            using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(60));
+            using var resp = await _http.SendAsync(req, cts.Token).ConfigureAwait(false);
             if (!resp.IsSuccessStatusCode)
                 return null;
 
@@ -65,8 +67,9 @@ public class OpenAiTranslationService : ITranslationService
             var result = body?["choices"]?[0]?["message"]?["content"]?.GetValue<string>();
             return string.IsNullOrWhiteSpace(result) ? null : result.Trim();
         }
-        catch
+        catch (Exception ex)
         {
+            PCL.Core.Logging.Swallowed.Report(ex);
             return null;
         }
     }
