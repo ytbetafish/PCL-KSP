@@ -283,10 +283,22 @@ public partial class PageHome
     }
 
     /// <summary>拒绝能构造任意对象的 XAML 片段（命名空间回退、类型声明与静态/资源注入）。</summary>
+    private static readonly string[] UnsafeXamlMarkers =
+    [
+        // 命名空间回退与代码嵌入
+        "clr-namespace", "x:Class", "x:Code",
+        // 静态/类型/引用注入：可以拿到任意已有对象或类型，再配合 ObjectDataProvider 实例化
+        "x:Static", "x:Type", "x:Reference", "x:Shared",
+        // 构造器式实例化
+        "x:FactoryMethod", "x:Arguments", "x:TypeArguments",
+        // 事件挂接与数据提供者
+        "EventSetter", "ObjectDataProvider"
+    ];
+
     internal static bool HasUnsafeXaml(string raw)
     {
         if (string.IsNullOrEmpty(raw)) return false;
-        foreach (var marker in new[] { "clr-namespace", "x:Class", "x:Code", "x:Static", "ObjectDataProvider", "EventSetter" })
+        foreach (var marker in UnsafeXamlMarkers)
         {
             if (raw.Contains(marker, StringComparison.OrdinalIgnoreCase)) return true;
         }
@@ -304,7 +316,8 @@ public partial class PageHome
         raw = Regex.Replace(raw, @"<local:MyButton\b[^>]*?EventData=""Minecraft/[^""]*""[^>]*?/>", string.Empty,
             RegexOptions.Singleline);
         raw = Regex.Replace(raw, @"<local:MyButton\b[^>]*?EventData=""Minecraft/[^""]*""[^>]*?>(?:(?!</local:MyButton).)*</local:MyButton>",
-            string.Empty, RegexOptions.Singleline);        raw = raw.Replace("\uFEFF", string.Empty);
+            string.Empty, RegexOptions.Singleline);
+        raw = raw.Replace("\uFEFF", string.Empty);
         raw = Regex.Replace(raw, @"\sxmlns(?::[A-Za-z0-9_]+)?=""[^""]*""", string.Empty);
         raw = Regex.Replace(raw, @"\sEventType=""打开网页""\s+EventData=""([^""]+)""", @" Tag=""$1""");
         raw = Regex.Replace(raw, @"\sEventData=""([^""]+)""\s+EventType=""打开网页""", @" Tag=""$1""");
