@@ -41,8 +41,7 @@ public static class CompProjectUiExtensions
     {
         public MyVirtualizingElement<MyCompItem> ToCompItem(
             bool showMcVersionDesc,
-            bool showLoaderDesc,
-            bool showQuickDownload = false)
+            bool showLoaderDesc)
         {
             return new MyVirtualizingElement<MyCompItem>(() =>
             {
@@ -63,7 +62,6 @@ public static class CompProjectUiExtensions
 
                 newItem.Tags = project.Tags;
                 newItem.Description = project.Description.Replace("\r", "").Replace("\n", "");
-                newItem.ShowDownloadBtn = showQuickDownload;
                 // 构造时同步收藏实心/空心状态，避免已收藏模组在列表里仍显示空心 heart。
                 newItem.RefreshFavoriteStatus();
 

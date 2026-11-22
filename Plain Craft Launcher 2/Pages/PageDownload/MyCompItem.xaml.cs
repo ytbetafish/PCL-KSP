@@ -401,16 +401,6 @@ public partial class MyCompItem
         }
     }
 
-    public bool ShowDownloadBtn
-    {
-        get => BtnDownload.Visibility == Visibility.Visible;
-        set
-        {
-            BtnDownload.Visibility = value ? Visibility.Visible : Visibility.Collapsed;
-            _UpdatePanButtons();
-        }
-    }
-
     /// <summary>是否显示详情（info）按钮。可勾选模式下用它作为进模组详情的明确入口。</summary>
     public bool ShowDetailBtn
     {
@@ -422,7 +412,7 @@ public partial class MyCompItem
         }
     }
 
-    private bool _HasActionButtons => ShowFavoriteBtn || ShowDownloadBtn || ShowDetailBtn;
+    private bool _HasActionButtons => ShowFavoriteBtn || ShowDetailBtn;
 
     private void _UpdatePanButtons()
     {
@@ -509,10 +499,6 @@ public partial class MyCompItem
             CompFavoritesUi.ShowMenu(project, (UIElement)sender, RefreshFavoriteStatus);
     }
 
-    private void _BtnDownload_Click(object sender, EventArgs e)
-    {
-    }
-
     private void MyCompItem_Click(MyCompItem sender, EventArgs e)
     {
         if (IsCheckable)
@@ -563,8 +549,7 @@ public partial class MyCompItem
 
         if (PanButtons.Visibility == Visibility.Visible)
             isClickOnButton = _IsClickOnActionButton(BtnDetail, clickPosition) ||
-                              _IsClickOnActionButton(BtnDelete, clickPosition) ||
-                              _IsClickOnActionButton(BtnDownload, clickPosition);
+                              _IsClickOnActionButton(BtnDelete, clickPosition);
 
         if (isClickOnButton) return;
 

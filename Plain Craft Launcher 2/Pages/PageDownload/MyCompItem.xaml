@@ -152,11 +152,6 @@
         <local:MyIconButton x:Name="BtnDetail" Height="25" Width="25" SvgIcon="lucide/info" Click="BtnDetail_Click"
                             Margin="0,0,4,0" Visibility="Collapsed" ToolTip="模组详情" />
 
-        <!-- 快速下载按钮 -->
-        <local:MyIconButton x:Name="BtnDownload" Height="25" Width="25" SvgIcon="lucide/download" Click="_BtnDownload_Click"
-                            Margin="0,0,4,0" Visibility="Collapsed"
-                            ToolTip="{loc:Loc Download.Comp.QuickDownload.Btn.ToolTip}" />
-
         <!-- 删除收藏按钮 -->
         <local:MyIconButton x:Name="BtnDelete" Height="25" Width="25" SvgIcon="lucide/heart" Click="BtnDelete_Click" />
 
