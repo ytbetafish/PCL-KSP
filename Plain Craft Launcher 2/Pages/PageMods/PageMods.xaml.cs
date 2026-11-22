@@ -896,20 +896,22 @@ public partial class PageMods
     {
         var text = GetService().Log.Dump();
         var win = AppDialogWindow.Create("PCL-KSP 操作日志", 700, out var host, height: 460);
+        var logBox = new TextBox
+        {
+            Text = string.IsNullOrEmpty(text) ? "（暂无日志）" : text,
+            IsReadOnly = true,
+            TextWrapping = TextWrapping.Wrap,
+            VerticalScrollBarVisibility = ScrollBarVisibility.Auto,
+            HorizontalScrollBarVisibility = ScrollBarVisibility.Auto,
+            AcceptsReturn = true,
+        };
+        logBox.SetResourceReference(Control.BackgroundProperty, "ColorBrushBackground");
+        logBox.SetResourceReference(Control.ForegroundProperty, "ColorBrush1");
+        logBox.SetResourceReference(Control.BorderBrushProperty, "ColorBrushBg0");
         host.Content = new Grid
         {
             Margin = new Thickness(16, 14, 16, 14),
-            Children =
-            {
-                new TextBox
-                {
-                    Text = string.IsNullOrEmpty(text) ? "（暂无日志）" : text,
-                    IsReadOnly = true,
-                    TextWrapping = TextWrapping.Wrap,
-                    VerticalScrollBarVisibility = ScrollBarVisibility.Auto,
-                    HorizontalScrollBarVisibility = ScrollBarVisibility.Auto,
-                }
-            }
+            Children = { logBox }
         };
         win.ShowDialog();
     }
