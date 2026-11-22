@@ -54,7 +54,7 @@
         <TextBlock x:Name="LabTitle" TextTrimming="WordEllipsis" FontSize="14"
                    Text="{Binding ViewModel.TitleText, ElementName=PanBack}"
                    Foreground="{DynamicResource ColorBrush1}" />
-        <TextBlock x:Name="LabTitleRaw" TextTrimming="WordEllipsis" FontSize="12"
+        <TextBlock x:Name="LabTitleRaw" TextTrimming="WordEllipsis" FontSize="12" Margin="8,0,0,0"
                    Text="{Binding ViewModel.SubTitleText, ElementName=PanBack}"
                    Foreground="{StaticResource ColorBrushGray1}" Opacity="0.4" VerticalAlignment="Center"
                    Visibility="{Binding ViewModel.SubTitleVisibility, ElementName=PanBack}" />

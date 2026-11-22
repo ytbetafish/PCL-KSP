@@ -12,6 +12,7 @@
                             <ColumnDefinition Width="*" />
                             <ColumnDefinition Width="Auto" />
                             <ColumnDefinition Width="Auto" />
+                            <ColumnDefinition Width="Auto" />
                         </Grid.ColumnDefinitions>
                         <local:MySearchBox x:Name="TxtSearch" HintText="搜索 KSP 模组（名称 / 作者 / ID）"
                                            Search="BtnSearch_Click" />
@@ -19,6 +20,8 @@
                                         Click="BtnFilterAll_Click" />
                         <local:MyButton Grid.Column="2" x:Name="BtnUpdateAll" Text="更新全部" Width="90" Margin="10,0,0,0"
                                         Click="BtnUpdateAll_Click" />
+                        <local:MyButton Grid.Column="3" x:Name="BtnTranslateTitles" Text="翻译标题" Width="90" Margin="10,0,0,0"
+                                        Click="BtnTranslateTitles_Click" />
                     </Grid>
                     <StackPanel Orientation="Horizontal" Margin="0,10,0,0">
                         <local:MyButton x:Name="BtnFilterInstalled" Text="已安装" Width="90"

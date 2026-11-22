@@ -154,6 +154,58 @@ public partial class PageComp : Grid
         }
     }
 
+    /// <summary>一键翻译当前页卡片标题：中文做主标题、英文原名保留为副标题。</summary>
+    private async void BtnTranslateTitles_Click(object sender, System.Windows.Input.MouseButtonEventArgs e)
+    {
+        if (_results.Count == 0)
+        {
+            HintService.Show(Hints.Info("列表为空，没有可翻译的标题。", false));
+            return;
+        }
+
+        var start = _currentPage * PageSize;
+        var end = Math.Min(start + PageSize, _results.Count);
+        var raw = _results.GetRange(start, end - start).Select(r => r.Name).ToList();
+
+        BtnTranslateTitles.IsEnabled = false;
+        try
+        {
+            var result = await ModTitleTranslator.TranslateMissingAsync(raw, (done, total) =>
+                Dispatcher.Invoke(() =>
+                    BtnTranslateTitles.Text = total <= 0 ? "翻译中…" : $"翻译 {done}/{total}"));
+            ApplyTranslatedTitles();
+            var message = result.Translated == 0 && result.Failed == 0
+                ? "这一页的标题都已经翻译过（命中本地译文缓存）。"
+                : $"已翻译 {result.Translated} 个标题" +
+                  (result.Failed > 0 ? $"，{result.Failed} 个失败" : "") + "；中文显示在英文原名上方。";
+            HintService.Show(result.Failed > 0 && result.Translated == 0
+                ? Hints.Error(message, false)
+                : Hints.Success(message, false));
+        }
+        catch (Exception ex)
+        {
+            Common.Log(ex, "[PageComp] 一键翻译标题失败");
+            HintService.Show(Hints.Error("翻译标题失败：" + ex.Message, false));
+        }
+        finally
+        {
+            BtnTranslateTitles.IsEnabled = true;
+            BtnTranslateTitles.Text = "翻译标题";
+        }
+    }
+
+    /// <summary>把译文写回 Comp 工程项并重建当前页卡片（中文主标题 + 英文副标题）。</summary>
+    private void ApplyTranslatedTitles()
+    {
+        foreach (var project in _projects)
+        {
+            var zh = ModTitleTranslator.TryGet(project.RawName);
+            if (zh is not null && string.IsNullOrEmpty(project.DisplayTitleOverride))
+                project.DisplayTitleOverride = zh;
+        }
+        RefreshList();
+    }
+
     private void UpdateAdvFilterLabel()
     {
         var parts = new List<string>();

@@ -17,6 +17,11 @@ public static partial class Comp
         public string TranslatedName => RawName;
 
         /// <summary>
+        ///     PCL-KSP：「一键翻译标题」得到的中文标题。非空时列表主标题用它，副标题仍保留 <see cref="RawName" />。
+        /// </summary>
+        public string? DisplayTitleOverride { get; set; }
+
+        /// <summary>
         ///     按当前界面语言生成卡片下边栏的版本描述文本。
         ///     PCL-KSP: 版本描述来自 CKAN 元数据声明的最高兼容 KSP 版本。
         /// </summary>
@@ -40,6 +45,10 @@ public static partial class Comp
         /// </summary>
         public KeyValuePair<string, string> GetControlTitle(bool hasModLoaderDescription)
         {
+            // PCL-KSP：标题被「一键翻译」改写时，主标题用中文译文，副标题保留英文原名（中文在前、英文在后）。
+            if (DisplayTitleOverride is { Length: > 0 } translatedTitle)
+                return new KeyValuePair<string, string>(translatedTitle, RawName);
+
             if (!_TryGetControlTitleParts(out var title, out var subtitleList))
                 return new KeyValuePair<string, string>(title, "");
 

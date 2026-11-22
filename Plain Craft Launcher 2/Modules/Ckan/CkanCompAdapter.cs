@@ -41,7 +41,10 @@ public static class CkanCompAdapter
         if (!string.IsNullOrEmpty(mod.ReplacedById))
             json["ReplacedById"] = mod.ReplacedById;
 
-        return new Comp.CompProject(json);
+        var project = new Comp.CompProject(json);
+        // 一键翻译过的标题：卡片主标题用中文、英文原名作副标题（中文在前）。
+        project.DisplayTitleOverride = ModTitleTranslator.TryGet(mod.Name);
+        return project;
     }
 
     /// <summary>

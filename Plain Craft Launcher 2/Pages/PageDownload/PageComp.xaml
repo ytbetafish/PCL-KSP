@@ -62,6 +62,8 @@
                             </local:MyComboBox>
                             <local:MyButton x:Name="BtnAdvancedSearch" Text="高级检索" Width="96" Margin="16,0,0,0"
                                             Click="BtnAdvancedSearch_Click" />
+                            <local:MyButton x:Name="BtnTranslateTitles" Text="翻译标题" Width="96" Margin="10,0,0,0"
+                                            Click="BtnTranslateTitles_Click" />
                             <TextBlock x:Name="LabAdvFilter" VerticalAlignment="Center" Margin="10,0,0,0"
                                        FontSize="12" Opacity="0.7" Visibility="Collapsed" />
                         </StackPanel>

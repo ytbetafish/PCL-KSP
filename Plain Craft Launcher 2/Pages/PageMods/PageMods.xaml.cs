@@ -5,6 +5,7 @@ using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
 using PCL;
+using PCL.Core.UI.Hints;
 using PCL.Translation;
 using Pcl.Ckan;
 
@@ -128,6 +129,14 @@ public partial class PageMods
 
     private void ApplyFilter()
     {
+        BuildList(GetFilteredMods());
+        PanLoad.Visibility = Visibility.Collapsed;
+        PanListCard.Visibility = Visibility.Visible;
+    }
+
+    /// <summary>按当前筛选条件取出要显示的模组；一键翻译标题也用它取目标列表。</summary>
+    private List<ModSearchResult> GetFilteredMods()
+    {
         IEnumerable<ModSearchResult> q = _lastResults;
         q = _filter switch
         {
@@ -140,9 +149,7 @@ public partial class PageMods
             "uncached" => q.Where(m => !m.IsCached),
             _ => q,
         };
-        BuildList(q.ToList());
-        PanLoad.Visibility = Visibility.Collapsed;
-        PanListCard.Visibility = Visibility.Visible;
+        return q.ToList();
     }
 
     private void BuildList(IReadOnlyList<ModSearchResult> mods)
@@ -178,7 +185,8 @@ public partial class PageMods
 
         var item = new MyListItem
         {
-            Title = mod.Name,
+            // 一键翻译过的标题写成「中文 · 英文原名」，没翻译过就还是原名。
+            Title = ModTitleTranslator.Prefix(mod.Name),
             Info = string.Join(" · ", info),
             tag = mod,
             Height = 46d,
@@ -346,7 +354,7 @@ public partial class PageMods
             BtnTranslate.Visibility = Visibility.Collapsed;
             return;
         }
-        LabModName.Text = _selected.Name;
+        LabModName.Text = ModTitleTranslator.Prefix(_selected.Name);
         _originalDescription = _selected.Description;
         LabModDesc.Text = string.IsNullOrWhiteSpace(_originalDescription) ? "（无简介）" : _originalDescription;
         LabModHome.Text = string.IsNullOrWhiteSpace(_selected.Homepage) ? "" : _selected.Homepage;
@@ -489,6 +497,44 @@ public partial class PageMods
         {
             Common.Log(ex, "[PageMods] 翻译简介失败");
             LabModDesc.Text = "（翻译失败：" + ex.Message + "）";
+        }
+    }
+
+    /// <summary>一键翻译当前列表里的模组标题：中文在前、英文原名保留在后，译文落盘缓存。</summary>
+    private async void BtnTranslateTitles_Click(object sender, System.Windows.Input.MouseButtonEventArgs e)
+    {
+        var mods = GetFilteredMods();
+        if (mods.Count == 0)
+        {
+            HintService.Show(Hints.Info("当前列表为空，没有可翻译的标题。", false));
+            return;
+        }
+
+        BtnTranslateTitles.IsEnabled = false;
+        try
+        {
+            var result = await ModTitleTranslator.TranslateMissingAsync(
+                mods.Select(m => m.Name).ToList(),
+                (done, total) => Dispatcher.Invoke(() =>
+                    BtnTranslateTitles.Text = total <= 0 ? "翻译中…" : $"翻译 {done}/{total}"));
+            ApplyFilter();
+            var message = result.Translated == 0 && result.Failed == 0
+                ? "这些标题都已经翻译过（命中本地译文缓存）。"
+                : $"已翻译 {result.Translated} 个标题" +
+                  (result.Failed > 0 ? $"，{result.Failed} 个失败" : "") + "；中文显示在英文原名前面。";
+            HintService.Show(result.Failed > 0 && result.Translated == 0
+                ? Hints.Error(message, false)
+                : Hints.Success(message, false));
+        }
+        catch (Exception ex)
+        {
+            Common.Log(ex, "[PageMods] 一键翻译标题失败");
+            HintService.Show(Hints.Error("翻译标题失败：" + ex.Message, false));
+        }
+        finally
+        {
+            BtnTranslateTitles.IsEnabled = true;
+            BtnTranslateTitles.Text = "翻译标题";
         }
     }
 

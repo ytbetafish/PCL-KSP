@@ -552,6 +552,91 @@ public static class SelfTestRunner
             });
         });
 
+        await CaseAsync("ckan/title-translation", async () =>
+        {
+            var samples = new[] { "Module Manager", "Kerbal Engineer Redux", "Automated Science Sampler" };
+            var (translated, failed) = await PCL.ModTitleTranslator.TranslateMissingAsync(samples);
+            var prefixed = PCL.ModTitleTranslator.Prefix("Module Manager");
+            if (translated == 0 && failed > 0)
+                throw new InvalidOperationException($"标题翻译全部失败（{failed} 个），请检查免费翻译接口");
+            if (!prefixed.EndsWith(" · Module Manager", StringComparison.Ordinal))
+                throw new InvalidOperationException($"标题格式不对（英文原名应保留在中文后面）：{prefixed}");
+            var chinese = PCL.ModTitleTranslator.TryGet("Module Manager");
+            if (string.IsNullOrEmpty(chinese))
+                throw new InvalidOperationException("译文没有进缓存");
+            var cacheFile = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
+                "PCL-KSP", "mod-title-zh.json");
+            if (!File.Exists(cacheFile)) throw new InvalidOperationException("译文缓存没有落盘");
+            var again = await PCL.ModTitleTranslator.TranslateMissingAsync(samples);
+            if (again.Translated != 0) throw new InvalidOperationException("第二次点击仍请求了接口，缓存没命中");
+
+            // 卡片标题契约：主标题=中文，副标题=英文原名（中文在前、英文在后）。
+            var project = new PCL.Comp.CompProject(new System.Text.Json.Nodes.JsonObject
+            {
+                ["DataSource"] = "CKAN",
+                ["Type"] = (int)PCL.Comp.CompType.Mod,
+                ["RawName"] = "Module Manager",
+                ["Description"] = ""
+            });
+            project.DisplayTitleOverride = chinese;
+            var cardTitle = project.GetControlTitle(true);
+            if (cardTitle.Key != chinese || cardTitle.Value != "Module Manager")
+                throw new InvalidOperationException($"卡片标题契约不对：主「{cardTitle.Key}」副「{cardTitle.Value}」");
+
+            // 离屏渲染真实卡片（铺主题底色），确认中文主标题在左、英文原名以灰色小字紧随其后，不被裁掉。
+            var app = System.Windows.Application.Current
+                      ?? throw new InvalidOperationException("Application 尚未创建，无法离屏渲染模组卡片");
+            var renderInfo = app.Dispatcher.Invoke(() =>
+            {
+                var item = new PCL.MyCompItem { Title = chinese, SubTitle = "Module Manager" };
+                item.Description = "Allows you to manage all your mods in one place.";
+                var host = new System.Windows.Controls.Border
+                {
+                    Background = app.TryFindResource("ColorBrushBackground") as System.Windows.Media.Brush
+                                 ?? System.Windows.Media.Brushes.Black,
+                    Padding = new System.Windows.Thickness(8),
+                    Child = item
+                };
+                host.Measure(new System.Windows.Size(720d, double.PositiveInfinity));
+                host.Arrange(new System.Windows.Rect(0, 0, 720d, host.DesiredSize.Height));
+                host.UpdateLayout();
+
+                if (item.LabTitle.Text != chinese)
+                    throw new InvalidOperationException($"卡片主标题没显示中文：{item.LabTitle.Text}");
+                if (item.LabTitleRaw.Text != "Module Manager")
+                    throw new InvalidOperationException($"卡片副标题没保留英文原名：{item.LabTitleRaw.Text}");
+                if (item.LabTitleRaw.Visibility != System.Windows.Visibility.Visible)
+                    throw new InvalidOperationException("卡片副标题被折叠，英文原名不可见");
+                var pTitle = item.LabTitle.TransformToAncestor(item).Transform(new System.Windows.Point(0, 0));
+                var pRaw = item.LabTitleRaw.TransformToAncestor(item).Transform(new System.Windows.Point(0, 0));
+                if (pRaw.X >= 720d)
+                    throw new InvalidOperationException($"英文原名被挤出可视区（X={pRaw.X:0.0}）");
+                var titleRight = pTitle.X + item.LabTitle.ActualWidth;
+                if (pRaw.X <= titleRight - 2d)
+                    throw new InvalidOperationException($"英文原名没有排在中文右侧（中文右边界 {titleRight:0.0}，英文起点 {pRaw.X:0.0}）");
+
+                const double scale = 1.5d;
+                var w = (int)Math.Ceiling(host.ActualWidth * scale);
+                var h = (int)Math.Ceiling(host.ActualHeight * scale);
+                var bmp = new System.Windows.Media.Imaging.RenderTargetBitmap(w, h, 96d * scale, 96d * scale,
+                    System.Windows.Media.PixelFormats.Pbgra32);
+                bmp.Render(host);
+                var encoder = new System.Windows.Media.Imaging.PngBitmapEncoder();
+                encoder.Frames.Add(System.Windows.Media.Imaging.BitmapFrame.Create(bmp));
+                var dir = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "PCL-KSP");
+                Directory.CreateDirectory(dir);
+                var png = Path.Combine(dir, $"mod-title-card-{DateTime.Now:HHmmss}.png");
+                using (var fs = File.Create(png))
+                {
+                    encoder.Save(fs);
+                }
+
+                return $"卡片「{item.LabTitle.Text}」在左、「{item.LabTitleRaw.Text}」在右（间距 {pRaw.X - titleRight:0.0}px）；渲染 {w}x{h} → {png}";
+            });
+
+            return $"新增译文 {translated} 个（失败 {failed}）；示例「{prefixed}」；再次点击为缓存命中；卡片主/副标题={cardTitle.Key}/{cardTitle.Value}；{renderInfo}";
+        });
+
         await CaseAsync("ckan/versions", async () =>
         {
             if (sampleId.Length == 0) throw new InvalidOperationException("没有取到样例模组标识");
