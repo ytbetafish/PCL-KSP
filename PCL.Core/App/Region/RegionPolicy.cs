@@ -178,6 +178,7 @@ public static partial class RegionPolicy
         }
         catch
         {
+            // 新版区域 API 不可用（旧系统或被策略禁用）时退回旧接口读取
             return TryReadLegacyGeoName(out available);
         }
     }
@@ -199,6 +200,7 @@ public static partial class RegionPolicy
         }
         catch
         {
+            // 拿不到 ISO 国家代码（无地理信息或被禁用）时返回 null，由上层兜底
             return null;
         }
     }
@@ -228,6 +230,7 @@ public static partial class RegionPolicy
         }
         catch
         {
+            // 取 UI 语言列表失败（API 不可用或被策略禁用）时返回空列表，由上层兜底
             return Array.Empty<string>();
         }
     }
@@ -247,6 +250,7 @@ public static partial class RegionPolicy
         }
         catch
         {
+            // 取用户区域失败时返回 null，由上层兜底
             return null;
         }
     }

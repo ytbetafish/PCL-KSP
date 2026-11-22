@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using System.Threading;
@@ -32,6 +32,7 @@ public static class XboxUtils
             }
             catch (JsonException)
             {
+                // 响应体不是标准 JSON 时拿不到 XErr，交由下面的 EnsureSuccessStatusCode 抛出带状态码的错误。
             }
         }
         response.EnsureSuccessStatusCode();

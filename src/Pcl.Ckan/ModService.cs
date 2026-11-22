@@ -28,6 +28,9 @@ public sealed class InstanceReadOnlyException : InvalidOperationException
 public sealed class ModService : IModService, IDisposable
 {
     private const string UserAgent = "Pcl.Ckan/1.0";
+    // 补全 SpaceDock 元数据的并发上限。8 是实测折中值：更高会被 SpaceDock 侧限流反拖慢，
+    // 更低则整页补全等太久。不暴露到设置页，避免把内部调优参数变成可被改坏的配置项。
+    private const int MetadataFetchConcurrency = 8;
     private readonly IUser _user;
     private readonly IConfiguration _config;
     private readonly RepositoryDataManager _repoData;
@@ -610,7 +613,7 @@ public sealed class ModService : IModService, IDisposable
             byId[m.identifier] = m;
         }
 
-        using var semaphore = new SemaphoreSlim(8);
+        using var semaphore = new SemaphoreSlim(MetadataFetchConcurrency);
         var tasks = new List<Task>();
         for (var i = 0; i < count; i++)
         {

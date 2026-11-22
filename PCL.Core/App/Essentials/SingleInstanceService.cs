@@ -57,7 +57,15 @@ public sealed partial class SingleInstanceService
                     if (!alive)
                     {
                         Context.Warn($"PID {oldPid} 已不存在，清理残留锁并接管");
-                        try { File.Delete(_LockFilePath); } catch { }
+                        try
+                        {
+                            File.Delete(_LockFilePath);
+                        }
+                        catch (Exception ex)
+                        {
+                            // 残留锁删不掉时仍可继续启动：接管会失败并落到下面的 warn 分支，这里记录原因。
+                            Context.Warn("删除残留单例锁文件失败", ex);
+                        }
                         try
                         {
                             var takeover = File.Open(_LockFilePath, FileMode.Create, FileAccess.ReadWrite, FileShare.Read);
