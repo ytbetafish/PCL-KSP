@@ -193,11 +193,6 @@ public partial class Application
     private static extern bool _SetDllDirectory(string lpPathName);
     // 切换窗口
 
-    // 控件模板事件
-    private void _MyIconButtonClick(object sender, EventArgs e)
-    {
-    }
-
     // 自定义监听器类
     public class BindingErrorTraceListener : TraceListener
     {

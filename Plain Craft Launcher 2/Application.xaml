@@ -1,4 +1,4 @@
-﻿<Application x:Class="PCL.Application"
+<Application x:Class="PCL.Application"
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:local="clr-namespace:PCL"
@@ -409,18 +409,6 @@
             </Style>
 
             <!-- ComboBox -->
-            <DataTemplate x:Key="ComboBoxItemTemplateWithDelete">
-                <local:MyListItem Title="{Binding}" FontSize="13" MaxHeight="26" IsScaleAnimationEnabled="False"
-                                  Margin="-3,0,0,0">
-                    <local:MyListItem.Buttons>
-                        <x:Array Type="local:MyIconButton">
-                            <local:MyIconButton Height="20" Width="20" VerticalAlignment="Center" Tag="{Binding}"
-                                                Click="_MyIconButtonClick"
-                                                SvgIcon="lucide/x" />
-                        </x:Array>
-                    </local:MyListItem.Buttons>
-                </local:MyListItem>
-            </DataTemplate>
             <Style TargetType="local:MyComboBox">
                 <Setter Property="OverridesDefaultStyle" Value="True" />
                 <Setter Property="SnapsToDevicePixels" Value="True" />
@@ -476,7 +464,6 @@
                 <Style.Triggers>
                     <Trigger Property="IsEditable" Value="True">
                         <Setter Property="IsTabStop" Value="False" />
-                        <Setter Property="ItemTemplate" Value="{DynamicResource ComboBoxItemTemplateWithDelete}" />
                         <Setter Property="Template">
                             <Setter.Value>
                                 <ControlTemplate TargetType="ComboBox">
