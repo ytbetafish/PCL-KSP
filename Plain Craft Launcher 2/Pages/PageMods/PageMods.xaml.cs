@@ -13,7 +13,9 @@ namespace PCL.Pages;
 public partial class PageMods
 {
     private static ModService? _modService;
+    private const int TransCacheLimit = 200;
     private readonly Dictionary<string, string?> _transCache = new();
+    private readonly Queue<string> _transCacheOrder = new();
     private ModSearchResult? _selected;
     private bool _showChinese;
     private string? _originalDescription;
@@ -442,6 +444,20 @@ public partial class PageMods
         lab.Visibility = Visibility.Visible;
     }
 
+    /// <summary>翻译缓存写入。超过上限按先入先出淘汰，避免长时间浏览不断堆内存。</summary>
+    private void CacheTranslation(string key, string? value)
+    {
+        if (!_transCache.ContainsKey(key))
+        {
+            while (_transCache.Count >= TransCacheLimit && _transCacheOrder.Count > 0)
+            {
+                _transCache.Remove(_transCacheOrder.Dequeue());
+            }
+            _transCacheOrder.Enqueue(key);
+        }
+        _transCache[key] = value;
+    }
+
     private async void BtnTranslate_Click(object sender, System.Windows.Input.MouseButtonEventArgs e)
     {
         if (_selected is null || string.IsNullOrWhiteSpace(_selected.Description))
@@ -471,7 +487,7 @@ public partial class PageMods
         try
         {
             var result = await svc.TranslateAsync(_selected.Description, "zh-CN");
-            _transCache[key] = result;
+            CacheTranslation(key, result);
             LabModDesc.Text = result ?? "（翻译失败，请检查翻译设置）";
         }
         catch (Exception ex)
