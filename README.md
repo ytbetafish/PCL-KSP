@@ -1,12 +1,18 @@
 # PCL KSP — KSP Launcher
 
-**PCL KSP 是《PCL》的修改版**：在 PCL-CE（Plain Craft Launcher Community Edition）基础上修改而来，面向 **《坎巴拉太空计划》(Kerbal Space Program, KSP)** 的启动器，非 PCL 官方产品。
+**PCL KSP 是《PCL》的修改版**：在 PCL-CE（Plain Craft Launcher Community Edition）的 WPF 底座上改造而来，面向 **《坎巴拉太空计划》（Kerbal Space Program，KSP）** 的启动器，非 PCL 官方产品。
 
-- 以 PCL-CE 的 WPF 程序骨架为底座，移除 Minecraft 专属的启动、下载与账号功能（少量 MC 兼容代码与素材暂留）；
-- 集成 **CKAN**（Comprehensive Kerbal Archive Network）核心，实现 KSP 模组的浏览 / 搜索 / 安装 / 依赖解析；
-- 参考 PCL-CE 的"简介翻译"，实现模组简介的中 / 英翻译切换。
+它要解决的事很具体：KSP 的模组生态压在 **CKAN**（Comprehensive Kerbal Archive Network）上，而 CKAN 只有命令行和另一套 Java 界面。PCL KSP 把 PCL 那套外壳与 CKAN 核心接起来，一个程序里管完启动、实例和模组。
 
-技术栈：C# / WPF / .NET 10 (`net10.0-windows`)。
+能做的事：
+
+- **启动与实例**：识别 KSP 路径与版本，实例选择、实例设置（概览 / 模组 / 存档 / 截图），多实例各自独立；
+- **CKAN 模组管理**：浏览、搜索、高级检索（作者 / 描述 / 许可 / 依赖）、筛选与排序、安装 / 卸载、依赖解析与冲突处理、替换（`replaced_by`）与推荐项、多提供者选择、事务式批量变更（Changeset）、缓存清理与手动安装识别；
+- **中文体验**：模组简介中英切换、模组标题一键翻译——中文在前、英文原名保留在后，译文落本地缓存，重启后仍然生效；翻译走免注册的免费接口（腾讯交互翻译，失败回退 MyMemory）；
+- **外壳与导航**：PCL 顶栏 + 仿原版的左栏滑入动画、深色主题、设置分页（KSP 实例 / CKAN / 翻译 / 外观 / 语言 / 日志 / 杂项 / 关于）、任务管理页、KSP Wiki 随机条目主页（带配图）；
+- **下载与网络**：GitHub 加速镜像、国内 CKAN 加速源接入。
+
+技术栈：C# / WPF / .NET 10（`net10.0-windows`）；CKAN 核心以 `external/CKAN.Core`（MIT）内联，`src/Pcl.Ckan` 是不依赖 WPF 的适配层。构建与运行见下文「三、构建方式」。
 
 > ## ⚠️ 项目状态：开发中，尚未完成
 >
