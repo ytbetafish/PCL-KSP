@@ -262,11 +262,31 @@ catch (System.Exception innerEx) { PCL.Core.Logging.Swallowed.Report(innerEx); }
             else
                 File.Move(tmp, _path);
         }
-        catch
+        catch (Exception ex)
         {
-            // 写盘失败不致命，但不静默吞掉——至少留个痕迹。
-            try { File.AppendAllText(Path.Combine(Path.GetTempPath(), "pclksp-settings-save-error.log"),
-                $"[{DateTime.Now}] save to {_path} failed{Environment.NewLine}"); }catch (System.Exception innerEx) { PCL.Core.Logging.Swallowed.Report(innerEx); }
+            // 写盘失败不致命，但不能只留一个没人会看的临时文件：统一日志记一条，界面也告诉用户。
+            PCL.Core.Logging.Swallowed.Report(ex);
+            try
+            {
+                File.AppendAllText(Path.Combine(Path.GetTempPath(), "pclksp-settings-save-error.log"),
+                    $"[{DateTime.Now}] save to {_path} failed: {ex.GetType().Name}: {ex.Message}{Environment.NewLine}");
+            }
+            catch (System.Exception innerEx)
+            {
+                PCL.Core.Logging.Swallowed.Report(innerEx);
+            }
+            try
+            {
+                PCL.Core.UI.Hints.HintService.Show(new PCL.Core.UI.Hints.HintRequest
+                {
+                    Message = $"设置保存失败，本次修改可能没写进配置文件：{ex.Message}",
+                    Kind = PCL.Core.UI.Hints.HintKind.Error
+                });
+            }
+            catch (System.Exception innerEx)
+            {
+                PCL.Core.Logging.Swallowed.Report(innerEx);
+            }
         }
     }
 }
