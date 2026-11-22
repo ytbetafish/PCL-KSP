@@ -6,7 +6,7 @@ namespace PCL.Translation;
 /// <summary>
 ///     免注册的免费翻译实现：优先腾讯交互翻译（transmart.imt 的 auto_translation），
 ///     失败时回退 MyMemory 公共接口。两者均不需要 API 密钥，国内网络可直接访问。
-///     用于用户没有配置 API 密钥时的默认翻译能力。
+///     这是当前唯一可用的翻译实现（AI 翻译已按需求移除），不需要任何 API 密钥。
 /// </summary>
 public class FreeTranslationService : ITranslationService
 {
