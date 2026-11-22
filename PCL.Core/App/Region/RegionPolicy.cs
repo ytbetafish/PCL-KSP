@@ -98,8 +98,10 @@ public static partial class RegionPolicy
             timeZone = TimeZoneInfo.Local.Id;
             timeZoneAvailable = !string.IsNullOrWhiteSpace(timeZone);
         }
-        catch
+        catch (Exception ex)
         {
+            // 拿不到本地时区时降级为“无时区信号”，不影响其余区域判定，只留一条 swallow 日志。
+            PCL.Core.Logging.Swallowed.Report(ex);
         }
 
         return new RegionSignals(geoName, geoAvailable, languages, languagesAvailable,
