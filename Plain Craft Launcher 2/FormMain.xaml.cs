@@ -12,7 +12,6 @@ using PCL.Core.App.IoC;
 using PCL.Core.App.Localization;
 using PCL.Core.UI.Hints;
 using PCL.Core.Logging;
-using PCL.Core.Minecraft;
 using PCL.Core.UI;
 using PCL.Core.UI.Dialogs;
 using PCL.Core.UI.Theme;
