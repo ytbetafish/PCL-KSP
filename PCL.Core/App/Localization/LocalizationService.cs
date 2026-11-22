@@ -31,6 +31,13 @@ public sealed partial class LocalizationService
     /// </summary>
     public const string DefaultLanguageCode = "zh-CN";
 
+    /// <summary>
+    ///     固定的 UI 语言代码。<br />
+    ///     PCL-KSP 不做多语言，界面语言恒定锁定为简体中文，配置中的语言项不再生效，展示格式也随之固定；<br />
+    ///     清空该常量即可恢复按配置 / 跟随系统的原行为。
+    /// </summary>
+    private const string LockedLanguageCode = DefaultLanguageCode;
+
     private static readonly LocalizationLanguage _DefaultLanguage = new(
         DefaultLanguageCode,
         "简体中文（中国大陆）",
@@ -97,10 +104,17 @@ public sealed partial class LocalizationService
     }
 
     /// <summary>
-    ///     按当前配置应用 UI 语言与展示格式。
+    ///     应用 UI 语言与展示格式。<br />
+    ///     界面语言锁定时忽略配置，固定使用 <see cref="LockedLanguageCode" />；未锁定时按配置应用。
     /// </summary>
     public static void ApplyFromConfig(bool save = false)
     {
+        if (!string.IsNullOrEmpty(LockedLanguageCode))
+        {
+            Apply(LockedLanguageCode, FormatCultureFollowLanguage, save);
+            return;
+        }
+
         if (!ConfigService.IsInitialized)
         {
             Apply(Auto, Auto, false);

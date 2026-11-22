@@ -282,6 +282,9 @@ public static class SelfTestRunner
                 $"KspRoot={KspSettings.Current.KspRootPath}；策略={KspSettings.Current.CkanRepoStrategy}；" +
                 $"镜像={KspSettings.Current.CkanMirrorUrls.Count} 个；主页模式={KspSettings.Current.HomePageMode}"));
 
+        await CaseAsync("settings/language-locked-zh-cn", () =>
+            Task.FromResult(ProbeLanguageLock()));
+
         await CaseAsync("settings/save-and-parse-back", () =>
             Task.FromResult(ProbeSettingsFile()));
     }
@@ -299,6 +302,16 @@ public static class SelfTestRunner
             throw new InvalidOperationException($"写盘内容与内存不一致：{savedRoot} ≠ {KspSettings.Current.KspRootPath}");
         var size = new FileInfo(path).Length;
         return $"已写盘 {size} 字节，KspRootPath 一致：{savedRoot}";
+    }
+
+    private static string ProbeLanguageLock()
+    {
+        var language = PCL.Core.App.Localization.LocalizationService.CurrentLanguage;
+        if (!string.Equals(language.Code, "zh-CN", StringComparison.Ordinal))
+            throw new InvalidOperationException("界面语言未锁定简体中文：" + language.Code);
+
+        var format = PCL.Core.App.Localization.LocalizationService.CurrentFormatCulture;
+        return $"CurrentLanguage={language.Code}，展示格式={format.Name}";
     }
 
     #endregion
