@@ -210,8 +210,6 @@ public partial class FormMain
         BtnExtraDownload.showCheck = BtnExtraDownload_ShowCheck;
         BtnExtraBack.showCheck = BtnExtraBack_ShowCheck;
         BtnExtraApril.showCheck = BtnExtraApril_ShowCheck;
-        BtnExtraShutdown.showCheck = BtnExtraShutdown_ShowCheck;
-        BtnExtraLog.showCheck = BtnExtraLog_ShowCheck;
         BtnExtraApril.ShowRefresh();
         // 初始化尺寸改变
         if (!Config.Preference.LockWindowSize)
@@ -1134,11 +1132,6 @@ public partial class FormMain
         HelpDetail = 9,
 
         /// <summary>
-        ///     游戏实时日志。这是一个副页面。
-        /// </summary>
-        GameLog = 10,
-
-        /// <summary>
         ///     存档详细管理，这是一个副页面。
         /// </summary>
         VersionSaves = 12,
@@ -1215,10 +1208,6 @@ public partial class FormMain
             case PageType.TaskManager:
             {
                 return Lang.Text("Main.Title.TaskManager");
-            }
-            case PageType.GameLog:
-            {
-                return Lang.Text("Main.Title.GameLog");
             }
             case PageType.CompDetail:
             {
@@ -1829,17 +1818,6 @@ public partial class FormMain
         return UpdateManager.isUpdateWaitingRestart;
     }
 
-    // 音乐
-    private void BtnExtraMusic_Click(object sender, MouseButtonEventArgs e)
-    {
-        // KSP: 音乐模块已剥离。
-    }
-
-    private void BtnExtraMusic_RightClick(object sender, MouseButtonEventArgs e)
-    {
-        // KSP: 音乐模块已剥离。
-    }
-
     // 任务管理
     private void BtnExtraDownload_Click(object sender, MouseButtonEventArgs e)
     {
@@ -1873,28 +1851,6 @@ public partial class FormMain
     public bool BtnExtraApril_ShowCheck()
     {
         return Launcher.isAprilEnabled && !Launcher.isAprilGiveup && pageCurrent == PageType.Launch;
-    }
-
-    // 关闭 Minecraft
-    private void BtnExtraShutdown_Click(object sender, MouseButtonEventArgs e)
-    {
-        // KSP: 原强制关闭 Minecraft 已剥离。
-    }
-
-    public bool BtnExtraShutdown_ShowCheck()
-    {
-        return false; // KSP: 无 MC 运行
-    }
-
-    // 游戏日志
-    private void BtnExtraLog_Click(object sender, MouseButtonEventArgs e)
-    {
-        PageChange(PageType.GameLog);
-    }
-
-    public bool BtnExtraLog_ShowCheck()
-    {
-        return false; // KSP: 游戏日志页已剥离
     }
 
     /// <summary>
