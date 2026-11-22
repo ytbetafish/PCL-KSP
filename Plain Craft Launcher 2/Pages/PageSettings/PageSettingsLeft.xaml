@@ -21,9 +21,6 @@
             <local:MyListItem x:Name="NavTranslate" IsScaleAnimationEnabled="False" Type="RadioBox"
                               MinPaddingRight="35" Height="36" VerticalAlignment="Top"
                               Title="翻译服务" SvgIcon="lucide/globe" />
-            <local:MyListItem x:Name="NavLanguage" IsScaleAnimationEnabled="False" Type="RadioBox"
-                              MinPaddingRight="35" Height="36" VerticalAlignment="Top"
-                              Title="语言与格式" SvgIcon="lucide/globe" />
             <local:MyListItem x:Name="NavAppearance" IsScaleAnimationEnabled="False" Type="RadioBox"
                               MinPaddingRight="35" Height="36" VerticalAlignment="Top"
                               Title="主题外观" SvgIcon="lucide/palette" />
