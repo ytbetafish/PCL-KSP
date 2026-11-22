@@ -126,6 +126,61 @@ public static class SelfTestRunner
 
     #endregion
 
+    #region 对话框主题离屏校验辅助
+
+    private static void WalkVisual(System.Windows.DependencyObject root, Action<System.Windows.DependencyObject> visit)
+    {
+        visit(root);
+        var count = System.Windows.Media.VisualTreeHelper.GetChildrenCount(root);
+        for (var i = 0; i < count; i++)
+        {
+            WalkVisual(System.Windows.Media.VisualTreeHelper.GetChild(root, i), visit);
+        }
+    }
+
+    private static T? FindVisual<T>(System.Windows.DependencyObject root) where T : System.Windows.DependencyObject
+    {
+        T? found = null;
+        WalkVisual(root, node =>
+        {
+            if (found is null && node is T typed) found = typed;
+        });
+        return found;
+    }
+
+    private static System.Windows.Controls.TextBlock? FindTextBlock(System.Windows.DependencyObject root, string text)
+    {
+        System.Windows.Controls.TextBlock? found = null;
+        WalkVisual(root, node =>
+        {
+            if (found is null && node is System.Windows.Controls.TextBlock tb && tb.Text == text) found = tb;
+        });
+        return found;
+    }
+
+    /// <summary>WCAG 相对亮度。</summary>
+    private static double RelativeLuminance(System.Windows.Media.Color color)
+    {
+        static double Channel(byte value)
+        {
+            var s = value / 255d;
+            return s <= 0.03928d ? s / 12.92d : Math.Pow((s + 0.055d) / 1.055d, 2.4d);
+        }
+        return 0.2126d * Channel(color.R) + 0.7152d * Channel(color.G) + 0.0722d * Channel(color.B);
+    }
+
+    /// <summary>WCAG 对比度（1 到 21）。</summary>
+    private static double ContrastRatio(System.Windows.Media.Color a, System.Windows.Media.Color b)
+    {
+        var la = RelativeLuminance(a);
+        var lb = RelativeLuminance(b);
+        var hi = Math.Max(la, lb);
+        var lo = Math.Min(la, lb);
+        return (hi + 0.05d) / (lo + 0.05d);
+    }
+
+    #endregion
+
     #region 翻译
 
     private const string EnSample =
@@ -414,6 +469,89 @@ public static class SelfTestRunner
 
             return $"作者={byAuthor.Count} / 描述={byDesc.Count} / 许可={byLicense.Count} / 依赖={byDep.Count} / 组合={combined.Count} / 空条件={empty.Count}";
         });
+        await CaseAsync("ckan/dialog-theme", () =>
+        {
+            var app = System.Windows.Application.Current
+                      ?? throw new InvalidOperationException("Application 尚未创建，无法离屏渲染对话框");
+            return app.Dispatcher.Invoke(() =>
+            {
+                const double scale = 1.5d;
+                var window = PCL.CkanAdvancedSearchDialog.Build(null, _ => { });
+                var content = window.Content as System.Windows.FrameworkElement
+                              ?? throw new InvalidOperationException("对话框没有内容面板");
+                content.Measure(new System.Windows.Size(window.Width, double.PositiveInfinity));
+                content.Arrange(new System.Windows.Rect(0, 0, window.Width, content.DesiredSize.Height));
+                content.UpdateLayout();
+
+                if (window.WindowStyle != System.Windows.WindowStyle.None || !window.AllowsTransparency)
+                {
+                    throw new InvalidOperationException("对话框仍用系统标题栏，深色模式下会是白标题栏");
+                }
+
+                var border = FindVisual<System.Windows.Controls.Border>(content)
+                             ?? throw new InvalidOperationException("外壳缺少 Border");
+                var bg = border.Background as System.Windows.Media.SolidColorBrush;
+                var wantBg = app.TryFindResource("ColorBrushBackground") as System.Windows.Media.SolidColorBrush;
+                if (bg is null || wantBg is null) throw new InvalidOperationException("取不到外壳底色或主题 ColorBrushBackground");
+                if (bg.Color != wantBg.Color)
+                {
+                    throw new InvalidOperationException($"外壳底色 {bg.Color} 未跟随主题 ColorBrushBackground {wantBg.Color}");
+                }
+
+                var title = FindTextBlock(content, "高级检索")
+                            ?? throw new InvalidOperationException("标题栏缺少「高级检索」文字");
+                var wantTitle = app.TryFindResource("ColorBrush2") as System.Windows.Media.SolidColorBrush;
+                if (title.Foreground is not System.Windows.Media.SolidColorBrush titleBrush || wantTitle is null
+                    || titleBrush.Color != wantTitle.Color)
+                {
+                    throw new InvalidOperationException("标题文字颜色未跟随主题 ColorBrush2");
+                }
+
+                var label = FindTextBlock(content, "作者")
+                            ?? throw new InvalidOperationException("四个字段里找不到「作者」标签");
+                var wantBody = app.TryFindResource("ColorBrush1") as System.Windows.Media.SolidColorBrush;
+                if (label.Foreground is not System.Windows.Media.SolidColorBrush labelBrush || wantBody is null
+                    || labelBrush.Color != wantBody.Color)
+                {
+                    throw new InvalidOperationException("正文颜色未跟随主题 ColorBrush1，主题切换后会退回白底浅字");
+                }
+
+                var closeButton = FindVisual<PCL.MyIconButton>(content)
+                                  ?? throw new InvalidOperationException("标题栏缺少关闭按钮");
+                var buttonCount = 0;
+                WalkVisual(content, node =>
+                {
+                    if (node is PCL.MyButton) buttonCount++;
+                });
+                if (buttonCount < 3) throw new InvalidOperationException($"底部按钮数量异常：{buttonCount}");
+
+                var contrastTitle = ContrastRatio(bg.Color, titleBrush.Color);
+                var contrastBody = ContrastRatio(bg.Color, labelBrush.Color);
+                if (contrastTitle < 4.5d || contrastBody < 4.5d)
+                {
+                    throw new InvalidOperationException($"对比度不足（标题 {contrastTitle:0.0}:1，正文 {contrastBody:0.0}:1，要求 ≥4.5:1）");
+                }
+
+                var dir = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "PCL-KSP");
+                Directory.CreateDirectory(dir);
+                var path = Path.Combine(dir, $"dialog-theme-advanced-{DateTime.Now:HHmmss}.png");
+                var w = (int)Math.Ceiling(content.ActualWidth * scale);
+                var h = (int)Math.Ceiling(content.ActualHeight * scale);
+                var bmp = new System.Windows.Media.Imaging.RenderTargetBitmap(w, h, 96d * scale, 96d * scale,
+                    System.Windows.Media.PixelFormats.Pbgra32);
+                bmp.Render(content);
+                var encoder = new System.Windows.Media.Imaging.PngBitmapEncoder();
+                encoder.Frames.Add(System.Windows.Media.Imaging.BitmapFrame.Create(bmp));
+                using (var fs = File.Create(path))
+                {
+                    encoder.Save(fs);
+                }
+
+                window.Close();
+                return $"外壳无边框+主题底色 {bg.Color}；标题对比度 {contrastTitle:0.0}:1，正文 {contrastBody:0.0}:1；关闭按钮 {(closeButton.ToolTip as string ?? "?")}；底部按钮 {buttonCount} 个；渲染 {w}x{h} → {path}";
+            });
+        });
+
         await CaseAsync("ckan/versions", async () =>
         {
             if (sampleId.Length == 0) throw new InvalidOperationException("没有取到样例模组标识");

@@ -230,20 +230,7 @@ public partial class PageKspInstance
     /// <summary>简易文本输入框（原版 PCL 的 MsgBox 输入样式在 KSP 版里未移植，此处自建）。</summary>
     private static string? PromptText(string title, string message, string defaultValue)
     {
-        var window = new Window
-        {
-            Title = title,
-            Width = 460,
-            SizeToContent = SizeToContent.Height,
-            WindowStartupLocation = WindowStartupLocation.CenterOwner,
-            ResizeMode = ResizeMode.NoResize,
-            ShowInTaskbar = false
-        };
-        var main = Application.Current?.MainWindow;
-        if (main is { IsVisible: true })
-        {
-            window.Owner = main;
-        }
+        var window = AppDialogWindow.Create(title, 460, out var host);
 
         var root = new StackPanel { Margin = new Thickness(18, 16, 18, 16) };
         root.Children.Add(new TextBlock
@@ -275,7 +262,7 @@ public partial class PageKspInstance
         buttons.Children.Add(cancel);
         root.Children.Add(buttons);
 
-        window.Content = root;
+        host.Content = root;
         window.ShowDialog();
         return window.DialogResult == true ? result : null;
     }

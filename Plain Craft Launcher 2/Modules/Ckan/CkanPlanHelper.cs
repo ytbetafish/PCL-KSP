@@ -67,21 +67,7 @@ internal static class CkanProviderChoiceDialog
     public static ModProviderOption? Choose(ModProviderChoice choice)
     {
         ModProviderOption? result = null;
-        var window = new Window
-        {
-            Title = "选择提供者",
-            Width = 520,
-            SizeToContent = SizeToContent.Height,
-            WindowStartupLocation = WindowStartupLocation.CenterScreen,
-            ResizeMode = ResizeMode.NoResize,
-            ShowInTaskbar = false
-        };
-        var main = Application.Current?.MainWindow;
-        if (main is { IsVisible: true } && !ReferenceEquals(main, window))
-        {
-            window.Owner = main;
-            window.WindowStartupLocation = WindowStartupLocation.CenterOwner;
-        }
+        var window = AppDialogWindow.Create("选择提供者", 520, out var host);
 
         var root = new DockPanel { Margin = new Thickness(16, 14, 16, 14) };
 
@@ -161,7 +147,7 @@ internal static class CkanProviderChoiceDialog
         btnCancel.Click += (_, _) => window.DialogResult = false;
         bottom.Children.Add(btnCancel);
 
-        window.Content = root;
+        host.Content = root;
         window.ShowDialog();
         return result;
     }
@@ -175,21 +161,7 @@ internal static class CkanOptionalInstallDialog
     public static IReadOnlyList<ModAuditItem> Choose(IReadOnlyList<ModAuditItem> items, string title)
     {
         var picked = new List<ModAuditItem>();
-        var window = new Window
-        {
-            Title = title,
-            Width = 560,
-            SizeToContent = SizeToContent.Height,
-            WindowStartupLocation = WindowStartupLocation.CenterScreen,
-            ResizeMode = ResizeMode.NoResize,
-            ShowInTaskbar = false
-        };
-        var main = Application.Current?.MainWindow;
-        if (main is { IsVisible: true } && !ReferenceEquals(main, window))
-        {
-            window.Owner = main;
-            window.WindowStartupLocation = WindowStartupLocation.CenterOwner;
-        }
+        var window = AppDialogWindow.Create(title, 560, out var host);
 
         var root = new DockPanel { Margin = new Thickness(16, 14, 16, 14) };
 
@@ -257,7 +229,7 @@ internal static class CkanOptionalInstallDialog
         btnCancel.Click += (_, _) => window.DialogResult = false;
         bottom.Children.Add(btnCancel);
 
-        window.Content = root;
+        host.Content = root;
         window.ShowDialog();
         return picked;
     }
@@ -273,21 +245,7 @@ internal static class CkanChangesetDialog
         IReadOnlyList<string>? confirmed = null;
         ModInstallPlan? confirmedPlan = null;
 
-        var window = new Window
-        {
-            Title = "批量变更（Changeset）",
-            Width = 640,
-            SizeToContent = SizeToContent.Height,
-            WindowStartupLocation = WindowStartupLocation.CenterScreen,
-            ResizeMode = ResizeMode.NoResize,
-            ShowInTaskbar = false
-        };
-        var main = Application.Current?.MainWindow;
-        if (main is { IsVisible: true } && !ReferenceEquals(main, window))
-        {
-            window.Owner = main;
-            window.WindowStartupLocation = WindowStartupLocation.CenterOwner;
-        }
+        var window = AppDialogWindow.Create("批量变更（Changeset）", 640, out var host);
 
         var root = new StackPanel { Margin = new Thickness(16, 14, 16, 14) };
         root.Children.Add(new TextBlock
@@ -423,7 +381,7 @@ internal static class CkanChangesetDialog
 
         btnCancel.Click += (_, _) => window.DialogResult = false;
 
-        window.Content = root;
+        host.Content = root;
         window.ShowDialog();
         return confirmed is null || confirmedPlan is null ? null : (confirmed, confirmedPlan);
     }
@@ -458,20 +416,7 @@ internal static class CkanCacheDialog
 {
     public static void Show(IModService service, Window? owner)
     {
-        var window = new Window
-        {
-            Title = "下载缓存",
-            Width = 540,
-            SizeToContent = SizeToContent.Height,
-            WindowStartupLocation = WindowStartupLocation.CenterScreen,
-            ResizeMode = ResizeMode.NoResize,
-            ShowInTaskbar = false
-        };
-        if (owner is { IsVisible: true })
-        {
-            window.Owner = owner;
-            window.WindowStartupLocation = WindowStartupLocation.CenterOwner;
-        }
+        var window = AppDialogWindow.Create("下载缓存", 540, out var host, modal: false, owner: owner);
 
         var root = new StackPanel { Margin = new Thickness(16, 14, 16, 14) };
         var info = new TextBlock
@@ -575,7 +520,7 @@ internal static class CkanCacheDialog
 
         btnClose.Click += (_, _) => window.Close();
 
-        window.Content = root;
+        host.Content = root;
         window.Show();
         RefreshAsync();
     }
@@ -594,20 +539,7 @@ internal static class CkanContentsDialog
 {
     internal static void Show(string moduleName, IReadOnlyList<ModContentEntry> entries)
     {
-        var window = new Window
-        {
-            Title = "内容 - " + moduleName,
-            Width = 680,
-            Height = 560,
-            WindowStartupLocation = WindowStartupLocation.CenterScreen,
-            ShowInTaskbar = false
-        };
-        var main = Application.Current?.MainWindow;
-        if (main is { IsVisible: true })
-        {
-            window.Owner = main;
-            window.WindowStartupLocation = WindowStartupLocation.CenterOwner;
-        }
+        var window = AppDialogWindow.Create("内容 - " + moduleName, 680, out var host, modal: false, height: 560);
 
         var root = new DockPanel { Margin = new Thickness(16, 14, 16, 14) };
         var header = new TextBlock
@@ -646,7 +578,7 @@ internal static class CkanContentsDialog
         btnClose.Click += (_, _) => window.Close();
         bottom.Children.Add(btnClose);
 
-        window.Content = root;
+        host.Content = root;
         window.Show();
     }
 }
@@ -665,21 +597,15 @@ internal static class CkanAdvancedSearchDialog
 {
     public static (bool Apply, ModSearchFilter? Filter)? Choose(ModSearchFilter? current)
     {
-        var window = new Window
-        {
-            Title = "高级检索",
-            Width = 560,
-            SizeToContent = SizeToContent.Height,
-            WindowStartupLocation = WindowStartupLocation.CenterScreen,
-            ResizeMode = ResizeMode.NoResize,
-            ShowInTaskbar = false
-        };
-        var main = Application.Current?.MainWindow;
-        if (main is { IsVisible: true })
-        {
-            window.Owner = main;
-            window.WindowStartupLocation = WindowStartupLocation.CenterOwner;
-        }
+        (bool Apply, ModSearchFilter? Filter)? result = null;
+        Build(current, r => result = r).ShowDialog();
+        return result;
+    }
+
+    /// <summary>只构建「高级检索」窗口而不显示；确认/取消时回调 onDone。自测用它做离屏渲染。</summary>
+    internal static Window Build(ModSearchFilter? current, Action<(bool Apply, ModSearchFilter? Filter)> onDone)
+    {
+        var window = AppDialogWindow.Create("高级检索", 560, out var host);
 
         var root = new StackPanel { Margin = new Thickness(16, 14, 16, 14) };
         root.Children.Add(new TextBlock
@@ -698,10 +624,10 @@ internal static class CkanAdvancedSearchDialog
         grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(100) });
         grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
 
-        var txtAuthor = new TextBox { Text = current?.Author ?? "" };
-        var txtDesc = new TextBox { Text = current?.Description ?? "" };
-        var txtLicense = new TextBox { Text = current?.License ?? "" };
-        var txtDepends = new TextBox { Text = current?.DependsOn ?? "" };
+        var txtAuthor = new MyTextBox { Text = current?.Author ?? "", Height = 34 };
+        var txtDesc = new MyTextBox { Text = current?.Description ?? "", Height = 34 };
+        var txtLicense = new MyTextBox { Text = current?.License ?? "", Height = 34 };
+        var txtDepends = new MyTextBox { Text = current?.DependsOn ?? "", Height = 34 };
 
         void AddRow(int row, string label, TextBox box)
         {
@@ -710,7 +636,6 @@ internal static class CkanAdvancedSearchDialog
             Grid.SetColumn(lb, 0);
             grid.Children.Add(lb);
             box.Margin = new Thickness(0, 0, 0, 8);
-            box.Padding = new Thickness(6, 4, 6, 4);
             Grid.SetRow(box, row);
             Grid.SetColumn(box, 1);
             grid.Children.Add(box);
@@ -730,12 +655,10 @@ internal static class CkanAdvancedSearchDialog
         };
         root.Children.Add(bottom);
 
-        (bool Apply, ModSearchFilter? Filter)? result = null;
-
         var btnClear = new MyButton { Text = "清除条件", Width = 110, Margin = new Thickness(0, 0, 10, 0) };
         btnClear.Click += (_, _) =>
         {
-            result = (true, null);
+            onDone((true, null));
             window.DialogResult = true;
         };
         bottom.Children.Add(btnClear);
@@ -743,22 +666,25 @@ internal static class CkanAdvancedSearchDialog
         var btnOk = new MyButton { Text = "确定", Width = 100, Margin = new Thickness(0, 0, 10, 0) };
         btnOk.Click += (_, _) =>
         {
-            result = (true, new ModSearchFilter(
+            onDone((true, new ModSearchFilter(
                 string.IsNullOrWhiteSpace(txtAuthor.Text) ? null : txtAuthor.Text.Trim(),
                 string.IsNullOrWhiteSpace(txtDesc.Text) ? null : txtDesc.Text.Trim(),
                 string.IsNullOrWhiteSpace(txtLicense.Text) ? null : txtLicense.Text.Trim(),
-                string.IsNullOrWhiteSpace(txtDepends.Text) ? null : txtDepends.Text.Trim()));
+                string.IsNullOrWhiteSpace(txtDepends.Text) ? null : txtDepends.Text.Trim())));
             window.DialogResult = true;
         };
         bottom.Children.Add(btnOk);
 
         var btnCancel = new MyButton { Text = "取消", Width = 90 };
-        btnCancel.Click += (_, _) => window.DialogResult = false;
+        btnCancel.Click += (_, _) =>
+        {
+            onDone((false, current));
+            window.DialogResult = false;
+        };
         bottom.Children.Add(btnCancel);
 
-        window.Content = root;
-        window.ShowDialog();
-        return result;
+        host.Content = root;
+        return window;
     }
 }
 
@@ -770,21 +696,7 @@ internal static class CkanOrphanDialog
     public static IReadOnlyList<ModOrphanItem> Choose(IReadOnlyList<ModOrphanItem> items)
     {
         var picked = new List<ModOrphanItem>();
-        var window = new Window
-        {
-            Title = "清理孤儿依赖",
-            Width = 560,
-            SizeToContent = SizeToContent.Height,
-            WindowStartupLocation = WindowStartupLocation.CenterScreen,
-            ResizeMode = ResizeMode.NoResize,
-            ShowInTaskbar = false
-        };
-        var main = Application.Current?.MainWindow;
-        if (main is { IsVisible: true } && !ReferenceEquals(main, window))
-        {
-            window.Owner = main;
-            window.WindowStartupLocation = WindowStartupLocation.CenterOwner;
-        }
+        var window = AppDialogWindow.Create("清理孤儿依赖", 560, out var host);
 
         var root = new DockPanel { Margin = new Thickness(16, 14, 16, 14) };
 
@@ -852,7 +764,7 @@ internal static class CkanOrphanDialog
         btnCancel.Click += (_, _) => window.DialogResult = false;
         bottom.Children.Add(btnCancel);
 
-        window.Content = root;
+        host.Content = root;
         window.ShowDialog();
         return picked;
     }
@@ -896,21 +808,7 @@ internal static class CkanConflictDialog
         }
 
         var picked = new List<string>();
-        var window = new Window
-        {
-            Title = "冲突诊断",
-            Width = 620,
-            SizeToContent = SizeToContent.Height,
-            WindowStartupLocation = WindowStartupLocation.CenterScreen,
-            ResizeMode = ResizeMode.NoResize,
-            ShowInTaskbar = false
-        };
-        var main = Application.Current?.MainWindow;
-        if (main is { IsVisible: true } && !ReferenceEquals(main, window))
-        {
-            window.Owner = main;
-            window.WindowStartupLocation = WindowStartupLocation.CenterOwner;
-        }
+        var window = AppDialogWindow.Create("冲突诊断", 620, out var host);
 
         var root = new DockPanel { Margin = new Thickness(16, 14, 16, 14) };
 
@@ -968,7 +866,7 @@ internal static class CkanConflictDialog
         btnCancel.Click += (_, _) => window.DialogResult = false;
         bottom.Children.Add(btnCancel);
 
-        window.Content = root;
+        host.Content = root;
         window.ShowDialog();
         return picked;
     }

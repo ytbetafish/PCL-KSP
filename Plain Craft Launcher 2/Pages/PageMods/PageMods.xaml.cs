@@ -895,18 +895,20 @@ public partial class PageMods
     private void BtnViewLog_Click(object sender, System.Windows.Input.MouseButtonEventArgs e)
     {
         var text = GetService().Log.Dump();
-        var win = new Window
+        var win = AppDialogWindow.Create("PCL-KSP 操作日志", 700, out var host, height: 460);
+        host.Content = new Grid
         {
-            Title = "PCL-KSP 操作日志",
-            Width = 700,
-            Height = 500,
-            Content = new TextBox
+            Margin = new Thickness(16, 14, 16, 14),
+            Children =
             {
-                Text = string.IsNullOrEmpty(text) ? "（暂无日志）" : text,
-                IsReadOnly = true,
-                TextWrapping = TextWrapping.Wrap,
-                VerticalScrollBarVisibility = ScrollBarVisibility.Auto,
-                HorizontalScrollBarVisibility = ScrollBarVisibility.Auto,
+                new TextBox
+                {
+                    Text = string.IsNullOrEmpty(text) ? "（暂无日志）" : text,
+                    IsReadOnly = true,
+                    TextWrapping = TextWrapping.Wrap,
+                    VerticalScrollBarVisibility = ScrollBarVisibility.Auto,
+                    HorizontalScrollBarVisibility = ScrollBarVisibility.Auto,
+                }
             }
         };
         win.ShowDialog();
