@@ -69,22 +69,4 @@ public static partial class Common
     ///     程序的缓存文件夹路径，以 \ 结尾。
     /// </summary>
     public static string pathTemp = Paths.Temp + @"\";
-
-    /// <summary>
-    ///     AppData 中的 PCL 文件夹路径，以 \ 结尾。
-    /// </summary>
-    public static string pathAppdata =
-        $@"{Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "PCL")}\";
-
-    /// <summary>
-    ///     AppData 中的 PCL-KSP 配置文件夹路径，以 \ 结尾。
-    /// </summary>
-    public static string pathAppdataConfig =
-        Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData)
-        + (VersionBranchName == "Debug" ? @"\.\pclkspdebug\" : @"\.\pclksp\");
-
-    /// <summary>
-    ///     纯 ASCII 路径，用于避免部分程序对非 ASCII 路径的兼容问题。
-    /// </summary>
-    public static string pathPure = GetPureAsciiDir();
 }

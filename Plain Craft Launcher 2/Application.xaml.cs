@@ -60,7 +60,6 @@ public partial class Application
             Directory.CreateDirectory(Common.ExePath + @"PCL\Musics");
             Directory.CreateDirectory(Path.Combine(Common.pathTemp, "Cache"));
             Directory.CreateDirectory(Path.Combine(Common.pathTemp, "Download"));
-            Directory.CreateDirectory(Common.pathAppdata);
 
             // 设置 ToolTipService 默认值
             ToolTipService.InitialShowDelayProperty.OverrideMetadata(typeof(DependencyObject),

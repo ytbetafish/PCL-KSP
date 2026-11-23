@@ -26,17 +26,6 @@ public static partial class Common
         return Encoding.Default.CodePage == 65001;
     }
 
-    /// <summary>
-    ///     可用于临时存放文件的，不含任何特殊字符的文件夹路径，以“\”结尾。
-    /// </summary>
-    private static string GetPureAsciiDir()
-    {
-        if (ExePath.IsAscii()) return $@"{ExePath}PCL\";
-        if (pathAppdata.IsAscii()) return pathAppdata;
-        if (pathTemp.IsAscii()) return pathTemp;
-        return Path.Combine(SystemPaths.DriveLetter, "ProgramData", "PCL");
-    }
-
     extension(Type genericType)
     {
         /// <summary>
