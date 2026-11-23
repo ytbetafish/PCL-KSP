@@ -110,6 +110,14 @@ public static class SelfTestRunner
         Common.Log("[SelfTest] " + line);
     }
 
+    /// <summary>
+    ///     自测产物（离屏渲染图等）的落盘目录：跟启动器自己的 PCL 目录放一起，不写进用户数据目录。
+    /// </summary>
+    private static string SelfTestArtifactDir()
+    {
+        return Path.Combine(Common.pathTemp, "SelfTest");
+    }
+
     private static void Flush()
     {
         try
@@ -532,7 +540,7 @@ public static class SelfTestRunner
                     throw new InvalidOperationException($"对比度不足（标题 {contrastTitle:0.0}:1，正文 {contrastBody:0.0}:1，要求 ≥4.5:1）");
                 }
 
-                var dir = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "PCL-KSP");
+                var dir = SelfTestArtifactDir();
                 Directory.CreateDirectory(dir);
                 var path = Path.Combine(dir, $"dialog-theme-advanced-{DateTime.Now:HHmmss}.png");
                 var w = (int)Math.Ceiling(content.ActualWidth * scale);
@@ -623,7 +631,7 @@ public static class SelfTestRunner
                 bmp.Render(host);
                 var encoder = new System.Windows.Media.Imaging.PngBitmapEncoder();
                 encoder.Frames.Add(System.Windows.Media.Imaging.BitmapFrame.Create(bmp));
-                var dir = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "PCL-KSP");
+                var dir = SelfTestArtifactDir();
                 Directory.CreateDirectory(dir);
                 var png = Path.Combine(dir, $"mod-title-card-{DateTime.Now:HHmmss}.png");
                 using (var fs = File.Create(png))
