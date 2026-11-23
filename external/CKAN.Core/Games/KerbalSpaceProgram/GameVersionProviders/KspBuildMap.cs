@@ -34,8 +34,16 @@ namespace CKAN.Games.KerbalSpaceProgram.GameVersionProviders
         // TODO: Need a way for the client to configure this
         private static readonly Uri BuildMapUri =
             new Uri("https://raw.githubusercontent.com/KSP-CKAN/CKAN-meta/master/builds.json");
-        private static readonly string cachedBuildMapPath =
+
+        /// <summary>
+        /// 版本映射的默认缓存位置（CKAN 的用户目录）。宿主程序可以改成自己的数据目录，
+        /// 避免在用户目录下生成 CKAN 专用文件夹。
+        /// </summary>
+        public static readonly string DefaultCachedBuildMapPath =
             Path.Combine(CKANPathUtils.AppDataPath, "builds-ksp.json");
+
+        /// <summary>版本映射缓存的实际位置，默认 <see cref="DefaultCachedBuildMapPath"/>。</summary>
+        public static string CachedBuildMapPath = DefaultCachedBuildMapPath;
 
         private static readonly ILog Log = LogManager.GetLogger(typeof(KspBuildMap));
 
@@ -127,7 +135,7 @@ namespace CKAN.Games.KerbalSpaceProgram.GameVersionProviders
             try
             {
                 Log.Debug("Getting cached build map");
-                return TrySetBuildMap(File.ReadAllText(cachedBuildMapPath));
+                return TrySetBuildMap(File.ReadAllText(CachedBuildMapPath));
             }
             catch
             {
@@ -144,8 +152,8 @@ namespace CKAN.Games.KerbalSpaceProgram.GameVersionProviders
                 if (json != null && TrySetBuildMap(json))
                 {
                     // Save to disk if parse succeeds
-                    new FileInfo(cachedBuildMapPath).Directory?.Create();
-                    json.WriteThroughTo(cachedBuildMapPath);
+                    new FileInfo(CachedBuildMapPath).Directory?.Create();
+                    json.WriteThroughTo(CachedBuildMapPath);
                     return true;
                 }
             }

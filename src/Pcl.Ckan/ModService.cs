@@ -106,6 +106,7 @@ public sealed class ModService : IModService, IDisposable
         _dataDir = dataDir;
         Directory.CreateDirectory(dataDir);
         _config = new JsonConfiguration(Path.Combine(dataDir, "config.json"));
+        CkanDataPaths.RedirectUserCaches(dataDir);
         _repoData = new RepositoryDataManager(Path.Combine(dataDir, "repo-data"));
         _manager = new GameInstanceManager(_user, _config);
     }

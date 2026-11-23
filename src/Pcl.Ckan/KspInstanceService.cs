@@ -20,6 +20,7 @@ public sealed class KspInstanceService
     {
         _user = user ?? new NullUser();
         _dataDir = dataDir ?? Path.Combine(Path.GetTempPath(), "Pcl.Ckan");
+        CkanDataPaths.RedirectUserCaches(_dataDir);
     }
 
     /// <summary>
