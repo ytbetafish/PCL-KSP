@@ -343,7 +343,7 @@ public partial class PageHome
     private void LoadBuiltinPreset()
     {
         LabWelcome.Text = "PCL KSP v" + PCL.Core.App.Basics.VersionName;
-        LabWelcomeSub.Text = "基于 PCL-CE 改造的《坎巴拉太空计划》启动器，使用 CKAN 管理模组。";
+        LabWelcomeSub.Text = "基于 PCL 社区版改造的《坎巴拉太空计划》启动器，使用 CKAN 管理模组。";
         LabWelcomeNotice.Text =
             "当前为开发中版本，功能仍在补齐。启动前请先在设置里确认 KSP 安装路径；" +
             "模组安装与更新走 CKAN，公共索引默认使用坎喵加速镜像。";

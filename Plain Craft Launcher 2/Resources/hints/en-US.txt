@@ -1,5 +1,5 @@
 
-PCL CE is a community-derived version of PCL developed by PCL-Community.
+PCL-KSP is a third-party launcher for Kerbal Space Program, built on top of the PCL community edition and not affiliated with the official PCL team.
 
 Create a hints.txt file in the PCL folder to customize the "Did You Know" content. Make sure the encoding is UTF-8!
 
@@ -979,61 +979,61 @@ It is possible for a village to generate on the border of two or more biomes but
 
 The original inhabitants of villages were pigmen, whose later design concepts were used for piglins.
 
-PCL CE is developed by PCL-Community based on the official PCL, and has no affiliation with LTCat(龙腾猫跃).
+PCL-KSP manages mods through CKAN: installs, updates and removals are driven by CKAN metadata.
 
-PCL CE supports importing HMCL archives.
+PCL-KSP can import already-downloaded .ckan and .zip mod packages.
 
-PCL CE is developed by PCL-Community, but PCL-Community develops more than just PCL CE.
+PCL-KSP is independently developed and maintained by a third party; please report issues to this project's repository.
 
-PCL CE stands for Plain Craft Launcher Community Edition.
+PCL-KSP keeps the WPF layout and interaction habits of the PCL community edition.
 
 Your Minecraft downloads are so fast thanks to bangbang93's BMCLAPI!
 
-PCL CE can directly update the Minecraft game and mod loaders from the "Instance Settings - Modify" tab.
+You can check for and apply updates to installed mods right from the mod manager.
 
-PCL CE supports Gaussian blur.
+PCL-KSP inherits the community edition UI and supports background blur.
 
-PCL CE supports dynamic backgrounds.
+PCL-KSP supports custom background images and videos.
 
-According to official edition statistics, 94.5% of users clicked on the "Do not click" button (don't even think about it; this community edition doesn't have that).
+PCL-KSP's mod list supports filtering, sorting and multi-select batch actions.
 
-PCL CE has implemented some of the official PCL's toolbox features, such as memory optimization, daily luck, game cache cleaning, high-speed download, and more community-developed tools.
+PCL-KSP provides a task manager page showing CKAN download and install progress.
 
-PCL CE supports log viewing and exporting, making it easy for users to submit detailed logs when reporting bugs.
+PCL-KSP supports viewing and exporting logs; please attach logs when reporting issues.
 
-PCL CE supports using Mirror酱 to accelerate updates.
+PCL-KSP ships through GitHub Releases with manual downloads and does not rely on the official update server.
 
-PCL CE supports dark mode, so your eyes won't be blinded when sneaking in some Minecraft gaming at night.
+PCL-KSP supports dark mode.
 
-PCL CE supports all drag-and-drop operations from the official version; you can directly drag and drop modpacks or mods to install.
+Drag a .ckan or .zip mod package into the window to install it.
 
-PCL CE has its own user group, but you need to be able to open GitHub to know the group number.
+Please submit questions and suggestions to this project's GitHub Issues.
 
 When the game crashes, never just send a screenshot! Always send the log!! Without the log, even God wouldn't know how to fix it!!!
 
 Alt+F4 closes the window, it's not diamonds or a gift pack!
 
-Most of the PCL CE development team are students, so updates might be a bit slow.
+PCL-KSP is maintained by an individual; release cadence depends on the author's spare time.
 
-PCL CE supports checking server status in "Instance Settings - Server" or "Tools - Toolbox - Peek at Server", so you can see if your favorite server is online without entering the game.
+The mod details page shows dependencies, recommendations and conflicts, so you can judge compatibility before installing.
 
-PCL CE allows save backups in "Instance Settings - Saves - Details - Backup".
+CKAN resolves dependencies before installing and reports anything missing.
 
-PCL CE allows modifying save game difficulty, command permission, and difficulty lock in "Instance Settings - Saves - Details".
+You can manage CKAN repository sources in settings and pick a faster mirror.
 
-PCL CE supports translating mod descriptions.
+PCL-KSP supports translating mod descriptions.
 
-PCL CE's multiplayer feature uses EasyTier for P2P hole punching.
+Mod data comes from the CKAN metadata index; cached content can be browsed offline.
 
-PCL CE can upgrade a game instance's Authlib during installation to fix Minecraft 1.16.5's multiplayer issues.
+KSP versions look like 1.12.5, and CKAN dependency matching is strict about version strings.
 
 Press F12 to temporarily re-display hidden settings.
 
-PCL CE supports changing fonts.
+PCL-KSP supports changing the UI font.
 
-PCL CE supports changing the game's process priority. With proper settings, the game won't compete for CPU while idling, nor will other programs compete while you play.
+PCL-KSP creates a PCL data directory next to the exe on every launch; delete it to reset to a fresh state.
 
-Do not run PCL CE as administrator unless necessary; this causes various permission issues and breaks system-level interactions such as drag-and-drop!
+Avoid running PCL-KSP as administrator unless necessary; it can cause odd permission issues and break drag-and-drop.
 
 Hover your mouse over some text in the settings to see a detailed explanation of that setting.
 

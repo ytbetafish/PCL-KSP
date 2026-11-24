@@ -65,7 +65,7 @@ public static class UpdateManager
         try
         {
             var fileName = LauncherPaths.ExecutableDirectory
-                + @"PCL\Plain Craft Launcher Community Edition.exe";
+                + @"PCL-KSP.exe";
             if (!File.Exists(fileName))
             {
                 // PCL-KSP 未随包分发 PCL-CE 的更新器：直接重启自身，不要卡在"更新失败"。

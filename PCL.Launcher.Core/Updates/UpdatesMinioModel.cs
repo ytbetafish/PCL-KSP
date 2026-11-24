@@ -148,7 +148,7 @@ public class UpdatesMinioModel : IUpdateSource // 社区自己的更新系统格
                         var entry = zip.Entries
                                 .FirstOrDefault(x =>
                                     x.Name.Contains(
-                                        "Plain Craft Launcher Community Edition.exe"))
+                                        "PCL-KSP.exe"))
                             ?? zip
                                 .Entries
                                 .FirstOrDefault(x => x.Name.Contains("Plain Craft Launcher"));

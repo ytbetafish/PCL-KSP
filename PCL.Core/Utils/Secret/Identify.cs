@@ -51,7 +51,7 @@ public class Identify
     {
         try
         {
-            var prefix = "PCL-CE|"u8.ToArray();
+            var prefix = "PCL-KSP|"u8.ToArray();
             var ctx = RawId;
             var suffix = "|LauncherId"u8.ToArray();
 
