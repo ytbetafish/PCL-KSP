@@ -88,6 +88,22 @@ public sealed class ModService : IModService, IDisposable
     }
 
     /// <summary>
+    ///     确保 CKAN 下载缓存目录存在后返回其路径。
+    ///     CKAN 的 NetFileCache 在目录缺失时会直接抛 DirectoryNotFoundKraken，
+    ///     而列表/详情/缓存查询这些只读路径原本不会创建目录，先统一在这里兜住。
+    /// </summary>
+    private string EnsureCacheDir()
+    {
+        var dir = _instance?.DownloadCacheDir;
+        if (string.IsNullOrEmpty(dir))
+        {
+            throw new InvalidOperationException("尚未附加 KSP 实例。");
+        }
+        Directory.CreateDirectory(dir);
+        return dir;
+    }
+
+    /// <summary>
     /// Create the adapter with a self-contained data directory under the user's temp folder,
     /// so it never collides with a system-wide CKAN install.
     /// </summary>
@@ -430,7 +446,7 @@ public sealed class ModService : IModService, IDisposable
         NetModuleCache? cache = null;
         try
         {
-            if (_instance != null) cache = new NetModuleCache(_instance.DownloadCacheDir);
+            if (_instance != null) cache = new NetModuleCache(EnsureCacheDir());
         }
             catch (System.Exception innerEx)
             {
@@ -874,7 +890,7 @@ public sealed class ModService : IModService, IDisposable
             {
                 try
                 {
-                    using var cache = new NetModuleCache(_instance.DownloadCacheDir);
+                    using var cache = new NetModuleCache(EnsureCacheDir());
                     cachedZip = cache.GetCachedFilename(mod);
                 }
                     catch (System.Exception innerEx)
@@ -922,7 +938,7 @@ public sealed class ModService : IModService, IDisposable
         }
         try
         {
-            using var cache = new NetModuleCache(_instance.DownloadCacheDir);
+            using var cache = new NetModuleCache(EnsureCacheDir());
             return cache.IsCached(mod);
         }
         catch
@@ -941,6 +957,7 @@ public sealed class ModService : IModService, IDisposable
         var cacheDir = _instance.DownloadCacheDir;
         return Task.Run(() =>
         {
+            Directory.CreateDirectory(cacheDir);
             using var cache = new NetModuleCache(cacheDir);
             cache.GetSizeInfo(out var files, out var bytes, out _);
             return (ModCacheStats?)new ModCacheStats(files, bytes, cacheDir);
@@ -957,6 +974,7 @@ public sealed class ModService : IModService, IDisposable
         var cacheDir = _instance.DownloadCacheDir;
         return Task.Run(() =>
         {
+            Directory.CreateDirectory(cacheDir);
             using var cache = new NetModuleCache(cacheDir);
             cache.RemoveAll();
         }, cancellationToken);
@@ -995,6 +1013,7 @@ public sealed class ModService : IModService, IDisposable
                 return new ModCacheImportResult(0, failed);
             }
 
+            Directory.CreateDirectory(cacheDir);
             using var cache = new NetModuleCache(cacheDir);
             // 逐个文件导入：一个损坏或伪装成 .zip 的文件只让自己记入失败清单，
             // 不拖累同批其余文件（CKAN 导入器遇到坏压缩包会直接抛 ZipException）。
@@ -1478,8 +1497,7 @@ public sealed class ModService : IModService, IDisposable
         {
             var opts = RelationshipResolverOptions.DependsOnlyOpts(_instance.StabilityToleranceConfig);
             opts.allow_incompatible = plan.AllowIncompatible;
-            Directory.CreateDirectory(_instance.DownloadCacheDir);
-            var cache = new NetModuleCache(_instance.DownloadCacheDir);
+            var cache = new NetModuleCache(EnsureCacheDir());
             var installer = new ModuleInstaller(_instance, cache, _config, _user, cancellationToken);
 
             var desired = plan.ToInstall.Concat(plan.ToUpgrade)
@@ -1618,8 +1636,7 @@ public sealed class ModService : IModService, IDisposable
 
         return RunExclusive(() =>
         {
-            Directory.CreateDirectory(_instance.DownloadCacheDir);
-            var cache = new NetModuleCache(_instance.DownloadCacheDir);
+            var cache = new NetModuleCache(EnsureCacheDir());
             var installer = new ModuleInstaller(_instance, cache, _config, _user, cancellationToken);
 
             HashSet<string>? possibleConfigOnlyDirs = null;
@@ -1644,8 +1661,7 @@ public sealed class ModService : IModService, IDisposable
 
         return RunExclusive(() =>
         {
-            Directory.CreateDirectory(_instance.DownloadCacheDir);
-            var cache = new NetModuleCache(_instance.DownloadCacheDir);
+            var cache = new NetModuleCache(EnsureCacheDir());
             var installer = new ModuleInstaller(_instance, cache, _config, _user, cancellationToken);
 
             HashSet<string>? possibleConfigOnlyDirs = null;
