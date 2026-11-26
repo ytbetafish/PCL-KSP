@@ -126,17 +126,31 @@ public class FreeTranslationService : ITranslationService
                 return null;
 
             var body = JsonNode.Parse(await resp.Content.ReadAsStringAsync().ConfigureAwait(false));
-            var status = body?["responseStatus"]?.GetValue<int>() ?? 0;
-            if (status != 200)
+            // MyMemory 有时把 responseStatus 返回成字符串（"200" / "403"），直接 GetValue<int>() 会抛异常，
+            // 这里两种类型都接受，避免正常响应被误判成失败。
+            if (!TryReadInt(body?["responseStatus"], out var status) || status != 200)
                 return null;
-            var translated = body?["responseData"]?["translatedText"]?.GetValue<string>();
-            return string.IsNullOrWhiteSpace(translated) ? null : translated;
+            var translated = body?["responseData"]?["translatedText"];
+            var translatedText = translated is JsonValue ? translated.GetValue<string>() : null;
+            return string.IsNullOrWhiteSpace(translatedText) ? null : translatedText;
         }
         catch (Exception ex)
         {
             PCL.Core.Logging.Swallowed.Report(ex);
             return null;
         }
+    }
+
+    /// <summary>容错读取 JSON 整数：既接受数字节点，也接受字符串形式的数字（MyMemory 两种都会返回）。</summary>
+    private static bool TryReadInt(JsonNode? node, out int value)
+    {
+        value = 0;
+        if (node is not JsonValue v) return false;
+        if (v.GetValueKind() == System.Text.Json.JsonValueKind.Number)
+            return v.TryGetValue<int>(out value);
+        if (v.GetValueKind() == System.Text.Json.JsonValueKind.String)
+            return int.TryParse(v.GetValue<string>(), out value);
+        return false;
     }
 
     /// <summary>粗判源语言：含 CJK 字符视为中文，否则英文。</summary>
@@ -175,36 +189,28 @@ public class FreeTranslationService : ITranslationService
     private static List<string> SplitChunks(string text, int max)
     {
         var result = new List<string>();
-        if (text.Length <= max)
+        var rest = text.Trim();
+        while (rest.Length > max)
         {
-            result.Add(text);
-            return result;
-        }
-
-        var sb = new StringBuilder();
-        foreach (var ch in text)
-        {
-            sb.Append(ch);
-            if (sb.Length >= max && (IsSentenceEnd(ch) || sb.Length >= max * 2))
+            // 每一块都必须不超过上限（MyMemory 免费额度按 500 字符卡，超了就整块失败）。
+            // 优先在块内的句末标点处断开；没有再退到词间空格；都没有才硬切。
+            var cut = -1;
+            for (var i = max - 1; i >= 0; i--)
             {
-                result.Add(sb.ToString().Trim());
-                sb.Clear();
+                if (!IsSentenceEnd(rest[i])) continue;
+                cut = i + 1;
+                break;
             }
+            if (cut <= 0)
+            {
+                var space = rest.LastIndexOf(' ', max - 1);
+                cut = space > 0 ? space : max;
+            }
+            result.Add(rest[..cut].Trim());
+            rest = rest[cut..].TrimStart();
         }
-
-        var rest = sb.ToString().Trim();
         if (rest.Length > 0)
-        {
-            // 没有句末标点导致超长时，按上限硬切，避免单次请求过大
-            while (rest.Length > max)
-            {
-                result.Add(rest[..max].Trim());
-                rest = rest[max..].Trim();
-            }
-            if (rest.Length > 0)
-                result.Add(rest);
-        }
-
+            result.Add(rest);
         return result.Count == 0 ? new List<string> { text } : result;
     }
 
